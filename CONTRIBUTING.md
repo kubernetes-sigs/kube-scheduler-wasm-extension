@@ -22,5 +22,7 @@ If your repo has certain guidelines for contribution, put them here ahead of the
 
 ## Contact Information
 
+This project is driven by [sig-scheduling](https://github.com/kubernetes/community/tree/master/sig-scheduling)!
+
 - [Slack](https://kubernetes.slack.com/messages/sig-scheduling)
 - [Mailing List](https://groups.google.com/forum/#!forum/kubernetes-sig-scheduling)
