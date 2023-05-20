@@ -14,16 +14,14 @@ This project contains everything needed to extend the scheduler:
 
 ## Motivation
 
-Nowadays, the kube-scheduler can be extended via [Scheduling Framework](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/).
-But, it requires non-trivial works: 
-When you want to integrate your plugins into scheduler,
-you need to re-build the scheduler with your plugins, replace the vanilla scheduler with it, 
-and keep doing them whenever you want to upgrade your cluster.
+Today, you can extend the kube-scheduler with [Scheduling Framework](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/), 
+but it is non-trivial. 
+To customize the scheduler means writing Go, and a complicated build process. 
+Once you've built your scheduler, you have deployment and configuration work to have your cluster use it. 
+This isn't one time work, as it needs to be redone on every upgrade of your cluster.
 
-In this project, we aim that users can use their own plugins by giving wasm binary to the scheduler,
-which frees users from the above tasks.
-
-Furthermore, programming language is no longer the problem anymore, you can use whatever programming language you like to build your own scheduler plugin.
+This project lowers that tension by making the default scheduler capable of loading custom plugins, compiled to WebAssembly (wasm). 
+This removes the deployment burdens above. It also allows plugins to be written in languages besides Go.
 
 ## Community, discussion, contribution, and support
 
