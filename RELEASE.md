@@ -7,5 +7,5 @@ The process is as follows:
 1. All [OWNERS](OWNERS) must LGTM this release
 1. An OWNER runs `git tag -s $VERSION` and inserts the changelog and pushes the tag with `git push $VERSION`
 1. The release issue is closed
-1. An announcement email is sent to `dev@kubernetes.io` with the subject `[ANNOUNCE] kubernetes-template-project $VERSION is released`
+1. An announcement email is sent to `dev@kubernetes.io` with the subject `[ANNOUNCE] kube-scheduler-wasm-extension $VERSION is released`
 1. An announcement email is sent to [Mailing List](https://groups.google.com/forum/#!forum/kubernetes-sig-scheduling) 

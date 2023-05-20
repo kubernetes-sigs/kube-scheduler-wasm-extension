@@ -1,19 +1,21 @@
 # kube-scheduler-wasm-extension
 
-All the things to make the scheduler extendable with [wasm](https://webassembly.org/).
+[WebAssembly](https://webassembly.org/) is a way to safely run code compiled in other
+languages. Runtimes execute WebAssembly Modules (Wasm), which are most often
+binaries with a `.wasm` extension.
+This project allows you to extend the kube-scheduler with custom scheduler plugin compiled to a Wasm
+binary. It works by embedding a WebAssembly runtime, [wazero](https://wazero.io), into the
+scheduler, and loading custom scheduler plugin via configuration.
 
-This project is composed of:
-- The SDK to build your wasm-ed plugin.
-- The scheduler plugin to load your wasm-ed plugin.
+This project contains everything needed to extend the scheduler:
+- Documentation describing what type of actions are possible, e.g. `Filter`.
+- Language SDKs used to build scheduler plugins, compiled to wasm.
+- The scheduler plugin which loads and runs wasm plugins
 
 ## Motivation
 
-Nowadays, the scheduler can be extended via 
-- [recommended] add custom scheduler plugins based on [Scheduling Framework](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/).
-- configure [Extenders](https://github.com/kubernetes/design-proposals-archive/blob/main/scheduling/scheduler_extender.md)
-
-Although building scheduler plugins is the recommended way to extend,
-it requires non-trivial works: 
+Nowadays, the kube-scheduler can be extended via [Scheduling Framework](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/).
+But, it requires non-trivial works: 
 When you want to integrate your plugins into scheduler,
 you need to re-build the scheduler with your plugins, replace the vanilla scheduler with it, 
 and keep doing them whenever you want to upgrade your cluster.
@@ -21,7 +23,7 @@ and keep doing them whenever you want to upgrade your cluster.
 In this project, we aim that users can use their own plugins by giving wasm binary to the scheduler,
 which frees users from the above tasks.
 
-And furthermore, users write their own scheduler plugins in any languages other than Golang as well.
+Furthermore, programming language is no longer the problem anymore, you can use whatever programming language you like to build your own scheduler plugin.
 
 ## Community, discussion, contribution, and support
 
