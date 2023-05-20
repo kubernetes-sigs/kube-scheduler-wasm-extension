@@ -34,7 +34,7 @@ replace (
 )
 
 require (
-	github.com/tetratelabs/wazero v1.1.0
+	github.com/tetratelabs/wazero v1.1.1-0.20230520044102-8c7e0caead29
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
 	k8s.io/kubernetes v1.26.2

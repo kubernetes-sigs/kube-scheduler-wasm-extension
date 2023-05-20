@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	v1 "k8s.io/api/core/v1"
 	"os"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
@@ -56,14 +57,14 @@ var _ api.Pod = pod{}
 
 type pod struct{}
 
-func (pod) Spec() api.PodSpec {
-	return pod{}
-}
-
-func (pod) NodeName() string {
-	if b, err := os.ReadFile("/kdev/pod/spec/nodeName"); err != nil {
+func (pod) Spec() *v1.PodSpec {
+	if b, err := os.ReadFile("/kdev/pod/spec"); err != nil {
 		panic(err)
 	} else {
-		return string(b)
+		var ps v1.PodSpec
+		if err = ps.Unmarshal(b); err != nil {
+			panic(err)
+		}
+		return &ps
 	}
 }

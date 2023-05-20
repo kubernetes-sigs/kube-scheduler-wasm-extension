@@ -1,5 +1,9 @@
 package api
 
+import (
+	v1 "k8s.io/api/core/v1"
+)
+
 type Filter interface {
 	Filter(NodeInfo, Pod) (Code, error)
 }
@@ -13,9 +17,5 @@ type Node interface {
 }
 
 type Pod interface {
-	Spec() PodSpec
-}
-
-type PodSpec interface {
-	NodeName() string
+	Spec() *v1.PodSpec
 }

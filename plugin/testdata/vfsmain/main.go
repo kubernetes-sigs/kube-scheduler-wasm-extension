@@ -15,7 +15,7 @@ type exampleFilter struct{}
 
 func (exampleFilter) Filter(nodeInfo api.NodeInfo, pod api.Pod) (api.Code, error) {
 	nodeName := nodeInfo.Node().Name()
-	podSpecNodeName := pod.Spec().NodeName()
+	podSpecNodeName := pod.Spec().NodeName
 
 	if len(podSpecNodeName) == 0 || podSpecNodeName == nodeName {
 		return api.Success, nil
