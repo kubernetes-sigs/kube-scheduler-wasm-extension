@@ -18,4 +18,7 @@ update-kubernetes-proto: proto-tools
 	echo "Regenerate the protobuf definition from the submodule ./kubernetes/kubernetes."
 	openapi2proto -spec ./kubernetes/kubernetes/api/openapi-spec/swagger.json -out ./kubernetes/proto/kubernetes.proto
 	echo "Regenerate the Go protobuf code."
-	protoc ./kubernetes/proto/kubernetes.proto --go_out=./kubernetes/proto --go_opt=Mkubernetes/proto/kubernetes.proto=./api
+	protoc ./kubernetes/proto/kubernetes.proto \
+		--go_out=./kubernetes/proto --go_opt=Mkubernetes/proto/kubernetes.proto=./api \
+		--go-vtproto_out=./kubernetes/proto --go-vtproto_opt=Mkubernetes/proto/kubernetes.proto=./api,features=marshal+unmarshal+size
+
