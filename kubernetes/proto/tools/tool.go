@@ -5,7 +5,7 @@
 package tools
 
 import (
-	_ "github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto"
+	_ "github.com/knqyf263/go-plugin/cmd/protoc-gen-go-plugin"
 	_ "github.com/sanposhiho/openapi2proto/cmd/openapi2proto"
 	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 )

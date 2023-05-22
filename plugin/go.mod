@@ -41,6 +41,8 @@ require (
 	k8s.io/kubernetes v1.26.2
 )
 
+require github.com/knqyf263/go-plugin v0.7.0 // indirect
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect

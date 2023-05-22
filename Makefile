@@ -11,7 +11,9 @@ submodule-update:
 	git config core.sparsecheckout true; \
 	git read-tree -mu HEAD
 
-
+# This uses go-plugin to generate UnmarshalVT because generating via below
+# hangs compiling with TinyGo.
+# --go-vtproto_out=./kubernetes/proto --go-vtproto_opt=Mkubernetes/proto/kubernetes.proto=./api,features=marshal+unmarshal+size
 .PHONY: update-kubernetes-proto
 update-kubernetes-proto: proto-tools
 	echo "You need to install protoc before running this."
@@ -19,6 +21,5 @@ update-kubernetes-proto: proto-tools
 	openapi2proto -spec ./kubernetes/kubernetes/api/openapi-spec/swagger.json -out ./kubernetes/proto/kubernetes.proto
 	echo "Regenerate the Go protobuf code."
 	protoc ./kubernetes/proto/kubernetes.proto \
-		--go_out=./kubernetes/proto --go_opt=Mkubernetes/proto/kubernetes.proto=./api \
-		--go-vtproto_out=./kubernetes/proto --go-vtproto_opt=Mkubernetes/proto/kubernetes.proto=./api,features=marshal+unmarshal+size
+		--go-plugin_out=./kubernetes/proto --go-plugin_opt=Mkubernetes/proto/kubernetes.proto=./api
 
