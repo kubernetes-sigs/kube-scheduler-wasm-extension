@@ -5,7 +5,7 @@ import (
 )
 
 type Filter interface {
-	Filter(NodeInfo, Pod) (Code, error)
+	Filter(NodeInfo, Pod) (code Code, reason string)
 }
 
 type NodeInfo interface {

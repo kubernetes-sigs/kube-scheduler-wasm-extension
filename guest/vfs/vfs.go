@@ -2,9 +2,9 @@ package vfs
 
 import (
 	"os"
-	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 func Filter(filter api.Filter) {
@@ -15,25 +15,11 @@ func Filter(filter api.Filter) {
 		panic(os.Args)
 	}
 
-	// The user can't recover any error fetching the nodeInfo or pod data.
-	// Instead of having each function return error, panic and recover here.
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			if err, ok := recovered.(error); ok {
-				println(err.Error()) // reason
-				os.Exit(int(api.Error))
-			} else {
-				os.Exit(int(api.Error))
-			}
-		}
-	}()
-
-	if code, err := filter.Filter(nodeInfo{}, pod{}); err != nil {
-		println(err.Error()) // reason
-		os.Exit(int(api.Error))
-	} else {
-		os.Exit(int(code))
+	code, reason := filter.Filter(nodeInfo{}, pod{})
+	if reason != "" {
+		println(reason) // anything in STDERR becomes the reason
 	}
+	os.Exit(int(code))
 }
 
 var _ api.NodeInfo = nodeInfo{}

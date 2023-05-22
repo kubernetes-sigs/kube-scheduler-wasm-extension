@@ -10,7 +10,15 @@ import (
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
 )
 
-func BenchmarkFilter(b *testing.B) {
+func BenchmarkFilterABI(b *testing.B) {
+	benchmarkFilter(b, "testdata/abimain/main.wasm")
+}
+
+func BenchmarkFilterVFS(b *testing.B) {
+	benchmarkFilter(b, "testdata/vfsmain/main.wasm")
+}
+
+func benchmarkFilter(b *testing.B, guestPath string) {
 	tests := []struct {
 		name         string
 		pod          *v1.Pod
@@ -29,7 +37,7 @@ func BenchmarkFilter(b *testing.B) {
 		},
 	}
 
-	p, err := New(nil, nil)
+	p, err := New(guestPath)
 	if err != nil {
 		b.Fatalf("failed to create plugin: %v", err)
 	}

@@ -31,8 +31,7 @@ func CompileGuest(ctx context.Context, guestPath string) (wazero.Runtime, wazero
 		return nil, nil, fmt.Errorf("wasm: error compiling binary: %w", err)
 	}
 
-	switch DetectImports(module.ImportedFunctions()) {
-	case ModeWasiP1:
+	if DetectImports(module.ImportedFunctions())&ModuleWasiP1 != 0 {
 		_, err = wasi_snapshot_preview1.Instantiate(ctx, runtime)
 	}
 
@@ -44,20 +43,25 @@ func CompileGuest(ctx context.Context, guestPath string) (wazero.Runtime, wazero
 	return runtime, module, nil
 }
 
+type ImportModules uint
+
 const (
-	ModeDefault ImportMode = iota
-	ModeWasiP1
+	ModuleWasiP1 ImportModules = 1 << iota
+	ModuleK8sApi
+	ModuleK8sScheduler
 )
 
-type ImportMode uint
-
-func DetectImports(imports []api.FunctionDefinition) ImportMode {
+func DetectImports(imports []api.FunctionDefinition) (modules ImportModules) {
 	for _, f := range imports {
 		moduleName, _, _ := f.Import()
 		switch moduleName {
+		case "k8s.io/api":
+			modules |= ModuleK8sApi
+		case "k8s.io/scheduler":
+			modules |= ModuleK8sScheduler
 		case wasi_snapshot_preview1.ModuleName:
-			return ModeWasiP1
+			modules |= ModuleWasiP1
 		}
 	}
-	return ModeDefault
+	return
 }

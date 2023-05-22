@@ -37,11 +37,13 @@ replace (
 require (
 	github.com/tetratelabs/wazero v1.1.1-0.20230520044102-8c7e0caead29
 	k8s.io/api v0.26.2
-	k8s.io/apimachinery v0.26.2
 	k8s.io/kubernetes v1.26.2
 )
 
-require github.com/knqyf263/go-plugin v0.7.0 // indirect
+require (
+	github.com/knqyf263/go-plugin v0.7.0 // indirect
+	k8s.io/apimachinery v0.26.2 // indirect
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

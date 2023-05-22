@@ -4,41 +4,39 @@ import (
 	"bytes"
 	"context"
 	"io/fs"
-	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 	"strconv"
 	"sync/atomic"
 	"testing/fstest"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/plugin/internal"
-
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/sys"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
+
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/plugin/internal"
 )
 
-func IsVFSPlugin(module wazero.CompiledModule) bool {
-	return internal.DetectImports(module.ImportedFunctions()) == internal.ModeWasiP1
+func IsVFSPlugin(guestModule wazero.CompiledModule) bool {
+	return internal.DetectImports(guestModule.ImportedFunctions()) == internal.ModuleWasiP1
 }
 
-func NewPlugin(runtime wazero.Runtime, module wazero.CompiledModule, guestName string) (pl framework.Plugin, err error) {
+func NewPlugin(_ context.Context, runtime wazero.Runtime, guestModule wazero.CompiledModule, guestName string) (pl framework.Plugin, err error) {
 	return &vfsPlugin{
-		moduleConfig:    wazero.NewModuleConfig(),
-		guestName:       guestName,
-		runtime:         runtime,
-		module:          module,
-		instanceCounter: atomic.Uint64{},
+		runtime:           runtime,
+		guestName:         guestName,
+		guestModule:       guestModule,
+		guestModuleConfig: wazero.NewModuleConfig(),
+		instanceCounter:   atomic.Uint64{},
 	}, nil
 }
 
 type vfsPlugin struct {
-	moduleConfig wazero.ModuleConfig
-	guestName    string
-
-	runtime wazero.Runtime
-	module  wazero.CompiledModule
-
-	instanceCounter atomic.Uint64
+	runtime           wazero.Runtime
+	guestName         string
+	guestModule       wazero.CompiledModule
+	guestModuleConfig wazero.ModuleConfig
+	instanceCounter   atomic.Uint64
 }
 
 var _ framework.FilterPlugin = (*vfsPlugin)(nil)
@@ -86,26 +84,26 @@ func (pl *vfsPlugin) Filter(ctx context.Context, _ *framework.CycleState, pod *v
 	// Concurrent modules can conflict on name. Make sure we have a unique one.
 	instanceNum := pl.instanceCounter.Add(1)
 	instanceName := pl.guestName + "-" + strconv.FormatUint(instanceNum, 10)
-	moduleConfig := pl.moduleConfig.WithName(instanceName)
+	guestModuleConfig := pl.guestModuleConfig.WithName(instanceName)
 
 	// Lazy marshal node and pod on-demand
-	moduleConfig = moduleConfig.WithFSConfig(
+	guestModuleConfig = guestModuleConfig.WithFSConfig(
 		wazero.NewFSConfig().
 			WithFSMount(&vfs{pod: pod, nodeInfo: nodeInfo}, "/kdev"))
 
 	// Any STDERR will be the status reason
 	var stderr bytes.Buffer
-	moduleConfig = moduleConfig.WithStderr(&stderr)
+	guestModuleConfig = guestModuleConfig.WithStderr(&stderr)
 
 	// Allow the program to inspect the args
 	argsSlice := []string{"scheduler", "filter"}
-	moduleConfig = moduleConfig.WithArgs(argsSlice...)
+	guestModuleConfig = guestModuleConfig.WithArgs(argsSlice...)
 
 	// Instantiating executes the guest's main function (exported as _start).
-	mod, err := pl.runtime.InstantiateModule(ctx, pl.module, moduleConfig)
+	mod, err := pl.runtime.InstantiateModule(ctx, pl.guestModule, guestModuleConfig)
 	if err == nil {
-		// WASI typically calls proc_exit which exits the module, but just in case
-		// it doesn't, close the module manually.
+		// WASI typically calls proc_exit which exits the guestModule, but just in case
+		// it doesn't, close the guestModule manually.
 		_ = mod.Close(ctx)
 		return nil // success
 	}

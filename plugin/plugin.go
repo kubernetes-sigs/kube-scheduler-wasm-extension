@@ -3,16 +3,16 @@ package plugin
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
+
+	"sigs.k8s.io/kube-scheduler-wasm-extension/plugin/abi"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/plugin/internal"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/plugin/vfs"
 )
 
 // New initializes a new plugin and returns it.
-func New(runtime.Object, framework.Handle) (pl framework.Plugin, err error) {
+func New(guestPath string /*runtime.Object, framework.Handle*/) (pl framework.Plugin, err error) {
 	// TODO: make this configuration via URL
-	const guestPath = "testdata/vfsmain/main.wasm"
 	const guestName = "example"
 
 	ctx := context.Background()
@@ -22,8 +22,11 @@ func New(runtime.Object, framework.Handle) (pl framework.Plugin, err error) {
 		return nil, err
 	}
 
-	if vfs.IsVFSPlugin(module) {
-		return vfs.NewPlugin(runtime, module, guestName)
+	if abi.IsABIPlugin(module) {
+		return abi.NewPlugin(ctx, runtime, module, guestName)
 	}
-	panic("TODO: ABIPlugin")
+	if vfs.IsVFSPlugin(module) {
+		return vfs.NewPlugin(ctx, runtime, module, guestName)
+	}
+	panic("unexpected")
 }
