@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io/fs"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 	"strconv"
 	"sync/atomic"
 	"testing/fstest"
@@ -60,17 +61,12 @@ type vfs struct {
 func (v vfs) Open(name string) (fs.File, error) {
 	var marshaller func() ([]byte, error)
 	switch name {
-	case "pod":
-		marshaller = v.pod.Marshal
 	case "pod/spec":
-		marshaller = v.pod.Spec.Marshal
-	case "pod/spec/nodeName":
-		// TODO: temporary until we have a guest proto unmarshaller
-		marshaller = func() ([]byte, error) {
-			return []byte(v.pod.Spec.NodeName), nil
-		}
-	case "nodeInfo/node":
-		marshaller = v.nodeInfo.Node().Marshal
+		// TODO v.pod.Spec.Marshal is incompatible, find a way to automatically
+		// convert *v1.PodSpec to protoapi.IoK8SApiCoreV1PodSpec
+		var msg protoapi.IoK8SApiCoreV1PodSpec
+		msg.NodeName = v.pod.Spec.NodeName
+		marshaller = msg.MarshalVT
 	case "nodeInfo/node/name":
 		marshaller = func() ([]byte, error) {
 			return []byte(v.nodeInfo.Node().Name), nil

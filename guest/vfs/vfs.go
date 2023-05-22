@@ -1,8 +1,8 @@
 package vfs
 
 import (
-	v1 "k8s.io/api/core/v1"
 	"os"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 )
@@ -57,14 +57,14 @@ var _ api.Pod = pod{}
 
 type pod struct{}
 
-func (pod) Spec() *v1.PodSpec {
+func (pod) Spec() *protoapi.IoK8SApiCoreV1PodSpec {
 	if b, err := os.ReadFile("/kdev/pod/spec"); err != nil {
 		panic(err)
 	} else {
-		var ps v1.PodSpec
-		if err = ps.Unmarshal(b); err != nil {
+		var msg protoapi.IoK8SApiCoreV1PodSpec
+		if err := msg.UnmarshalVT(b); err != nil {
 			panic(err)
 		}
-		return &ps
+		return &msg
 	}
 }

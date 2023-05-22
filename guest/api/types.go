@@ -1,7 +1,7 @@
 package api
 
 import (
-	v1 "k8s.io/api/core/v1"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 type Filter interface {
@@ -17,5 +17,5 @@ type Node interface {
 }
 
 type Pod interface {
-	Spec() *v1.PodSpec
+	Spec() *protoapi.IoK8SApiCoreV1PodSpec
 }
