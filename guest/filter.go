@@ -1,12 +1,18 @@
-package abi
+package guest
 
 import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/abi/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
-// Filter defaults to return success
+// Filter should be assigned in `main` to a FilterFunc function.
+//
+// For example:
+//
+//	func main() {
+//		guest.FilterFn = api.FilterFunc(nameEqualsPosSpec)
+//	}
 var Filter api.Filter
 
 // filter is only exported to the host.
@@ -18,7 +24,7 @@ func filter() (code uint32) { //nolint
 	}
 	c, reason := Filter.Filter(nodeInfo{}, pod{})
 	if reason != "" {
-		imports.Reason(reason)
+		imports.StatusReason(reason)
 	}
 	return uint32(c)
 }
@@ -27,12 +33,13 @@ var _ api.NodeInfo = nodeInfo{}
 
 type nodeInfo struct{}
 
-func (nodeInfo) Node() api.Node {
-	return nodeInfo{}
-}
-
-func (nodeInfo) Name() string {
-	return imports.NodeInfoNodeName()
+func (nodeInfo) Node() *protoapi.IoK8SApiCoreV1Node {
+	b := imports.NodeInfoNode()
+	var msg protoapi.IoK8SApiCoreV1Node
+	if err := msg.UnmarshalVT(b); err != nil {
+		panic(err)
+	}
+	return &msg
 }
 
 var _ api.Pod = pod{}

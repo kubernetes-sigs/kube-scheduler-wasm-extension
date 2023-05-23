@@ -10,6 +10,6 @@ require (
 	sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto v0.0.0-00010101000000-000000000000 // indirect
 )
 
-replace sigs.k8s.io/kube-scheduler-wasm-extension/guest => ../../guest
+replace sigs.k8s.io/kube-scheduler-wasm-extension/guest => ./../guest
 
-replace sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto => ../../kubernetes/proto
+replace sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto => ./../kubernetes/proto

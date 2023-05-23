@@ -3,12 +3,12 @@
 package imports
 
 //go:wasm-module k8s.io/scheduler
-//go:export reason
-func _reason(ptr, size uint32)
+//go:export status_reason
+func _statusReason(ptr, size uint32)
 
 //go:wasm-module k8s.io/api
-//go:export nodeInfo/node/name
-func _nodeInfoNodeName(ptr uint32, limit bufLimit) (len uint32)
+//go:export nodeInfo/node
+func _nodeInfoNode(ptr uint32, limit bufLimit) (len uint32)
 
 //go:wasm-module k8s.io/api
 //go:export pod/spec

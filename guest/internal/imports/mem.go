@@ -25,23 +25,6 @@ func stringToPtr(s string) (uint32, uint32) {
 	return uint32(uintptr(ptr)), uint32(len(s))
 }
 
-func getString(fn func(ptr uint32, limit bufLimit) (len uint32)) (result string) {
-	size := fn(uint32(readBufPtr), readBufLimit)
-	if size == 0 {
-		return
-	}
-	if size > 0 && size <= readBufLimit {
-		return string(readBuf[:size]) // string will copy the buffer.
-	}
-
-	// Otherwise, allocate a new string
-	buf := make([]byte, size)
-	ptr := uintptr(unsafe.Pointer(&buf[0]))
-	_ = fn(uint32(ptr), size)
-	s := unsafe.Slice((*byte)(unsafe.Pointer(ptr)), size)
-	return *(*string)(unsafe.Pointer(&s))
-}
-
 func getBytes(fn func(ptr uint32, limit bufLimit) (len uint32)) (result []byte) {
 	size := fn(uint32(readBufPtr), readBufLimit)
 	if size == 0 {

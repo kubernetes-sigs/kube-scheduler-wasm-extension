@@ -3,10 +3,10 @@
 package imports
 
 // reason is stubbed for compilation outside TinyGo.
-func _reason(ptr, size uint32) {}
+func _statusReason(ptr, size uint32) {}
 
 // nodeInfoNodeName is stubbed for compilation outside TinyGo.
-func _nodeInfoNodeName(ptr uint32, limit bufLimit) (len uint32) {
+func _nodeInfoNode(ptr uint32, limit bufLimit) (len uint32) {
 	return 0
 }
 

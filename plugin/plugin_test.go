@@ -10,15 +10,7 @@ import (
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
 )
 
-func TestFilterABI(t *testing.T) {
-	testFilter(t, "testdata/abimain/main.wasm")
-}
-
-func TestFilterVFS(t *testing.T) {
-	testFilter(t, "testdata/vfsmain/main.wasm")
-}
-
-func testFilter(t *testing.T, guestPath string) {
+func TestFilter(t *testing.T) {
 	tests := []struct {
 		name         string
 		pod          *v1.Pod
@@ -49,7 +41,7 @@ func testFilter(t *testing.T, guestPath string) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			p, err := New(guestPath)
+			p, err := New("../example/main.wasm")
 			if err != nil {
 				t.Fatalf("failed to create plugin: %v", err)
 			}

@@ -2,17 +2,17 @@ package imports
 
 import "runtime"
 
-// Reason overwrites the status reason
-func Reason(reason string) {
+// StatusReason overwrites the status reason
+func StatusReason(reason string) {
 	ptr, size := stringToPtr(reason)
-	_reason(ptr, size)
+	_statusReason(ptr, size)
 	runtime.KeepAlive(reason) // keep reason alive until ptr is no longer needed.
 }
 
-func NodeInfoNodeName() string {
+func NodeInfoNode() []byte {
 	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
-	return getString(func(ptr uint32, limit bufLimit) (len uint32) {
-		return _nodeInfoNodeName(ptr, limit)
+	return getBytes(func(ptr uint32, limit bufLimit) (len uint32) {
+		return _nodeInfoNode(ptr, limit)
 	})
 }
 
