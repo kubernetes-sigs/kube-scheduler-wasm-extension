@@ -11,7 +11,7 @@ import (
 // For example:
 //
 //	func main() {
-//		guest.FilterFn = api.FilterFunc(nameEqualsPosSpec)
+//		guest.Filter = api.FilterFunc(nameEqualsPodSpec)
 //	}
 var Filter api.Filter
 
