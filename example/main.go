@@ -6,11 +6,11 @@ import (
 )
 
 func main() {
-	guest.Filter = api.FilterFunc(nameEqualsPosSpec)
+	guest.Filter = api.FilterFunc(nameEqualsPodSpec)
 }
 
-// nameEqualsPosSpec schedules this node if its name equals its pod spec.
-func nameEqualsPosSpec(nodeInfo api.NodeInfo, pod api.Pod) (api.StatusCode, string) {
+// nameEqualsPodSpec schedules this node if its name equals its pod spec.
+func nameEqualsPodSpec(nodeInfo api.NodeInfo, pod api.Pod) (api.StatusCode, string) {
 	nodeName := nodeInfo.Node().Metadata.Name
 	podSpecNodeName := pod.Spec().NodeName
 
