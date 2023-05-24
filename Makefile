@@ -22,4 +22,3 @@ update-kubernetes-proto: proto-tools
 	echo "Regenerate the Go protobuf code."
 	protoc ./kubernetes/proto/kubernetes.proto \
 		--go-plugin_out=./kubernetes/proto --go-plugin_opt=Mkubernetes/proto/kubernetes.proto=./api
-
