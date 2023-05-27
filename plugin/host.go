@@ -3,19 +3,17 @@ package plugin
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
-	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
 const (
 	i32                      = wazeroapi.ValueTypeI32
 	k8sApi                   = "k8s.io/api"
 	k8sApiNodeInfoNode       = "nodeInfo/node"
-	k8sApiPodSpec            = "pod/spec"
+	k8sApiPod                = "pod"
 	k8sScheduler             = "k8s.io/scheduler"
 	k8sSchedulerStatusReason = "status_reason"
 )
@@ -34,8 +32,8 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeInfoNodeFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeInfoNode).
 		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiPodSpecFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
-		WithParameterNames("buf", "buf_limit").Export(k8sApiPodSpec).
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sApiPod).
 		Instantiate(ctx)
 }
 
@@ -77,21 +75,14 @@ func k8sApiNodeInfoNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uin
 	bufLimit := bufLimit(stack[1])
 
 	node := filterArgsFromContext(ctx).nodeInfo.Node()
-	// TODO: fields are different between v1.Node and V1Node
-	// Currently mapping node.Name -> V1Node.Metadata.Name
-	var msg protoapi.IoK8SApiCoreV1Node
-	msg.Metadata = &protoapi.IoK8SApimachineryPkgApisMetaV1ObjectMeta{Name: node.Name}
-	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), &msg, buf, bufLimit))
+
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), node, buf, bufLimit))
 }
 
-func k8sApiPodSpecFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
 	pod := filterArgsFromContext(ctx).pod
-	// TODO wire types are not in the same order between v1.Pod and V1PodSpec
-	var msg protoapi.IoK8SApiCoreV1PodSpec
-	msg.NodeName = pod.Spec.NodeName
-
-	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), &msg, buf, bufLimit))
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
 }

@@ -16,9 +16,9 @@ func NodeInfoNode() []byte {
 	})
 }
 
-func PodSpec() []byte {
+func Pod() []byte {
 	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
 	return getBytes(func(ptr uint32, limit bufLimit) (len uint32) {
-		return _podSpec(ptr, limit)
+		return _pod(ptr, limit)
 	})
 }

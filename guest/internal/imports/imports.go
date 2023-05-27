@@ -11,5 +11,5 @@ func _statusReason(ptr, size uint32)
 func _nodeInfoNode(ptr uint32, limit bufLimit) (len uint32)
 
 //go:wasm-module k8s.io/api
-//go:export pod/spec
-func _podSpec(ptr uint32, limit bufLimit) (len uint32)
+//go:export pod
+func _pod(ptr uint32, limit bufLimit) (len uint32)
