@@ -16,18 +16,21 @@
 
 package api
 
-import protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+import (
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/framework"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+)
 
 // Filter is a WebAssembly implementation of framework.FilterPlugin.
 type Filter interface {
-	Filter(FilterArgs) (statusCode StatusCode, statusReason string)
+	Filter(FilterArgs) (statusCode framework.Code, statusReason string)
 }
 
 // FilterFunc adapts an ordinary function to a Filter.
-type FilterFunc func(FilterArgs) (statusCode StatusCode, statusReason string)
+type FilterFunc func(FilterArgs) (statusCode framework.Code, statusReason string)
 
 // Filter returns f(a).
-func (f FilterFunc) Filter(a FilterArgs) (statusCode StatusCode, statusReason string) {
+func (f FilterFunc) Filter(a FilterArgs) (statusCode framework.Code, statusReason string) {
 	return f(a)
 }
 
@@ -35,10 +38,6 @@ func (f FilterFunc) Filter(a FilterArgs) (statusCode StatusCode, statusReason st
 //
 // Note: The arguments are lazy fetched to avoid overhead for properties not in use.
 type FilterArgs interface {
-	NodeInfo() NodeInfo
+	NodeInfo() framework.NodeInfo
 	Pod() *protoapi.Pod
-}
-
-type NodeInfo interface {
-	Node() *protoapi.Node
 }

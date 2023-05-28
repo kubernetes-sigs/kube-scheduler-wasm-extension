@@ -17,28 +17,43 @@
 package guest
 
 import (
+	"context"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/framework"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
-// Filter should be assigned in `main` to a FilterFunc function.
+// filter should be assigned in `main` to a FilterFunc function.
 //
 // For example:
 //
 //	func main() {
-//		guest.Filter = api.FilterFunc(nameEqualsPodSpec)
+//		guest.filter = api.FilterFunc(nameEqualsPodSpec)
 //	}
-var Filter api.Filter
+var filter api.Filter
 
-// filter is only exported to the host.
+func RegisterFilter(pl framework.FilterPlugin) {
+	filter = api.FilterFunc(func(fa api.FilterArgs) (statusCode framework.Code, statusReason string) {
+		ctx := context.Background()
+		status := pl.Filter(ctx, &framework.CycleState{}, fa.Pod, fa.NodeInfo)
+		var reason string
+		if len(status.Reasons()) > 0 {
+			reason = status.Reasons()[0]
+		}
+		return status.Code(), reason
+	})
+}
+
+// _filter is only exported to the host.
 //
 //go:export filter
-func filter() (code uint32) { //nolint
-	if Filter == nil {
+func _filter() (code uint32) { //nolint
+	if filter == nil {
 		return
 	}
-	c, reason := Filter.Filter(filterArgs{})
+	c, reason := filter.Filter(filterArgs{})
 	if reason != "" {
 		imports.StatusReason(reason)
 	}
@@ -49,8 +64,8 @@ var _ api.FilterArgs = filterArgs{}
 
 type filterArgs struct{}
 
-func (filterArgs) NodeInfo() api.NodeInfo {
-	return nodeInfo{}
+func (filterArgs) NodeInfo() framework.NodeInfo {
+	return &nodeInfo{}
 }
 
 func (filterArgs) Pod() *protoapi.Pod {
@@ -62,7 +77,7 @@ func (filterArgs) Pod() *protoapi.Pod {
 	return &msg
 }
 
-var _ api.NodeInfo = nodeInfo{}
+var _ framework.NodeInfo = nodeInfo{}
 
 type nodeInfo struct{}
 
