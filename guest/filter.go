@@ -22,33 +22,37 @@ func filter() (code uint32) { //nolint
 	if Filter == nil {
 		return
 	}
-	c, reason := Filter.Filter(nodeInfo{}, pod{})
+	c, reason := Filter.Filter(filterArgs{})
 	if reason != "" {
 		imports.StatusReason(reason)
 	}
 	return uint32(c)
 }
 
-var _ api.NodeInfo = nodeInfo{}
+var _ api.FilterArgs = filterArgs{}
 
-type nodeInfo struct{}
+type filterArgs struct{}
 
-func (nodeInfo) Node() *protoapi.IoK8SApiCoreV1Node {
-	b := imports.NodeInfoNode()
-	var msg protoapi.IoK8SApiCoreV1Node
+func (filterArgs) NodeInfo() api.NodeInfo {
+	return nodeInfo{}
+}
+
+func (filterArgs) Pod() *protoapi.Pod {
+	b := imports.Pod()
+	var msg protoapi.Pod
 	if err := msg.UnmarshalVT(b); err != nil {
-		panic(err)
+		panic(err.Error())
 	}
 	return &msg
 }
 
-var _ api.Pod = pod{}
+var _ api.NodeInfo = nodeInfo{}
 
-type pod struct{}
+type nodeInfo struct{}
 
-func (pod) Spec() *protoapi.IoK8SApiCoreV1PodSpec {
-	b := imports.PodSpec()
-	var msg protoapi.IoK8SApiCoreV1PodSpec
+func (nodeInfo) Node() *protoapi.Node {
+	b := imports.NodeInfoNode()
+	var msg protoapi.Node
 	if err := msg.UnmarshalVT(b); err != nil {
 		panic(err)
 	}

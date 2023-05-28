@@ -8,13 +8,13 @@ import wazeroapi "github.com/tetratelabs/wazero/api"
 type bufLimit = uint32
 
 type valueType interface {
-	SizeVT() (n int)
-	MarshalToSizedBufferVT(dAtA []byte) (int, error)
+	Size() (n int)
+	MarshalToSizedBuffer(dAtA []byte) (int, error)
 }
 
 func marshalIfUnderLimit(mem wazeroapi.Memory, vt valueType, buf uint32, bufLimit bufLimit) (vLen int) {
 	// First, see if the caller passed enough memory to serialize the object.
-	vLen = vt.SizeVT()
+	vLen = vt.Size()
 	if vLen > int(bufLimit) {
 		return // caller can retry with a larger limit
 	} else if vLen == 0 {
@@ -26,7 +26,7 @@ func marshalIfUnderLimit(mem wazeroapi.Memory, vt valueType, buf uint32, bufLimi
 	if !ok { // caller passed a length outside memory
 		panic("out of memory")
 	}
-	if _, err := vt.MarshalToSizedBufferVT(wasmMem); err != nil {
+	if _, err := vt.MarshalToSizedBuffer(wasmMem); err != nil {
 		panic(err)
 	}
 	return

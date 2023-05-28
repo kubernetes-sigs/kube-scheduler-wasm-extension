@@ -11,14 +11,31 @@ submodule-update:
 	git config core.sparsecheckout true; \
 	git read-tree -mu HEAD
 
-# This uses go-plugin to generate UnmarshalVT because generating via below
-# hangs compiling with TinyGo.
-# --go-vtproto_out=./kubernetes/proto --go-vtproto_opt=Mkubernetes/proto/kubernetes.proto=./api,features=marshal+unmarshal+size
+# This uses the exact generated protos from Kubernetes source, to ensure exact
+# wire-type parity. Otherwise, we need expensive to maintain conversion logic.
+# We can't use the go generated in the same source tree in TinyGo, because it
+# hangs compiling. Instead, we generate UnmarshalVT with go-plugin which is
+# known to work with TinyGo.
 .PHONY: update-kubernetes-proto
 update-kubernetes-proto: proto-tools
-	echo "You need to install protoc before running this."
-	echo "Regenerate the protobuf definition from the submodule ./kubernetes/kubernetes."
-	openapi2proto -spec ./kubernetes/kubernetes/api/openapi-spec/swagger.json -out ./kubernetes/proto/kubernetes.proto
 	echo "Regenerate the Go protobuf code."
-	protoc ./kubernetes/proto/kubernetes.proto \
-		--go-plugin_out=./kubernetes/proto --go-plugin_opt=Mkubernetes/proto/kubernetes.proto=./api
+	cd kubernetes/kubernetes/staging/src/; \
+	protoc ./k8s.io/apimachinery/pkg/api/resource/generated.proto --go-plugin_out=../../../proto \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/api/resource/generated.proto=./resource; \
+	protoc ./k8s.io/apimachinery/pkg/runtime/generated.proto --go-plugin_out=../../../proto \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/runtime/generated.proto=./runtime; \
+	protoc ./k8s.io/apimachinery/pkg/runtime/schema/generated.proto --go-plugin_out=../../../proto \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/runtime/schema/generated.proto=./schema; \
+	protoc ./k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto --go-plugin_out=../../../proto \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/apis/meta/v1/generated.proto=./meta \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/runtime/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/runtime \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/runtime/schema/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/schema; \
+	protoc ./k8s.io/apimachinery/pkg/util/intstr/generated.proto --go-plugin_out=../../../proto \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/util/intstr/generated.proto=./instr; \
+	protoc ./k8s.io/api/core/v1/generated.proto --go-plugin_out=../../../proto \
+		--go-plugin_opt=Mk8s.io/api/core/v1/generated.proto=./api \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/api/resource/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/resource \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/apis/meta/v1/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/runtime/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/runtime \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/runtime/schema/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/schema \
+		--go-plugin_opt=Mk8s.io/apimachinery/pkg/util/intstr/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/instr;
