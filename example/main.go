@@ -17,23 +17,39 @@
 package main
 
 import (
+	"context"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/framework"
 )
 
 func main() {
-	guest.Filter = api.FilterFunc(nameEqualsPodSpec)
+	guest.RegisterFilter(&NodeName{})
 }
 
-// nameEqualsPodSpec schedules this node if its name equals its pod spec.
-func nameEqualsPodSpec(args api.FilterArgs) (api.StatusCode, string) {
-	nodeName := nilToEmpty(args.NodeInfo().Node().Metadata.Name)
-	podSpecNodeName := nilToEmpty(args.Pod().Spec.NodeName)
+// NodeName is a plugin that checks if a pod spec node name matches the current node.
+type NodeName struct{}
+
+const (
+	// Name is the name of the plugin used in the plugin registry and configurations.
+	name = "NodeName"
+
+	// ErrReason returned when node name doesn't match.
+	ErrReason = "node(s) didn't match the requested node name"
+)
+
+func (*NodeName) Name() string {
+	return name
+}
+
+func (*NodeName) Filter(ctx context.Context, state *framework.CycleState, podFn framework.PodFn, nodeInfoFn framework.NodeInfoFn) *framework.Status {
+	nodeName := nilToEmpty(nodeInfoFn().Node().Metadata.Name)
+	podSpecNodeName := nilToEmpty(podFn().Spec.NodeName)
 
 	if len(podSpecNodeName) == 0 || podSpecNodeName == nodeName {
-		return api.StatusCodeSuccess, ""
+		return nil
 	} else {
-		return api.StatusCodeUnschedulable, podSpecNodeName + " != " + nodeName
+		return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReason)
 	}
 }
 
