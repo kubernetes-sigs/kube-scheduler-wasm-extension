@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    container.googleapis.com/instance_id: "12345678912345678"
+    csi.volume.kubernetes.io/nodeid: '{"pd.csi.storage.gke.io":"projects/sanposhiho-project/zones/asia-northeast1-b/instances/gke-sanposhiho-default-pool-1d5a4320-eklb"}'
+    node.alpha.kubernetes.io/ttl: "0"
+    node.gke.io/last-applied-node-labels: cloud.google.com/gke-boot-disk=pd-balanced,cloud.google.com/gke-container-runtime=containerd,cloud.google.com/gke-cpu-scaling-level=2,cloud.google.com/gke-logging-variant=DEFAULT,cloud.google.com/gke-max-pods-per-node=110,cloud.google.com/gke-nodepool=default-pool,cloud.google.com/gke-os-distribution=cos,cloud.google.com/machine-family=e2,cloud.google.com/private-node=false
+    node.gke.io/last-applied-node-taints: ""
+    volumes.kubernetes.io/controller-managed-attach-detach: "true"
+  creationTimestamp: "2023-05-17T03:42:32Z"
+  labels:
+    beta.kubernetes.io/arch: amd64
+    beta.kubernetes.io/instance-type: e2-medium
+    beta.kubernetes.io/os: linux
+    cloud.google.com/gke-boot-disk: pd-balanced
+    cloud.google.com/gke-container-runtime: containerd
+    cloud.google.com/gke-cpu-scaling-level: "2"
+    cloud.google.com/gke-logging-variant: DEFAULT
+    cloud.google.com/gke-max-pods-per-node: "110"
+    cloud.google.com/gke-nodepool: default-pool
+    cloud.google.com/gke-os-distribution: cos
+    cloud.google.com/machine-family: e2
+    cloud.google.com/private-node: "false"
+    failure-domain.beta.kubernetes.io/region: asia-northeast1
+    failure-domain.beta.kubernetes.io/zone: asia-northeast1-b
+    kubernetes.io/arch: amd64
+    kubernetes.io/hostname: gke-sanposhiho-default-pool-1d5a4320-eklb
+    kubernetes.io/os: linux
+    node.kubernetes.io/instance-type: e2-medium
+    topology.gke.io/zone: asia-northeast1-b
+    topology.kubernetes.io/region: asia-northeast1
+    topology.kubernetes.io/zone: asia-northeast1-b
+  name: gke-sanposhiho-default-pool-1d5a4320-eklb
+  resourceVersion: "88751690"
+  uid: 859128e9-4a10-404b-a3c0-58dd11a97d6f
+spec:
+  podCIDR: 10.100.4.0/24
+  podCIDRs:
+  - 10.100.4.0/24
+  providerID: gce://sanposhiho-project/asia-northeast1-b/gke-sanposhiho-default-pool-1d5a4320-eklb
+status:
+  addresses:
+  - address: 11.111.11.111
+    type: InternalIP
+  - address: 11.111.11.111
+    type: ExternalIP
+  - address: gke-sanposhiho-default-pool-1d5a4320-eklb.c.sanposhiho-project.internal
+    type: InternalDNS
+  - address: gke-sanposhiho-default-pool-1d5a4320-eklb.c.sanposhiho-project.internal
+    type: Hostname
+  allocatable:
+    attachable-volumes-gce-pd: "15"
+    cpu: 940m
+    ephemeral-storage: "17060071478"
+    hugepages-1Gi: "0"
+    hugepages-2Mi: "0"
+    memory: 2880020Ki
+    pods: "110"
+  capacity:
+    attachable-volumes-gce-pd: "15"
+    cpu: "2"
+    ephemeral-storage: 98831908Ki
+    hugepages-1Gi: "0"
+    hugepages-2Mi: "0"
+    memory: 4025876Ki
+    pods: "110"
+  conditions:
+  - lastHeartbeatTime: "2023-05-30T02:42:13Z"
+    lastTransitionTime: "2023-05-17T03:42:37Z"
+    message: kernel has no deadlock
+    reason: KernelHasNoDeadlock
+    status: "False"
+    type: KernelDeadlock
+  - lastHeartbeatTime: "2023-05-30T02:42:13Z"
+    lastTransitionTime: "2023-05-17T03:42:37Z"
+    message: Filesystem is not read-only
+    reason: FilesystemIsNotReadOnly
+    status: "False"
+    type: ReadonlyFilesystem
+  - lastHeartbeatTime: "2023-05-30T02:42:13Z"
+    lastTransitionTime: "2023-05-17T03:42:37Z"
+    message: docker overlay2 is functioning properly
+    reason: NoCorruptDockerOverlay2
+    status: "False"
+    type: CorruptDockerOverlay2
+  - lastHeartbeatTime: "2023-05-30T02:42:13Z"
+    lastTransitionTime: "2023-05-17T03:42:37Z"
+    message: node is functioning properly
+    reason: NoFrequentUnregisterNetDevice
+    status: "False"
+    type: FrequentUnregisterNetDevice
+  - lastHeartbeatTime: "2023-05-30T02:42:13Z"
+    lastTransitionTime: "2023-05-17T03:42:37Z"
+    message: kubelet is functioning properly
+    reason: NoFrequentKubeletRestart
+    status: "False"
+    type: FrequentKubeletRestart
+  - lastHeartbeatTime: "2023-05-30T02:42:13Z"
+    lastTransitionTime: "2023-05-17T03:42:37Z"
+    message: docker is functioning properly
+    reason: NoFrequentDockerRestart
+    status: "False"
+    type: FrequentDockerRestart
+  - lastHeartbeatTime: "2023-05-30T02:42:13Z"
+    lastTransitionTime: "2023-05-17T03:42:37Z"
+    message: containerd is functioning properly
+    reason: NoFrequentContainerdRestart
+    status: "False"
+    type: FrequentContainerdRestart
+  - lastHeartbeatTime: "2023-05-17T03:42:33Z"
+    lastTransitionTime: "2023-05-17T03:42:33Z"
+    message: NodeController create implicit route
+    reason: RouteCreated
+    status: "False"
+    type: NetworkUnavailable
+  - lastHeartbeatTime: "2023-05-30T02:42:27Z"
+    lastTransitionTime: "2023-05-17T03:42:31Z"
+    message: kubelet has sufficient memory available
+    reason: KubeletHasSufficientMemory
+    status: "False"
+    type: MemoryPressure
+  - lastHeartbeatTime: "2023-05-30T02:42:27Z"
+    lastTransitionTime: "2023-05-17T03:42:31Z"
+    message: kubelet has no disk pressure
+    reason: KubeletHasNoDiskPressure
+    status: "False"
+    type: DiskPressure
+  - lastHeartbeatTime: "2023-05-30T02:42:27Z"
+    lastTransitionTime: "2023-05-17T03:42:31Z"
+    message: kubelet has sufficient PID available
+    reason: KubeletHasSufficientPID
+    status: "False"
+    type: PIDPressure
+  - lastHeartbeatTime: "2023-05-30T02:42:27Z"
+    lastTransitionTime: "2023-05-17T03:42:32Z"
+    message: kubelet is posting ready status. AppArmor enabled
+    reason: KubeletReady
+    status: "True"
+    type: Ready
+  daemonEndpoints:
+    kubeletEndpoint:
+      Port: 10250
+  images:
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  - names:
+    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    sizeBytes: 114493979
+  nodeInfo:
+    architecture: amd64
+    bootID: 24a8a8cf-8b61-4cf8-9a5c-12345678
+    containerRuntimeVersion: containerd://1.6.18
+    kernelVersion: 5.10.162+
+    kubeProxyVersion: v1.24.11-gke.1000
+    kubeletVersion: v1.24.11-gke.1000
+    machineID: e4444034274f042098cb5cfd6a49fa2e
+    operatingSystem: linux
+    osImage: Container-Optimized OS from Google
+    systemUUID: e4444034-274f-0420-98cb-9e419f3b78b4

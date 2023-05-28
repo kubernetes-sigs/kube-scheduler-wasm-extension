@@ -19,7 +19,6 @@ package wasm
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -27,12 +26,7 @@ import (
 )
 
 // prepareRuntime compiles the guest and instantiates any host modules it needs.
-func prepareRuntime(ctx context.Context, guestPath string) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
-	guestBin, err := os.ReadFile(guestPath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("wasm: error reading guest binary: %w", err)
-	}
-
+func prepareRuntime(ctx context.Context, guestBin []byte) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
 	// Create the runtime, which when closed releases any resources associated with it.
 	runtime = wazero.NewRuntime(ctx)
 

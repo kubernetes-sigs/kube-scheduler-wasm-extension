@@ -25,10 +25,11 @@ package v1
 
 import (
 	fmt "fmt"
-	proto "google.golang.org/protobuf/proto"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	io "io"
 	bits "math/bits"
+
+	proto "google.golang.org/protobuf/proto"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	runtime "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/runtime"
 )
 

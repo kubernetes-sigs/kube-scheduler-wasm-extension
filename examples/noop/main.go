@@ -17,20 +17,15 @@
 package main
 
 import (
-	"os"
-
-	"k8s.io/component-base/cli"
-	_ "k8s.io/component-base/metrics/prometheus/clientgo" // for rest client metric registration
-	_ "k8s.io/component-base/metrics/prometheus/version"  // for version metric registration
-	"k8s.io/kubernetes/cmd/kube-scheduler/app"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 )
 
 func main() {
-	command := app.NewSchedulerCommand(
-		app.WithPlugin(wasm.PluginName, wasm.New),
-	)
+	guest.Filter = api.FilterFunc(filterNoop)
+}
 
-	code := cli.Run(command)
-	os.Exit(code)
+// filterNoop doesn't do anything. This is used to test base-case performance.
+func filterNoop(api.FilterArgs) (api.StatusCode, string) {
+	return api.StatusCodeSuccess, ""
 }

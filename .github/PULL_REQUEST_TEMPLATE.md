@@ -48,3 +48,21 @@ For more information on release notes see: https://git.k8s.io/community/contribu
 ```release-note
 
 ```
+
+#### What are the benchmark results of this change?
+<!--
+If documentation-only or trivial, just write "N/A". Otherwise, run the following:
+
+1. `make bench-plugin > before.txt` on the commit prior to your changes
+2. `make bench-plugin > after.txt` on the commit of your changes
+3. Paste the output of `benchstat before.txt after.txt` as a code block.
+
+If you haven't yet installed benchstat, it looks like this.
+```
+$ go install golang.org/x/perf/cmd/benchstat@latest
+```
+
+-->
+```benchstat
+
+```

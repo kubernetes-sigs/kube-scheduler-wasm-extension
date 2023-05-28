@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package wasm
+package wasm_test
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/testdata"
 )
 
 func TestFilter(t *testing.T) {
@@ -34,40 +35,34 @@ func TestFilter(t *testing.T) {
 		expectedCode framework.Code
 	}{
 		{
-			name: "success: node is match with spec.NodeName",
-			pod: &v1.Pod{
-				Spec: v1.PodSpec{
-					NodeName: "good-node",
-				},
-			},
-			node:         st.MakeNode().Name("good-node").Obj(),
+			name:         "success: node is match with spec.NodeName",
+			pod:          testdata.PodSmall,
+			node:         testdata.NodeSmall,
 			expectedCode: framework.Success,
 		},
 		{
-			name: "filtered: bad-node",
-			pod: &v1.Pod{
-				Spec: v1.PodSpec{
-					NodeName: "good-node",
-				},
-			},
+			name:         "filtered: bad-node",
+			pod:          testdata.PodSmall,
 			node:         st.MakeNode().Name("bad-node").Obj(),
 			expectedCode: framework.Unschedulable,
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			p, err := New("../example/main.wasm")
+	for _, tt := range tests {
+		tc := tt
+
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := testdata.NewPluginExampleFilterSimple()
 			if err != nil {
 				t.Fatalf("failed to create plugin: %v", err)
 			}
 			defer p.(io.Closer).Close()
 
 			ni := framework.NewNodeInfo()
-			ni.SetNode(test.node)
-			s := p.(framework.FilterPlugin).Filter(context.Background(), nil, test.pod, ni)
-			if s.Code() != test.expectedCode {
-				t.Fatalf("unexpected code: got %v, expected %v, got reason: %v", s.Code(), test.expectedCode, s.Message())
+			ni.SetNode(tc.node)
+			s := p.(framework.FilterPlugin).Filter(context.Background(), nil, tc.pod, ni)
+			if s.Code() != tc.expectedCode {
+				t.Fatalf("unexpected code: got %v, expected %v, got reason: %v", s.Code(), tc.expectedCode, s.Message())
 			}
 		})
 	}
