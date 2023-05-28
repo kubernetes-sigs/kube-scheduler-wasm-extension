@@ -1,4 +1,4 @@
-package plugin
+package wasm
 
 import wazeroapi "github.com/tetratelabs/wazero/api"
 
