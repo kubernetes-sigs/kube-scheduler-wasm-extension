@@ -1,12 +1,15 @@
-package plugin
+package wasm
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
+	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
 
 	"github.com/tetratelabs/wazero"
 )
@@ -16,20 +19,22 @@ const (
 )
 
 // New initializes a new plugin and returns it.
-func New(guestPath string /*runtime.Object, framework.Handle*/) (framework.Plugin, error) {
-	// TODO: make this configuration via URL
-	const guestName = "example"
+func New(configuration runtime.Object, frameworkHandle framework.Handle) (framework.Plugin, error) {
+	config := PluginConfig{}
+	if err := frameworkruntime.DecodeInto(configuration, &config); err != nil {
+		return nil, fmt.Errorf("failed to decode into %s PluginConfig: %w", PluginName, err)
+	}
 
 	ctx := context.Background()
 
-	runtime, guestModule, err := prepareRuntime(ctx, guestPath)
+	runtime, guestModule, err := prepareRuntime(ctx, config.GuestPath)
 	if err != nil {
 		return nil, err
 	}
 
 	pl := &wasmPlugin{
 		guestModuleConfig: wazero.NewModuleConfig(),
-		guestName:         guestName,
+		guestName:         config.GuestName,
 		runtime:           runtime,
 		guestModule:       guestModule,
 		instanceCounter:   atomic.Uint64{},
