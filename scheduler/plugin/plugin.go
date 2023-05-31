@@ -81,14 +81,24 @@ type wasmPlugin struct {
 	pool              *guestPool
 }
 
+// guestPool manages the wasm guest instances.
+// It remember which guest instance is assigned to which pod in scheduling cycle or binding cycle.
 type guestPool struct {
 	// pool is a pool of unused guest instances.
 	pool sync.Pool
 
 	// scheduledPodUID is the UID of the pod that is being scheduled.
+	// The plugin will update this field at the beginning of each scheduling cycle (PreFilter).
+	//
+	// Note: We cannot unassign the guest instance in PostFilter/Permit
+	// because PostFilter is not enough to notice failures in the scheduling cycle,
+	// it's called only when the Pod is rejected in PreFilter or Filter.
+	// So, we need to trach Pods in the scheduling cycle and the binding cycle separately
+	// so that we can know which guest instance to unassign at PreFilter.
 	schedulingPodUID types.UID
 	// assignedToSchedulingPod has the guest instance assignedToSchedulingPod to the pod.
 	// assignedToSchedulingPod instance won't be put back to the pool until the scheduling cycle of this Pod is finished.
+	// The plugin will update this field at the beginning of each scheduling cycle (PreFilter) along with schedulingPodUID.
 	assignedToSchedulingPod *guest
 	// assignedToSchedulingPodLock is a lock to protect the access to the assigned instance.
 	// The scheduler may call Filter(), AddPod(), RemovePod() concurrently, and we need to take a lock.
@@ -114,17 +124,26 @@ func (pl *wasmPlugin) newGuestPool(ctx context.Context) (*guestPool, error) {
 	return p, nil
 }
 
-// assign assigns the guest instance to the pod so that the same pod can always get the same guest instance.
-func (g *guestPool) assign(guest *guest, podUID types.UID) {
+// assignForScheduling assigns the guest instance to the pod in the scheduling cycle
+// so that the same pod can always get the same guest instance.
+func (g *guestPool) assignForScheduling(guest *guest, podUID types.UID) {
 	g.assignedToSchedulingPod = guest
 	g.schedulingPodUID = podUID
 }
 
-// assignForBinding assigns the guest instance to the pod for binding cycle.
-// This function doesn't take a lock because it is called in the scheduling cycle meaning it'll never called in parallel.
+// assignForBinding assigns the guest instance to the pod in the binding cycle.
+// This function doesn't take a lock because it is supposed to be called in the scheduling cycle meaning it'll never called in parallel.
 func (g *guestPool) assignForBinding(podUID types.UID) {
 	guest := g.assignedToSchedulingPod
 	g.assignedToBindingPod[podUID] = guest
+}
+
+// unassignForScheduling unassigns the guest instance from the pod and put the instance back to the pool.
+func (g *guestPool) unassignForScheduling() {
+	assigned := g.assignedToSchedulingPod
+	g.assignedToSchedulingPod = nil
+	g.schedulingPodUID = ""
+	g.put(assigned)
 }
 
 // unassignForBinding unassigns the guest instance from the pod in the binding cycle.
@@ -134,23 +153,15 @@ func (g *guestPool) unassignForBinding(podUID types.UID) {
 	g.put(assigned)
 }
 
-// unassign unassigns the guest instance from the pod and put the instance back to the pool.
-func (g *guestPool) unassign() {
-	assigned := g.assignedToSchedulingPod
-	g.assignedToSchedulingPod = nil
-	g.schedulingPodUID = ""
-	g.put(assigned)
-}
-
 // put puts the guest instance back to the pool.
 func (g *guestPool) put(guest *guest) {
 	g.pool.Put(guest)
 }
 
-// get gets a guest instance for the given Pod.
-// if the pod has already got a guest, it returns the guest.
+// getInstanceForSchedulingPod gets a guest instance for the Pod in the scheduling cycle.
+// If the pod has already got a guest, it returns the guest.
 // Otherwise, it gets a guest from the pool.
-func (p *guestPool) get(ctx context.Context, podUID types.UID) (*guest, bool) {
+func (p *guestPool) getInstanceForSchedulingPod(ctx context.Context, podUID types.UID) (*guest, bool) {
 	// Check if the pod has already got a guest.
 	if podUID == p.schedulingPodUID {
 		return p.assignedToSchedulingPod, true
@@ -167,10 +178,7 @@ func (p *guestPool) get(ctx context.Context, podUID types.UID) (*guest, bool) {
 		return nil, false
 	}
 
-	// Assign the guest to the pod.
-	p.assign(gue, podUID)
-
-	return g.(*guest), true
+	return gue, true
 }
 
 var _ framework.FilterPlugin = (*wasmPlugin)(nil)
@@ -181,16 +189,19 @@ func (pl *wasmPlugin) Name() string {
 }
 
 func (pl *wasmPlugin) getOrCreateGuest(ctx context.Context, podUID types.UID) (*guest, error) {
-	poolG, ok := pl.pool.get(ctx, podUID)
+	poolG, ok := pl.pool.getInstanceForSchedulingPod(ctx, podUID)
 	if !ok {
 		if g, createErr := pl.newGuest(ctx); createErr != nil {
 			return nil, createErr
 		} else {
 			poolG = g
 			// Assign this new guest to the pod.
-			pl.pool.assign(poolG, podUID)
+			pl.pool.assignForScheduling(poolG, podUID)
 		}
 	}
+
+	// Assign the guest to the pod.
+	pl.pool.assignForScheduling(poolG, podUID)
 
 	return poolG, nil
 }
@@ -201,7 +212,7 @@ func (pl *wasmPlugin) PreFilterExtensions() framework.PreFilterExtensions {
 
 func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod) (*framework.PreFilterResult, *framework.Status) {
 	// When PreFilter is called, run unassign because the previous scheduling cycle should have been finished.
-	pl.pool.unassign()
+	pl.pool.unassignForScheduling()
 
 	_, err := pl.getOrCreateGuest(ctx, pod.GetUID())
 	if err != nil {
