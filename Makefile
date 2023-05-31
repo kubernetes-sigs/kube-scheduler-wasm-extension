@@ -1,3 +1,13 @@
+%/main.wasm: %/main.go
+	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi main.go)
+
+.PHONY: build-tinygo
+build-tinygo: examples/filter-simple/main.wasm examples/noop/main.wasm
+
+.PHONY: bench-plugin
+bench-plugin:
+	@(cd internal/e2e; go test -run='^$$' -bench '^BenchmarkPlugin.*$$' . -count=6)
+
 .PHONY: proto-tools
 proto-tools:
 	cd ./kubernetes/proto/tools; \

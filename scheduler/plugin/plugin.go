@@ -19,6 +19,7 @@ package wasm
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 
@@ -30,9 +31,9 @@ import (
 	"github.com/tetratelabs/wazero"
 )
 
-const (
-	PluginName = "wasm"
-)
+const PluginName = "wasm"
+
+var _ frameworkruntime.PluginFactory = New
 
 // New initializes a new plugin and returns it.
 func New(configuration runtime.Object, frameworkHandle framework.Handle) (framework.Plugin, error) {
@@ -43,7 +44,12 @@ func New(configuration runtime.Object, frameworkHandle framework.Handle) (framew
 
 	ctx := context.Background()
 
-	runtime, guestModule, err := prepareRuntime(ctx, config.GuestPath)
+	guestBin, err := os.ReadFile(config.GuestPath)
+	if err != nil {
+		return nil, fmt.Errorf("wasm: error reading guest binary at %s: %w", config.GuestPath, err)
+	}
+
+	runtime, guestModule, err := prepareRuntime(ctx, guestBin)
 	if err != nil {
 		return nil, err
 	}

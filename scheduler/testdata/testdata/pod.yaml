@@ -1,0 +1,196 @@
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      ad.datadoghq.com/hoge-custom-controller.check_names: '["prometheus"]'
+      ad.datadoghq.com/hoge-custom-controller.init_configs: '[{}]'
+      ad.datadoghq.com/hoge-custom-controller.logs: '[{"source":"docker","service":"hoge-custom-controller"}]'
+      cni.projectcalico.org/podIP: hogehoge
+      cni.projectcalico.org/podIPs: hogehoge
+      container.apparmor.security.beta.kubernetes.io/hoge-custom-controller: runtime/default
+      container.apparmor.security.beta.kubernetes.io/workload-identity-init-container: runtime/default
+      kubectl.kubernetes.io/default-container: hoge-custom-controller
+    creationTimestamp: "2023-05-20T00:46:28Z"
+    generateName: hoge-custom-controller-d87b6785d-
+    labels:
+      app: hoge-custom-controller
+      app.sanposhiho.in/name: hoge-custom-controller
+      app.sanposhiho.in/part-of: sanposhiho-pr-rc
+      sanposhiho.com/container-name-0: hoge-custom-controller
+      sanposhiho.com/pod-name: hoge-custom-controller-d87b6785d-c8bqf
+      pod-template-hash: d87b6785d
+      topology.sanposhiho.in/cluster: citadel-2g-lab-tokyo-01
+      topology.sanposhiho.in/environment: dev
+      topology.sanposhiho.in/region: tokyo
+      version: main
+    name: hoge-custom-controller-d87b6785d-c8bqf
+    namespace: sanposhiho-pr-rc-lab
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: hoge-custom-controller-d87b6785d
+      uid: hogehogehoge
+    resourceVersion: "2433645240"
+    uid: 3ba2f153-7785-4c13-9d2d-d1661572f930
+  spec:
+    containers:
+    - env:
+      - name: ENV
+        value: dev
+      - name: GCP_PROJECT_ID
+        value: sanposhiho-poc
+      - name: LOG_LEVEL
+        value: info
+      - name: PARALLELISM
+        value: "8"
+      - name: INTERVAL
+        value: 5s
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      image: gcr.io/sanposhiho-hogehoge/hoge-custom-controller:latest
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /metrics
+          port: healthz
+          scheme: HTTP
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      name: hoge-custom-controller
+      ports:
+      - containerPort: 9090
+        name: healthz
+        protocol: TCP
+      - containerPort: 3000
+        name: http
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /metrics
+          port: healthz
+          scheme: HTTP
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2G
+        requests:
+          cpu: "1"
+          memory: 2G
+      securityContext:
+        privileged: false
+        readOnlyRootFilesystem: false
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+    dnsConfig:
+      options:
+      - name: ndots
+        value: "2"
+      - name: single-request-reopen
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    imagePullSecrets:
+    - name: gcr-image-puller-service-account
+    initContainers:
+    - command:
+      - /bin/sh
+      - -c
+      - "echo hogehoge"
+      image: curlimages/curl:7.78.0
+      imagePullPolicy: IfNotPresent
+      name: workload-identity-init-container
+      resources:
+        limits:
+          cpu: 100m
+          memory: 8M
+        requests:
+          cpu: 100m
+          memory: 8M
+      securityContext:
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+    priority: 0
+    readinessGates:
+    - conditionType: hogehoge
+    restartPolicy: Always
+    serviceAccount: hogehoge
+    serviceAccountName: hogehoge
+    terminationGracePeriodSeconds: 90
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: null
+      message: 'Timeout in hoge'
+      reason: HOGETimeout
+      status: "True"
+      type: cloud.google.com/sanposhiho-ready
+    - lastProbeTime: null
+      lastTransitionTime: "2023-05-20T00:48:29Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2023-05-20T01:00:29Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2023-05-20T00:49:50Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2023-05-20T00:47:07Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: containerd://jfdklajfgkldsahgiopwdanvkledsaj
+      image: gcr.io/sanposhiho-hogehoge/hoge-custom-controller:latest
+      imageID: gcr.io/sanposhiho-hogehoge/hoge-custom-controller@sha256:2cfkd3e940ad859bdbc5df6c2db7c729996fab9729ea3b2e197a3c75d2377c29b
+      lastState: {}
+      name: hoge-custom-controller
+      ready: true
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2023-05-20T00:49:42Z"
+    initContainerStatuses:
+    - containerID: containerd://4fd3bbdbfdv2394996307548d8266a79c9281adc11b0472e536da1c630d4641d
+      image: docker.io/curlimages/curl:7.78.0
+      imageID: docker.io/curlimages/curl@sha256:fdhjskalfhdsjakfdhjksalhfjdskalhfdjksal
+      lastState: {}
+      name: init-container
+      ready: true
+      restartCount: 0
+      state:
+        terminated:
+          containerID: containerd://yudisaoyfuidsaofdsaghfjdsamfdvsanmfds
+          exitCode: 0
+          finishedAt: "2023-05-20T00:48:28Z"
+          reason: Completed
+          startedAt: "2023-05-20T00:48:28Z"
+    phase: Running
+    qosClass: Guaranteed
+    startTime: "2023-05-20T00:47:07Z"
