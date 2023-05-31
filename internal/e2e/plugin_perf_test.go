@@ -27,13 +27,15 @@ import (
 )
 
 func BenchmarkPluginFilter(b *testing.B) {
-	noop, err := testdata.NewPluginExampleNoop()
+	ctx := context.Background()
+
+	noop, err := testdata.NewPluginExampleNoop(ctx)
 	if err != nil {
 		b.Fatalf("failed to create plugin: %v", err)
 	}
 	defer noop.(io.Closer).Close()
 
-	filterSimple, err := testdata.NewPluginExampleFilterSimple()
+	filterSimple, err := testdata.NewPluginExampleFilterSimple(ctx)
 	if err != nil {
 		b.Fatalf("failed to create plugin: %v", err)
 	}
@@ -80,7 +82,7 @@ func BenchmarkPluginFilter(b *testing.B) {
 
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						s := pl.plugin.(framework.FilterPlugin).Filter(context.Background(), nil, tc.pod, ni)
+						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
 						if want, have := framework.Success, s.Code(); want != have {
 							b.Fatalf("unexpected code: got %v, expected %v, got reason: %v", want, have, s.Message())
 						}

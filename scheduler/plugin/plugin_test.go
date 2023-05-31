@@ -48,11 +48,12 @@ func TestFilter(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tt := range tests {
 		tc := tt
 
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := testdata.NewPluginExampleFilterSimple()
+			p, err := testdata.NewPluginExampleFilterSimple(ctx)
 			if err != nil {
 				t.Fatalf("failed to create plugin: %v", err)
 			}
@@ -60,7 +61,7 @@ func TestFilter(t *testing.T) {
 
 			ni := framework.NewNodeInfo()
 			ni.SetNode(tc.node)
-			s := p.(framework.FilterPlugin).Filter(context.Background(), nil, tc.pod, ni)
+			s := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
 			if s.Code() != tc.expectedCode {
 				t.Fatalf("unexpected code: got %v, expected %v, got reason: %v", s.Code(), tc.expectedCode, s.Message())
 			}
