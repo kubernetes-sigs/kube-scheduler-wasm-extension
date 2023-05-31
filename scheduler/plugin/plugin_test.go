@@ -27,13 +27,13 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/testdata"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
-const exampleWasmPath = "../example/main.wasm"
+var ctx = context.Background()
 
 func Test_getOrCreateGuest(t *testing.T) {
-	p, err := testdata.NewPluginExampleFilterSimple()
+	p, err := test.NewPluginExampleFilterSimple(ctx)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -44,7 +44,6 @@ func Test_getOrCreateGuest(t *testing.T) {
 		t.Fatalf("failed to cast plugin to wasmPlugin: %v", ok)
 	}
 
-	ctx := context.Background()
 	uid := types.UID("test-uid")
 	differentuid := types.UID("test-uid")
 
@@ -80,7 +79,7 @@ func Test_getOrCreateGuest(t *testing.T) {
 
 // Test_guestPool_assignedToBindingPod tests that the assignedToBindingPod field is set correctly.
 func Test_guestPool_assignedToBindingPod(t *testing.T) {
-	p, err := testdata.NewPluginExampleFilterSimple()
+	p, err := test.NewPluginExampleFilterSimple(ctx)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -91,7 +90,6 @@ func Test_guestPool_assignedToBindingPod(t *testing.T) {
 		t.Fatalf("failed to cast plugin to wasmPlugin: %v", ok)
 	}
 
-	ctx := context.Background()
 	pod := st.MakePod().UID("uid1").Name("test-pod").Node("good-node").Obj()
 	nextPod := st.MakePod().UID("uid2").Name("test-pod2").Node("good-node").Obj()
 
@@ -162,7 +160,7 @@ func Test_guestPool_assignedToBindingPod(t *testing.T) {
 
 // Test_guestPool_assignedToSchedulingPod tests that the schedulingPodUID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
-	p, err := testdata.NewPluginExampleFilterSimple()
+	p, err := test.NewPluginExampleFilterSimple(ctx)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -173,7 +171,6 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 		t.Fatalf("failed to cast plugin to wasmPlugin: %v", ok)
 	}
 
-	ctx := context.Background()
 	pod := st.MakePod().UID("uid1").Name("test-pod").Node("good-node").Obj()
 	nextPod := st.MakePod().UID("uid2").Name("test-pod2").Node("good-node").Obj()
 
@@ -204,36 +201,98 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 
 	if pl.GetInstanceFromPool() == nil {
 		t.Fatal("expected guest instance that is used for `pod` to be in the pool, but it's not")
+
+	}
+}
+
+func TestNewFromConfig(t *testing.T) {
+	tests := []struct {
+		name          string
+		guestPath     string
+		expectedError string
+	}{
+		{
+			name:      "valid wasm",
+			guestPath: test.PathExampleFilterSimple,
+		},
+		{
+			name:      "panic on _start",
+			guestPath: test.PathTestPanicOnStart,
+			expectedError: `failed to create a guest pool: wasm: instantiate error: panic!
+module[panic_on_start-1] function[_start] failed: wasm error: unreachable
+wasm stack trace:
+	panic_on_start.main()`,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: tc.guestPath})
+			if err != nil {
+				if want, have := tc.expectedError, err.Error(); want != have {
+					t.Fatalf("unexpected error: want %v, have %v", want, have)
+				}
+			} else if want := tc.expectedError; want != "" {
+				t.Fatalf("expected error %v", want)
+			}
+			if p != nil {
+				p.(io.Closer).Close()
+			}
+		})
 	}
 }
 
 func TestFilter(t *testing.T) {
 	tests := []struct {
-		name         string
-		pod          *v1.Pod
-		node         *v1.Node
-		expectedCode framework.Code
+		name            string
+		guestPath       string
+		pod             *v1.Pod
+		node            *v1.Node
+		expectedCode    framework.Code
+		expectedMessage string
 	}{
 		{
 			name:         "success: node is match with spec.NodeName",
-			pod:          testdata.PodSmall,
-			node:         testdata.NodeSmall,
+			pod:          test.PodSmall,
+			node:         test.NodeSmall,
 			expectedCode: framework.Success,
 		},
 		{
-			name:         "filtered: bad-node",
-			pod:          testdata.PodSmall,
-			node:         st.MakeNode().Name("bad-node").Obj(),
-			expectedCode: framework.Unschedulable,
+			name:            "filtered: bad-node",
+			pod:             test.PodSmall,
+			node:            st.MakeNode().Name("bad-node").Obj(),
+			expectedCode:    framework.Unschedulable,
+			expectedMessage: "good-node != bad-node",
+		},
+		{
+			name:         "filtered: panic",
+			guestPath:    test.PathErrorPanicOnFilter,
+			pod:          test.PodSmall,
+			node:         test.NodeSmall,
+			expectedCode: framework.Error,
+			expectedMessage: `wasm: filter error: panic!
+wasm error: unreachable
+wasm stack trace:
+	panic_on_filter.filter() i32`,
 		},
 	}
 
-	ctx := context.Background()
 	for _, tt := range tests {
 		tc := tt
 
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := testdata.NewPluginExampleFilterSimple(ctx)
+			t.Parallel()
+
+			guestPath := tc.guestPath
+			if guestPath == "" {
+				guestPath = test.PathExampleFilterSimple
+			}
+
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
 			if err != nil {
 				t.Fatalf("failed to create plugin: %v", err)
 			}
@@ -242,8 +301,11 @@ func TestFilter(t *testing.T) {
 			ni := framework.NewNodeInfo()
 			ni.SetNode(tc.node)
 			s := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
-			if s.Code() != tc.expectedCode {
-				t.Fatalf("unexpected code: got %v, expected %v, got reason: %v", s.Code(), tc.expectedCode, s.Message())
+			if want, have := tc.expectedCode, s.Code(); want != have {
+				t.Fatalf("unexpected code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedMessage, s.Message(); want != have {
+				t.Fatalf("unexpected message: want %v, have %v", want, have)
 			}
 		})
 	}

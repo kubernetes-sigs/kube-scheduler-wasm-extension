@@ -16,7 +16,10 @@
 
 package guest
 
+// Override the default GC with a more performant one.
+// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
+	_ "github.com/wasilibs/nottinygc"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"

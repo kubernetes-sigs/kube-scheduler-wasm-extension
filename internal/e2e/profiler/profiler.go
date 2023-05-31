@@ -23,11 +23,9 @@ import (
 	"os"
 
 	"github.com/stealthrocket/wzprof"
+	"github.com/tetratelabs/wazero/experimental"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/testdata"
-
-	"github.com/tetratelabs/wazero/experimental"
 )
 
 func main() {
@@ -37,8 +35,8 @@ func main() {
 		log.Panicln("error reading", guestPath, ":", err)
 	}
 
-	node := testdata.NodeReal
-	pod := testdata.PodReal
+	node := test.NodeReal
+	pod := test.PodReal
 	ni := framework.NewNodeInfo()
 	ni.SetNode(node)
 
