@@ -2,6 +2,7 @@ package testdata
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"fmt"
 	"path"
@@ -15,25 +16,25 @@ import (
 	apiyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/kubectl/pkg/scheme"
 	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
+	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 )
 
 // NewPluginExampleFilterSimple returns a new plugin configured with PathExampleFilterSimple.
-func NewPluginExampleFilterSimple() (frameworkruntime.Plugin, error) {
-	return wasm.New(&apiruntime.Unknown{
-		ContentType: "application/json",
-		Raw:         []byte(fmt.Sprintf(`{"guestName":"filter-simple", "guestPath":"%s"}`, PathExampleFilterSimple)),
-	}, nil)
+func NewPluginExampleFilterSimple(ctx context.Context) (frameworkruntime.Plugin, error) {
+	return wasm.NewFromConfig(ctx, wasm.PluginConfig{
+		GuestName: "filter-simple",
+		GuestPath: PathExampleFilterSimple,
+	})
 }
 
 var PathExampleFilterSimple = pathExample("filter-simple")
 
 // NewPluginExampleNoop returns a new plugin configured with PathExampleNoop.
-func NewPluginExampleNoop() (frameworkruntime.Plugin, error) {
-	return wasm.New(&apiruntime.Unknown{
-		ContentType: "application/json",
-		Raw:         []byte(fmt.Sprintf(`{"guestName":"noop", "guestPath":"%s"}`, PathExampleNoop)),
-	}, nil)
+func NewPluginExampleNoop(ctx context.Context) (frameworkruntime.Plugin, error) {
+	return wasm.NewFromConfig(ctx, wasm.PluginConfig{
+		GuestName: "noop",
+		GuestPath: PathExampleNoop,
+	})
 }
 
 var PathExampleNoop = pathExample("noop")

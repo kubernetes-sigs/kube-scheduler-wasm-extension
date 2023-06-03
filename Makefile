@@ -4,6 +4,17 @@
 .PHONY: build-tinygo
 build-tinygo: examples/filter-simple/main.wasm examples/noop/main.wasm
 
+%/main-debug.wasm: %/main.go
+	@(cd $(@D); tinygo build -o main-debug.wasm -scheduler=none -target=wasi main.go)
+
+.PHONY: profile
+profile: examples/filter-simple/main-debug.wasm
+	@cd ./internal/e2e; \
+	go run ./profiler/profiler.go ../../$^; \
+	go tool pprof -text cpu.pprof; \
+	go tool pprof -text mem.pprof; \
+	rm cpu.pprof mem.pprof
+
 .PHONY: bench-plugin
 bench-plugin:
 	@(cd internal/e2e; go test -run='^$$' -bench '^BenchmarkPlugin.*$$' . -count=6)

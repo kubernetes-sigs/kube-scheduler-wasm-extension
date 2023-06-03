@@ -1,0 +1,6 @@
+# debug builds are too big to check in
+main-debug.wasm
+
+# don't check in profiler data
+cpu.pprof
+mem.pprof

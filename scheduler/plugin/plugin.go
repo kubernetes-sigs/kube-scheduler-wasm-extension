@@ -42,8 +42,12 @@ func New(configuration runtime.Object, frameworkHandle framework.Handle) (framew
 		return nil, fmt.Errorf("failed to decode into %s PluginConfig: %w", PluginName, err)
 	}
 
-	ctx := context.Background()
+	return NewFromConfig(context.Background(), config)
+}
 
+// NewFromConfig is like New, except it allows us to explicitly provide the
+// context and configuration of the plugin. This allows flexibility in tests.
+func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, error) {
 	guestBin, err := os.ReadFile(config.GuestPath)
 	if err != nil {
 		return nil, fmt.Errorf("wasm: error reading guest binary at %s: %w", config.GuestPath, err)
