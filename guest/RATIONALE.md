@@ -15,7 +15,7 @@ reasons are performance and lack of ability to export functions.
 
 ### Lack of exported functions
 
-Plugins can implement multiple hooks, such as `PreFilter` and `Filter`. An FFI
+Plugins can implement multiple hooks(i.e. extension points in scheduler framework), such as `PreFilter` and `Filter`. An FFI
 approach to implementing plugins would export a WebAssembly function for each
 hook. A sub-process (WASI) approach would use a `main` argument for each hook.
 
