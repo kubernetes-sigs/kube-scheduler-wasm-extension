@@ -17,8 +17,6 @@
 package wasm
 
 import (
-	"context"
-
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
@@ -32,10 +30,6 @@ func NewTestWasmPlugin(p framework.Plugin) (*WasmPlugin, bool) {
 	}
 
 	return &WasmPlugin{wasmPlugin: pl}, true
-}
-
-func (w *WasmPlugin) GetOrCreateGuest(ctx context.Context, podUID types.UID) (*guest, error) {
-	return w.getOrCreateGuest(ctx, podUID)
 }
 
 func (w *WasmPlugin) ClearGuestModule() {
