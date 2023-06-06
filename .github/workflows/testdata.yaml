@@ -1,0 +1,54 @@
+# `name` value will appear "as is" in the badge.
+# See https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow#adding-a-workflow-status-badge-to-your-repository
+# yamllint --format github .github/workflows/testdata.yaml
+---
+name: "testdata"
+
+on:
+  push:  # We run tests on non-tagged pushes to main
+    tags: ''
+    branches: main
+    paths-ignore:
+      - '**/*.md'
+  pull_request:  # We also run tests on pull requests targeted at the main branch.
+    branches: main
+    paths-ignore:
+      - '**/*.md'
+  # workflow_dispatch will let us manually trigger the workflow from GitHub actions dashboard.
+  # For example, you can try to build a branch without raising a pull request.
+  # See https://docs.github.com/en/free-pro-team@latest/actions/managing-workflow-runs/manually-running-a-workflow
+  workflow_dispatch:
+
+jobs:
+  # Note: TinyGo is not idempotent when generating wasm, so we neither check in
+  # %.wasm, nor do we verify it matches what's checked in.
+  testdata:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        go-version:  # Note: Go only supports 2 versions: https://go.dev/doc/devel/release#policy
+          - "1.20"
+        tinygo-version:  # Note: TinyGo only supports latest: https://github.com/tinygo-org/tinygo/releases
+          - "0.27.0"  # Latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: "Set up TinyGo"
+        run: |  # Installing via curl so commands are similar on OS/x
+          tinygo_version=${{ matrix.tinygo-version }}
+          curl -sSL https://github.com/tinygo-org/tinygo/releases/download/v${tinygo_version}/tinygo${tinygo_version}.linux-amd64.tar.gz | sudo tar -C /usr/local -xzf -
+          echo "TINYGOROOT=/usr/local/tinygo" >> $GITHUB_ENV
+          echo "/usr/local/tinygo/bin" >> $GITHUB_PATH
+
+      - name: "Set up wat2wasm"
+        run: |  # Needed for testdata. wabt includes wat2wasm.
+          wabt_version=1.0.33
+          wabt_url=https://github.com/WebAssembly/wabt/releases/download/${wabt_version}/wabt-${wabt_version}-ubuntu.tar.gz
+          curl -sSL ${wabt_url} | tar --strip-components 2 -C /usr/local/bin -xzf - wabt-${wabt_version}/bin/wat2wasm
+
+      - run: make testdata

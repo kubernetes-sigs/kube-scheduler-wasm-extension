@@ -30,6 +30,7 @@ import (
 
 	proto "google.golang.org/protobuf/proto"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+
 	runtime "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/runtime"
 )
 

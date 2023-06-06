@@ -26,6 +26,7 @@ package v1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+
 	instr "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/instr"
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 	resource "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/resource"

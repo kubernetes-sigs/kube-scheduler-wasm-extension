@@ -1,3 +1,7 @@
+gofumpt       := mvdan.cc/gofumpt@v0.5.0
+gosimports    := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
+golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
+
 %/main.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi main.go)
 
@@ -7,17 +11,17 @@ build-tinygo: examples/filter-simple/main.wasm examples/noop/main.wasm
 %/main-debug.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main-debug.wasm -scheduler=none -target=wasi main.go)
 
-.PHONY: testdata
-testdata:
-	@$(MAKE) build-tinygo
-	@$(MAKE) build-wat
-
-.PHONY: build-tinygo
+.PHONY: build-wat
 build-wat: $(wildcard scheduler/test/testdata/*/*.wat)
 	@for f in $^; do \
         wasm=$$(echo $$f | sed -e 's/\.wat/\.wasm/'); \
 	    wat2wasm -o $$wasm --debug-names $$f; \
 	done
+
+.PHONY: testdata
+testdata:
+	@$(MAKE) build-tinygo
+	@$(MAKE) build-wat
 
 .PHONY: profile
 profile: examples/filter-simple/main-debug.wasm
@@ -72,3 +76,52 @@ update-kubernetes-proto: proto-tools
 		--go-plugin_opt=Mk8s.io/apimachinery/pkg/runtime/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/runtime \
 		--go-plugin_opt=Mk8s.io/apimachinery/pkg/runtime/schema/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/schema \
 		--go-plugin_opt=Mk8s.io/apimachinery/pkg/util/intstr/generated.proto=sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/instr;
+	@$(MAKE) format
+
+.PHONY: lint
+lint:
+	@for f in $(all_mods); do \
+        (cd $$(dirname $$f); go run $(golangci_lint) run --timeout 5m); \
+	done
+
+.PHONY: format
+format:
+	@go run $(gofumpt) -l -w .
+	@go run $(gosimports) -local sigs.k8s.io/kube-scheduler-wasm-extension/ -w $(shell find . -name '*.go' -type f)
+
+all_examples :=  $(wildcard ./examples/*/go.mod)
+# all_mods are the go modules including examples. Examples should also be
+# formatted, lint checked, etc. even if they are are built with TinyGo.
+all_mods     := ./internal/e2e/go.mod ./scheduler/go.mod ./guest/go.mod ./kubernetes/proto/go.mod $(all_examples)
+
+.PHONY: tidy
+tidy:
+	@for f in $(all_mods); do \
+        (cd $$(dirname $$f); go mod tidy); \
+	done
+
+.PHONY: build
+build:
+	@# We filter out the examples main packages, as nottinygo cannot compiled \
+     # to a normal platform executable.
+	@for f in $(filter-out $(all_examples), $(all_mods)); do \
+        (cd $$(dirname $$f); go build ./...); \
+	done
+
+.PHONY: test-scheduler
+test-scheduler:
+	@for d in ./scheduler ./internal/e2e; do \
+        (cd $$d; go test ./...); \
+	done
+
+.PHONY: check  # Pre-flight check for pull requests
+check:
+	@# To make troubleshooting easier, order targets from simple to specific.
+	@$(MAKE) tidy
+	@$(MAKE) build
+	@$(MAKE) format
+	@$(MAKE) lint
+	@if [ ! -z "`git status -s`" ]; then \
+		echo "The following differences will fail CI until committed:"; \
+		git diff --exit-code; \
+	fi

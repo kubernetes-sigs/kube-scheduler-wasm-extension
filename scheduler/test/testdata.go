@@ -111,7 +111,6 @@ func relativePath(fromThisFile string) string {
 	p := path.Join(path.Dir(thisFile), fromThisFile)
 	if abs, err := filepath.Abs(p); err != nil {
 		panic(err)
-		return ""
 	} else {
 		return abs
 	}
