@@ -60,11 +60,16 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, 
 		return nil, err
 	}
 
+	guestName := config.GuestName
+	if guestName == "" {
+		guestName = guestModule.Name()
+	}
+
 	pl := &wasmPlugin{
-		guestModuleConfig: wazero.NewModuleConfig(),
-		guestName:         config.GuestName,
 		runtime:           runtime,
+		guestName:         guestName,
 		guestModule:       guestModule,
+		guestModuleConfig: wazero.NewModuleConfig(),
 		instanceCounter:   atomic.Uint64{},
 	}
 

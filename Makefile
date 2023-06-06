@@ -1,11 +1,23 @@
 %/main.wasm: %/main.go
-	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi main.go)
+	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi main.go)
 
 .PHONY: build-tinygo
 build-tinygo: examples/filter-simple/main.wasm examples/noop/main.wasm
 
 %/main-debug.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main-debug.wasm -scheduler=none -target=wasi main.go)
+
+.PHONY: testdata
+testdata:
+	@$(MAKE) build-tinygo
+	@$(MAKE) build-wat
+
+.PHONY: build-tinygo
+build-wat: $(wildcard scheduler/test/testdata/*/*.wat)
+	@for f in $^; do \
+        wasm=$$(echo $$f | sed -e 's/\.wat/\.wasm/'); \
+	    wat2wasm -o $$wasm --debug-names $$f; \
+	done
 
 .PHONY: profile
 profile: examples/filter-simple/main-debug.wasm

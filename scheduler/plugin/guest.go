@@ -35,6 +35,7 @@ const (
 
 type guest struct {
 	guest    wazeroapi.Module
+	out      *bytes.Buffer
 	filterFn wazeroapi.Function
 }
 
@@ -57,22 +58,44 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 	instanceName := pl.guestName + "-" + strconv.FormatUint(instanceNum, 10)
 	guestModuleConfig := pl.guestModuleConfig.WithName(instanceName)
 
+	// A guest may have an instantiation error, which writes to stdout or stderr.
+	// Capture stdout and stderr during instantiation.
+	var out bytes.Buffer
+	guestModuleConfig = guestModuleConfig.WithStdout(&out).WithStderr(&out)
+
 	g, err := pl.runtime.InstantiateModule(ctx, pl.guestModule, guestModuleConfig)
 	if err != nil {
 		_ = pl.runtime.Close(ctx)
-		return nil, fmt.Errorf("wasm: error instantiating guest: %w", err)
+		return nil, decorateError(&out, "instantiate", err)
+	} else {
+		out.Reset()
 	}
 
-	return &guest{guest: g, filterFn: g.ExportedFunction(guestExportFilter)}, nil
+	return &guest{
+		guest:    g,
+		out:      &out,
+		filterFn: g.ExportedFunction(guestExportFilter),
+	}, nil
 }
 
 // filter calls the WebAssembly guest function handler.FuncHandleRequest.
 func (g *guest) filter(ctx context.Context) *framework.Status {
+	defer g.out.Reset()
 	if results, err := g.filterFn.Call(ctx); err != nil {
-		return framework.AsStatus(err)
+		return framework.AsStatus(decorateError(g.out, "filter", err))
 	} else {
 		code := uint32(results[0])
 		reason := filterArgsFromContext(ctx).reason
 		return framework.NewStatus(framework.Code(code), reason)
 	}
+}
+
+func decorateError(out fmt.Stringer, fn string, err error) error {
+	detail := out.String()
+	if detail != "" {
+		err = fmt.Errorf("wasm: %s error: %s\n%v", fn, detail, err)
+	} else {
+		err = fmt.Errorf("wasm: %s error: %v", fn, err)
+	}
+	return err
 }

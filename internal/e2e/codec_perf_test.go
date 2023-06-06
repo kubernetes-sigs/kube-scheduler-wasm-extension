@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/testdata"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
 // BenchmarkUnmarshalVT helps explain protobuf unmarshalling performance. Even
@@ -43,22 +43,22 @@ func BenchmarkUnmarshalVT(b *testing.B) {
 	}{
 		{
 			name:      "node: small",
-			input:     mustMarshal(b, testdata.NodeSmall.Marshal),
+			input:     mustMarshal(b, test.NodeSmall.Marshal),
 			unmarshal: unmarshalNode,
 		},
 		{
 			name:      "node: real",
-			input:     mustMarshal(b, testdata.NodeReal.Marshal),
+			input:     mustMarshal(b, test.NodeReal.Marshal),
 			unmarshal: unmarshalNode,
 		},
 		{
 			name:      "pod: small",
-			input:     mustMarshal(b, testdata.PodSmall.Marshal),
+			input:     mustMarshal(b, test.PodSmall.Marshal),
 			unmarshal: unmarshalPod,
 		},
 		{
 			name:      "pod: real",
-			input:     mustMarshal(b, testdata.PodReal.Marshal),
+			input:     mustMarshal(b, test.PodReal.Marshal),
 			unmarshal: unmarshalPod,
 		},
 	}

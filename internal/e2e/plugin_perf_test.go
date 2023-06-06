@@ -23,19 +23,19 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/testdata"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
 func BenchmarkPluginFilter(b *testing.B) {
 	ctx := context.Background()
 
-	noop, err := testdata.NewPluginExampleNoop(ctx)
+	noop, err := test.NewPluginExampleNoop(ctx)
 	if err != nil {
 		b.Fatalf("failed to create plugin: %v", err)
 	}
 	defer noop.(io.Closer).Close()
 
-	filterSimple, err := testdata.NewPluginExampleFilterSimple(ctx)
+	filterSimple, err := test.NewPluginExampleFilterSimple(ctx)
 	if err != nil {
 		b.Fatalf("failed to create plugin: %v", err)
 	}
@@ -62,13 +62,13 @@ func BenchmarkPluginFilter(b *testing.B) {
 	}{
 		{
 			name: "params: small",
-			node: testdata.NodeSmall,
-			pod:  testdata.PodSmall,
+			node: test.NodeSmall,
+			pod:  test.PodSmall,
 		},
 		{
 			name: "params: real",
-			node: testdata.NodeReal,
-			pod:  testdata.PodReal,
+			node: test.NodeReal,
+			pod:  test.PodReal,
 		},
 	}
 
