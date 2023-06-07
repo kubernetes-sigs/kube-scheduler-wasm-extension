@@ -22,10 +22,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"k8s.io/kubernetes/pkg/scheduler/framework"
-
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
 const (
@@ -85,7 +84,7 @@ func (g *guest) filter(ctx context.Context) *framework.Status {
 		return framework.AsStatus(decorateError(g.out, "filter", err))
 	} else {
 		code := uint32(results[0])
-		reason := filterArgsFromContext(ctx).reason
+		reason := filterParamsFromContext(ctx).reason
 		return framework.NewStatus(framework.Code(code), reason)
 	}
 }

@@ -19,11 +19,10 @@ package wasm
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
-
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
 const (
@@ -54,11 +53,11 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 		Instantiate(ctx)
 }
 
-// filterArgsKey is a context.Context value associated with a filterArgs
+// filterParamsKey is a context.Context value associated with a filterParams
 // pointer to the current request.
-type filterArgsKey struct{}
+type filterParamsKey struct{}
 
-type filterArgs struct {
+type filterParams struct {
 	pod      *v1.Pod
 	nodeInfo *framework.NodeInfo
 	// reason is a field to avoid compiler-specific malloc/free functions, and
@@ -67,8 +66,8 @@ type filterArgs struct {
 	reason string
 }
 
-func filterArgsFromContext(ctx context.Context) *filterArgs {
-	return ctx.Value(filterArgsKey{}).(*filterArgs)
+func filterParamsFromContext(ctx context.Context) *filterParams {
+	return ctx.Value(filterParamsKey{}).(*filterParams)
 }
 
 // k8sSchedulerStatusReasonFn is a function used by the wasm guest to set the
@@ -84,14 +83,14 @@ func k8sSchedulerStatusReasonFn(ctx context.Context, mod wazeroapi.Module, stack
 	} else {
 		reason = string(b)
 	}
-	filterArgsFromContext(ctx).reason = reason
+	filterParamsFromContext(ctx).reason = reason
 }
 
 func k8sApiNodeInfoNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	node := filterArgsFromContext(ctx).nodeInfo.Node()
+	node := filterParamsFromContext(ctx).nodeInfo.Node()
 
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), node, buf, bufLimit))
 }
@@ -100,6 +99,6 @@ func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	pod := filterArgsFromContext(ctx).pod
+	pod := filterParamsFromContext(ctx).pod
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
 }

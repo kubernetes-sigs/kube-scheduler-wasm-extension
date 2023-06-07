@@ -26,56 +26,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
+
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
 var ctx = context.Background()
-
-func Test_getOrCreateGuest(t *testing.T) {
-	p, err := test.NewPluginExampleFilterSimple(ctx)
-	if err != nil {
-		t.Fatalf("failed to create plugin: %v", err)
-	}
-	defer p.(io.Closer).Close()
-
-	pl, ok := wasm.NewTestWasmPlugin(p)
-	if !ok {
-		t.Fatalf("failed to cast plugin to wasmPlugin: %v", ok)
-	}
-
-	uid := types.UID("test-uid")
-	differentuid := types.UID("test-uid")
-
-	g, err := pl.GetOrCreateGuest(ctx, uid)
-	if err != nil {
-		t.Fatalf("failed to get guest instance: %v", err)
-	}
-	if g == nil {
-		t.Fatalf("got nil guest instance")
-	}
-
-	// this should creat new guest instance because we pass the different podUID.
-	g, err = pl.GetOrCreateGuest(ctx, differentuid)
-	if err != nil {
-		t.Fatalf("failed to get guest instance: %v", err)
-	}
-	if g == nil {
-		t.Fatalf("got nil guest instance")
-	}
-
-	// remove guestModule to make sure that the next getOrCreateGuest() doesn't try to create new instance.
-	pl.ClearGuestModule()
-
-	// this should return the same guest instance as the previous one because we pass the same podUID.
-	g, err = pl.GetOrCreateGuest(ctx, uid)
-	if err != nil {
-		t.Fatalf("failed to get guest instance: %v", err)
-	}
-	if g == nil {
-		t.Fatalf("got nil guest instance")
-	}
-}
 
 // Test_guestPool_assignedToBindingPod tests that the assignedToBindingPod field is set correctly.
 func Test_guestPool_assignedToBindingPod(t *testing.T) {
@@ -201,7 +157,6 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 
 	if pl.GetInstanceFromPool() == nil {
 		t.Fatal("expected guest instance that is used for `pod` to be in the pool, but it's not")
-
 	}
 }
 

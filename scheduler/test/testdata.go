@@ -16,6 +16,7 @@ import (
 	apiyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/kubectl/pkg/scheme"
 	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework"
+
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 )
 
