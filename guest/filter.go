@@ -24,57 +24,87 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
-// Filter should be assigned in `main` to a FilterFunc function.
+// FilterPlugin should be assigned in `main` to a FilterPlugin instance.
 //
 // For example:
 //
 //	func main() {
-//		guest.Filter = api.FilterFunc(nameEqualsPodSpec)
+//		guest.FilterPlugin = api.FilterFunc(nameEqualsPodSpec)
 //	}
-var Filter api.Filter
+var FilterPlugin api.FilterPlugin
 
 // filter is only exported to the host.
 //
 //go:export filter
-func filter() (code uint32) { //nolint
-	if Filter == nil {
-		return
+func filter() uint32 { //nolint
+	// Pass on unconfigured filter
+	if FilterPlugin == nil {
+		return uint32(api.StatusCodeSuccess)
 	}
-	c, reason := Filter.Filter(filterArgs{})
-	if reason != "" {
-		imports.StatusReason(reason)
-	}
-	return uint32(c)
+
+	// The parameters passed are lazy with regard to host functions. This means
+	// a no-op plugin should not have any unmarshal penalty.
+	// TODO: Make these fields and reset on pre-filter or similar.
+	s := FilterPlugin.Filter(&nodeInfo{}, &pod{})
+	return imports.StatusToCode(s)
 }
 
-var _ api.FilterArgs = filterArgs{}
+var _ api.NodeInfo = (*nodeInfo)(nil)
 
-type filterArgs struct{}
-
-func (filterArgs) NodeInfo() api.NodeInfo {
-	return nodeInfo{}
+type nodeInfo struct {
+	n *protoapi.Node
 }
 
-func (filterArgs) Pod() *protoapi.Pod {
-	b := imports.Pod()
-	var msg protoapi.Pod
-	if err := msg.UnmarshalVT(b); err != nil {
-		panic(err.Error())
+func (n *nodeInfo) Node() *protoapi.Node {
+	return n.node()
+}
+
+func (n *nodeInfo) node() *protoapi.Node {
+	if node := n.n; node != nil {
+		return node
 	}
-	return &msg
-}
 
-var _ api.NodeInfo = nodeInfo{}
-
-type nodeInfo struct{}
-
-func (nodeInfo) Node() *protoapi.Node {
 	b := imports.NodeInfoNode()
 	var msg protoapi.Node
 	if err := msg.UnmarshalVT(b); err != nil {
 		panic(err)
 	}
-	return &msg
+	n.n = &msg
+	return n.n
+}
+
+var _ api.Pod = (*pod)(nil)
+
+type pod struct {
+	p *protoapi.Pod
+}
+
+func (p *pod) Metadata() *meta.ObjectMeta {
+	return p.pod().Metadata
+}
+
+func (p *pod) Spec() *protoapi.PodSpec {
+	return p.pod().Spec
+}
+
+func (p *pod) Status() *protoapi.PodStatus {
+	return p.pod().Status
+}
+
+// pod lazy initializes p from the imported host function imports.Pod.
+func (p *pod) pod() *protoapi.Pod {
+	if pod := p.p; pod != nil {
+		return pod
+	}
+
+	b := imports.Pod()
+	var msg protoapi.Pod
+	if err := msg.UnmarshalVT(b); err != nil {
+		panic(err.Error())
+	}
+	p.p = &msg
+	return p.p
 }

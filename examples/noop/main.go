@@ -22,10 +22,8 @@ import (
 )
 
 func main() {
-	guest.Filter = api.FilterFunc(filterNoop)
+	guest.FilterPlugin = api.FilterFunc(filterNoop)
 }
 
 // filterNoop doesn't do anything. This is used to test base-case performance.
-func filterNoop(api.FilterArgs) (api.StatusCode, string) {
-	return api.StatusCodeSuccess, ""
-}
+func filterNoop(api.NodeInfo, api.Pod) (status *api.Status) { return }

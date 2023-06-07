@@ -41,18 +41,23 @@ func stringToPtr(s string) (uint32, uint32) {
 	return uint32(uintptr(ptr)), uint32(len(s))
 }
 
-func getBytes(fn func(ptr uint32, limit bufLimit) (len uint32)) (result []byte) {
+func getBytes(fn func(ptr uint32, limit bufLimit) (len uint32)) []byte {
 	size := fn(uint32(readBufPtr), readBufLimit)
 	if size == 0 {
-		return
+		return nil
 	}
-	if size > 0 && size <= readBufLimit {
-		// copy to avoid passing a mutable buffer
-		result = make([]byte, size)
-		copy(result, readBuf)
-		return
-	}
+
+	// Ensure the result isn't a shared buffer.
 	buf := make([]byte, size)
+
+	// If the function result fit in our read buffer, copy it out.
+	if size <= readBufLimit {
+		copy(buf, readBuf)
+		return buf
+	}
+
+	// If the size returned from the function was larger than our read buffer,
+	// we need to execute it again. buf is exactly the right size now.
 	ptr := uintptr(unsafe.Pointer(&buf[0]))
 	_ = fn(uint32(ptr), size)
 	return buf

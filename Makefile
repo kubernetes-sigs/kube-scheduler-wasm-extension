@@ -9,7 +9,7 @@ golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
 build-tinygo: examples/filter-simple/main.wasm examples/noop/main.wasm
 
 %/main-debug.wasm: %/main.go
-	@(cd $(@D); tinygo build -o main-debug.wasm -scheduler=none -target=wasi main.go)
+	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi main.go)
 
 .PHONY: build-wat
 build-wat: $(wildcard scheduler/test/testdata/*/*.wat)
