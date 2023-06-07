@@ -23,6 +23,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
