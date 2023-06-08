@@ -31,23 +31,25 @@ var _ FilterPlugin = FilterFunc(nil)
 // FilterFunc adapts an ordinary function to a FilterPlugin.
 type FilterFunc func(pod Pod, nodeInfo NodeInfo) *Status
 
-// Filter returns f(a).
+// Filter returns f(pod, nodeInfo).
 func (f FilterFunc) Filter(pod Pod, nodeInfo NodeInfo) *Status {
 	return f(pod, nodeInfo)
 }
 
 // ScorePlugin is a WebAssembly implementation of framework.ScorePlugin.
+//
+// Note: This is int32, not int64. See /RATIONALE.md for why.
 type ScorePlugin interface {
-	Score(pod Pod, nodeName string) (int64, *Status)
+	Score(pod Pod, nodeName string) (int32, *Status)
 }
 
 var _ ScorePlugin = ScoreFunc(nil)
 
 // ScoreFunc adapts an ordinary function to a ScorePlugin.
-type ScoreFunc func(pod Pod, nodeName string) (int64, *Status)
+type ScoreFunc func(pod Pod, nodeName string) (int32, *Status)
 
-// Score returns f(a).
-func (f ScoreFunc) Score(pod Pod, nodeName string) (int64, *Status) {
+// Score returns f(pod, nodeName).
+func (f ScoreFunc) Score(pod Pod, nodeName string) (int32, *Status) {
 	return f(pod, nodeName)
 }
 

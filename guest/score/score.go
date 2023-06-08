@@ -1,5 +1,3 @@
-//go:build tinygo.wasm
-
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -16,20 +14,17 @@
    limitations under the License.
 */
 
-package imports
+// Package score exports an api.ScorePlugin to the host. Only import this
+// package when setting Plugin, as doing otherwise will cause overhead.
+package score
 
-//go:wasm-module k8s.io/api
-//go:export nodeInfo/node
-func k8sApiNodeInfoNode(ptr uint32, limit bufLimit) (len uint32)
+import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 
-//go:wasm-module k8s.io/api
-//go:export nodeName
-func k8sApiNodeName(ptr uint32, limit bufLimit) (len uint32)
-
-//go:wasm-module k8s.io/api
-//go:export pod
-func k8sApiPod(ptr uint32, limit bufLimit) (len uint32)
-
-//go:wasm-module k8s.io/scheduler
-//go:export status_reason
-func k8sSchedulerStatusReason(ptr, size uint32)
+// Plugin should be assigned in `main` to an api.ScorePlugin instance.
+//
+// For example:
+//
+//	func main() {
+//		score.Plugin = api.ScoreFunc(score100IfNameEqualsPodSpec)
+//	}
+var Plugin api.ScorePlugin

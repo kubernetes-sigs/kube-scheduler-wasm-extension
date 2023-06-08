@@ -62,3 +62,22 @@ func getBytes(fn func(ptr uint32, limit bufLimit) (len uint32)) []byte {
 	_ = fn(uint32(ptr), size)
 	return buf
 }
+
+func getString(fn func(ptr uint32, limit bufLimit) (len uint32)) string {
+	size := fn(uint32(readBufPtr), readBufLimit)
+	if size == 0 {
+		return ""
+	}
+
+	// If the function result fit in our read buffer, copy it out.
+	if size <= readBufLimit {
+		return string(readBuf[:size])
+	}
+
+	// If the size returned from the function was larger than our read buffer,
+	// we need to execute it again. Make a buffer of exactly the right size.
+	buf := make([]byte, size)
+	ptr := unsafe.Pointer(&buf[0])
+	_ = fn(uint32(uintptr(ptr)), size)
+	return unsafe.String((*byte)(ptr), size /* unsafe.IntegerType */)
+}

@@ -26,21 +26,14 @@ import (
 )
 
 const (
-	i32                      = wazeroapi.ValueTypeI32
+	i32, i64                 = wazeroapi.ValueTypeI32, wazeroapi.ValueTypeI64
 	k8sApi                   = "k8s.io/api"
 	k8sApiNodeInfoNode       = "nodeInfo/node"
+	k8sApiNodeName           = "nodeName"
 	k8sApiPod                = "pod"
 	k8sScheduler             = "k8s.io/scheduler"
 	k8sSchedulerStatusReason = "status_reason"
 )
-
-func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
-	return runtime.NewHostModuleBuilder(k8sScheduler).
-		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerStatusReasonFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
-		WithParameterNames("ptr", "size").Export(k8sSchedulerStatusReason).
-		Instantiate(ctx)
-}
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
 	return runtime.NewHostModuleBuilder(k8sApi).
@@ -48,26 +41,72 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeInfoNodeFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeInfoNode).
 		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeNameFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeName).
+		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiPod).
 		Instantiate(ctx)
 }
 
-// filterParamsKey is a context.Context value associated with a filterParams
-// pointer to the current request.
-type filterParamsKey struct{}
+func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
+	return runtime.NewHostModuleBuilder(k8sScheduler).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerStatusReasonFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerStatusReason).
+		Instantiate(ctx)
+}
 
-type filterParams struct {
-	pod      *v1.Pod
+// paramsKey is a context.Context value associated with a params
+// pointer to the current request.
+type paramsKey struct{}
+
+type params struct {
+	// pod is used by guest.filterFn and guest.scoreFn
+	pod *v1.Pod
+
+	// nodeInfo is used by guest.filterFn
 	nodeInfo *framework.NodeInfo
-	// reason is a field to avoid compiler-specific malloc/free functions, and
-	// to avoid having to deal with out-params because TinyGo only supports a
+
+	// nodeName is used by guest.scoreFn
+	nodeName string
+
+	// reason returned by all guest exports.
+	//
+	// It is a field to avoid compiler-specific malloc/free functions, and to
+	// avoid having to deal with out-params because TinyGo only supports a
 	// single result.
 	reason string
 }
 
-func filterParamsFromContext(ctx context.Context) *filterParams {
-	return ctx.Value(filterParamsKey{}).(*filterParams)
+func paramsFromContext(ctx context.Context) *params {
+	return ctx.Value(paramsKey{}).(*params)
+}
+
+func k8sApiNodeInfoNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	node := paramsFromContext(ctx).nodeInfo.Node()
+
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), node, buf, bufLimit))
+}
+
+func k8sApiNodeNameFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	nodeName := paramsFromContext(ctx).nodeName
+
+	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), nodeName, buf, bufLimit))
+}
+
+func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	pod := paramsFromContext(ctx).pod
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
 }
 
 // k8sSchedulerStatusReasonFn is a function used by the wasm guest to set the
@@ -83,22 +122,5 @@ func k8sSchedulerStatusReasonFn(ctx context.Context, mod wazeroapi.Module, stack
 	} else {
 		reason = string(b)
 	}
-	filterParamsFromContext(ctx).reason = reason
-}
-
-func k8sApiNodeInfoNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
-	buf := uint32(stack[0])
-	bufLimit := bufLimit(stack[1])
-
-	node := filterParamsFromContext(ctx).nodeInfo.Node()
-
-	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), node, buf, bufLimit))
-}
-
-func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
-	buf := uint32(stack[0])
-	bufLimit := bufLimit(stack[1])
-
-	pod := filterParamsFromContext(ctx).pod
-	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
+	paramsFromContext(ctx).reason = reason
 }

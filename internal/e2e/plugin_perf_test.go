@@ -18,58 +18,38 @@ package e2e_test
 
 import (
 	"context"
-	"io"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 
+	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
 func BenchmarkPluginFilter(b *testing.B) {
 	ctx := context.Background()
 
-	noop, err := test.NewPluginExampleNoop(ctx)
-	if err != nil {
-		b.Fatalf("failed to create plugin: %v", err)
-	}
-	defer noop.(io.Closer).Close()
-
-	filterSimple, err := test.NewPluginExampleFilterSimple(ctx)
-	if err != nil {
-		b.Fatalf("failed to create plugin: %v", err)
-	}
-	defer filterSimple.(io.Closer).Close()
-
-	plugins := []struct {
-		name   string
-		plugin framework.Plugin
-	}{
-		{
-			name:   "noop",
-			plugin: noop,
-		},
-		{
-			name:   "filter-simple",
-			plugin: filterSimple,
-		},
-	}
+	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{
+		GuestName: "filter-simple",
+		GuestPath: test.PathExampleFilterSimple,
+	})
+	defer close()
 
 	tests := []struct {
 		name string
-		node *v1.Node
 		pod  *v1.Pod
+		node *v1.Node
 	}{
 		{
 			name: "params: small",
-			node: test.NodeSmall,
 			pod:  test.PodSmall,
+			node: test.NodeSmall,
 		},
 		{
 			name: "params: real",
-			node: test.NodeReal,
 			pod:  test.PodReal,
+			node: test.NodeReal,
 		},
 	}
 
@@ -92,4 +72,94 @@ func BenchmarkPluginFilter(b *testing.B) {
 			}
 		})
 	}
+}
+
+func BenchmarkPluginScore(b *testing.B) {
+	ctx := context.Background()
+
+	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{
+		GuestName: "score-simple",
+		GuestPath: test.PathExampleScoreSimple,
+	})
+	defer close()
+
+	tests := []struct {
+		name string
+		pod  *v1.Pod
+	}{
+		{
+			name: "params: small",
+			pod:  test.PodSmall,
+		},
+		{
+			name: "params: real",
+			pod:  test.PodReal,
+		},
+	}
+
+	for _, tp := range plugins {
+		pl := tp
+		b.Run(pl.name, func(b *testing.B) {
+			for _, tc := range tests {
+				b.Run(tc.name, func(b *testing.B) {
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						_, s := pl.plugin.(framework.ScorePlugin).Score(ctx, nil, tc.pod, tc.pod.Spec.NodeName)
+						if want, have := framework.Success, s.Code(); want != have {
+							b.Fatalf("unexpected status code: got %v, expected %v, got reason: %v", want, have, s.Message())
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+func newTestPlugins(b *testing.B, ctx context.Context, config wasm.PluginConfig) ([]struct {
+	name   string
+	plugin framework.Plugin
+}, func(),
+) {
+	noopTinyGo, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
+		GuestName: "noop",
+		GuestPath: test.PathTestNoopTinyGo,
+	})
+	if err != nil {
+		b.Fatalf("failed to create plugin: %v", err)
+	}
+
+	noopWat, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
+		GuestName: "noop-wat",
+		GuestPath: test.PathTestNoopWat,
+	})
+	if err != nil {
+		b.Fatalf("failed to create plugin: %v", err)
+	}
+
+	plugin, err := wasm.NewFromConfig(ctx, config)
+	if err != nil {
+		b.Fatalf("failed to create plugin: %v", err)
+	}
+
+	return []struct {
+			name   string
+			plugin framework.Plugin
+		}{
+			{
+				name:   "noop-wat", // absolute base case
+				plugin: noopWat,
+			},
+			{
+				name:   "noop", // base case for TinyGo
+				plugin: noopTinyGo,
+			},
+			{
+				name:   plugin.Name(),
+				plugin: plugin,
+			},
+		}, func() {
+			_ = noopWat.Close()
+			_ = noopTinyGo.Close()
+			_ = plugin.Close()
+		}
 }

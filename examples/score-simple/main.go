@@ -1,5 +1,3 @@
-//go:build tinygo.wasm
-
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -16,20 +14,29 @@
    limitations under the License.
 */
 
-package imports
+package main
 
-//go:wasm-module k8s.io/api
-//go:export nodeInfo/node
-func k8sApiNodeInfoNode(ptr uint32, limit bufLimit) (len uint32)
+import (
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
+)
 
-//go:wasm-module k8s.io/api
-//go:export nodeName
-func k8sApiNodeName(ptr uint32, limit bufLimit) (len uint32)
+func main() {
+	score.Plugin = api.ScoreFunc(score100IfNameEqualsPodSpec)
+}
 
-//go:wasm-module k8s.io/api
-//go:export pod
-func k8sApiPod(ptr uint32, limit bufLimit) (len uint32)
+// score100IfNameEqualsPodSpec scores 100 if this node name equals its pod spec.
+func score100IfNameEqualsPodSpec(pod api.Pod, nodeName string) (int32, *api.Status) {
+	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
+	if nodeName == podSpecNodeName {
+		return 100, nil
+	}
+	return 0, nil
+}
 
-//go:wasm-module k8s.io/scheduler
-//go:export status_reason
-func k8sSchedulerStatusReason(ptr, size uint32)
+func nilToEmpty(ptr *string) string {
+	if ptr != nil {
+		return *ptr
+	}
+	return ""
+}

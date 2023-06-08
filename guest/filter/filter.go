@@ -18,11 +18,7 @@
 // package when setting Plugin, as doing otherwise will cause overhead.
 package filter
 
-import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/types"
-)
+import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 
 // Plugin should be assigned in `main` to an api.FilterPlugin instance.
 //
@@ -32,19 +28,3 @@ import (
 //		filter.Plugin = api.FilterFunc(nameEqualsPodSpec)
 //	}
 var Plugin api.FilterPlugin
-
-// filter is only exported to the host.
-//
-//go:export filter
-func filter() uint32 { //nolint
-	// Pass on unconfigured filter
-	if Plugin == nil {
-		return uint32(api.StatusCodeSuccess)
-	}
-
-	// The parameters passed are lazy with regard to host functions. This means
-	// a no-op plugin should not have any unmarshal penalty.
-	// TODO: Make these fields and reset on pre-filter or similar.
-	s := Plugin.Filter(&types.Pod{}, &types.NodeInfo{})
-	return imports.StatusToCode(s)
-}

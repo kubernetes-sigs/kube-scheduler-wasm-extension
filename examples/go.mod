@@ -1,4 +1,4 @@
-module sigs.k8s.io/kube-scheduler-wasm-extension/examples/noop
+module sigs.k8s.io/kube-scheduler-wasm-extension/examples
 
 // TinyGo 0.27 doesn't fully support Go 1.20, but it supports what we need.
 // Particularly, unsafe.SliceData, unsafe.StringData were added to TinyGo 0.27.
@@ -14,6 +14,6 @@ require (
 	sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto v0.0.0-00010101000000-000000000000 // indirect
 )
 
-replace sigs.k8s.io/kube-scheduler-wasm-extension/guest => ./../../guest
+replace sigs.k8s.io/kube-scheduler-wasm-extension/guest => ./../guest
 
-replace sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto => ./../../kubernetes/proto
+replace sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto => ./../kubernetes/proto

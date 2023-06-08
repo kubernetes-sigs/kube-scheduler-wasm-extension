@@ -18,11 +18,14 @@
 
 package imports
 
-// _statusReason is stubbed for compilation outside TinyGo.
-func _statusReason(uint32, uint32) {}
+// k8sApiNodeInfoNode is stubbed for compilation outside TinyGo.
+func k8sApiNodeInfoNode(uint32, bufLimit) (len uint32) { return }
 
-// _nodeInfoNode is stubbed for compilation outside TinyGo.
-func _nodeInfoNode(uint32, bufLimit) (len uint32) { return }
+// k8sApiNodeName is stubbed for compilation outside TinyGo.
+func k8sApiNodeName(uint32, bufLimit) (len uint32) { return }
 
-// _pod is stubbed for compilation outside TinyGo.
-func _pod(uint32, bufLimit) (len uint32) { return }
+// k8sApiPod is stubbed for compilation outside TinyGo.
+func k8sApiPod(uint32, bufLimit) (len uint32) { return }
+
+// k8sSchedulerStatusReason is stubbed for compilation outside TinyGo.
+func k8sSchedulerStatusReason(uint32, uint32) {}

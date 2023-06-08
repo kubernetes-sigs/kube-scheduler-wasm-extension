@@ -28,15 +28,16 @@ import (
 )
 
 const (
-	guestExportFilter = "filter"
 	guestExportMemory = "memory"
+	guestExportFilter = "filter"
+	guestExportScore  = "score"
 )
 
 type guest struct {
-	guest     wazeroapi.Module
-	out       *bytes.Buffer
-	filterFn  wazeroapi.Function
-	callStack []uint64
+	guest             wazeroapi.Module
+	out               *bytes.Buffer
+	filterFn, scoreFn wazeroapi.Function
+	callStack         []uint64
 }
 
 func compileGuest(ctx context.Context, runtime wazero.Runtime, guestBin []byte) (guest wazero.CompiledModule, err error) {
@@ -67,24 +68,45 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 		out.Reset()
 	}
 
+	// Allocate a call stack sized to max of params / return values of any
+	// guest function.
+	callStack := make([]uint64, 1)
+
 	return &guest{
 		guest:     g,
 		out:       &out,
 		filterFn:  g.ExportedFunction(guestExportFilter),
-		callStack: make([]uint64, 1), // Sized to max of params / return values of filterFn
+		scoreFn:   g.ExportedFunction(guestExportScore),
+		callStack: callStack,
 	}, nil
 }
 
-// filter calls the WebAssembly guest function handler.FuncHandleRequest.
+// filter calls guestExportFilter.
 func (g *guest) filter(ctx context.Context) *framework.Status {
 	defer g.out.Reset()
 	callStack := g.callStack
+
 	if err := g.filterFn.CallWithStack(ctx, callStack); err != nil {
 		return framework.AsStatus(decorateError(g.out, "filter", err))
 	}
-	code := uint32(callStack[0])
-	reason := filterParamsFromContext(ctx).reason
-	return framework.NewStatus(framework.Code(code), reason)
+	statusCode := int32(callStack[0])
+	statusReason := paramsFromContext(ctx).reason
+	return framework.NewStatus(framework.Code(statusCode), statusReason)
+}
+
+// score calls guestExportScore.
+func (g *guest) score(ctx context.Context) (int64, *framework.Status) {
+	defer g.out.Reset()
+	callStack := g.callStack
+
+	if err := g.scoreFn.CallWithStack(ctx, callStack); err != nil {
+		return 0, framework.AsStatus(decorateError(g.out, "score", err))
+	}
+
+	score := int32(callStack[0] >> 32)
+	statusCode := int32(callStack[0])
+	statusReason := paramsFromContext(ctx).reason
+	return int64(score), framework.NewStatus(framework.Code(statusCode), statusReason)
 }
 
 func decorateError(out fmt.Stringer, fn string, err error) error {
@@ -101,6 +123,7 @@ type exports uint
 
 const (
 	exportFilterPlugin exports = 1 << iota
+	exportScorePlugin
 )
 
 func detectExports(exportedFns map[string]wazeroapi.FunctionDefinition) (exports, error) {
@@ -112,6 +135,11 @@ func detectExports(exportedFns map[string]wazeroapi.FunctionDefinition) (exports
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", guestExportFilter)
 			}
 			e |= exportFilterPlugin
+		case guestExportScore:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i64}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i64)", guestExportScore)
+			}
+			e |= exportScorePlugin
 		}
 	}
 	if e == 0 {

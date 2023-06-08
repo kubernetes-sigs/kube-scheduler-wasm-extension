@@ -41,20 +41,27 @@ func StatusToCode(s *api.Status) uint32 {
 // statusReason overwrites the status reason
 func statusReason(reason string) {
 	ptr, size := stringToPtr(reason)
-	_statusReason(ptr, size)
+	k8sSchedulerStatusReason(ptr, size)
 	runtime.KeepAlive(reason) // keep reason alive until ptr is no longer needed.
+}
+
+func NodeName() string {
+	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
+	return getString(func(ptr uint32, limit bufLimit) (len uint32) {
+		return k8sApiNodeName(ptr, limit)
+	})
 }
 
 func NodeInfoNode() []byte {
 	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
 	return getBytes(func(ptr uint32, limit bufLimit) (len uint32) {
-		return _nodeInfoNode(ptr, limit)
+		return k8sApiNodeInfoNode(ptr, limit)
 	})
 }
 
 func Pod() []byte {
 	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
 	return getBytes(func(ptr uint32, limit bufLimit) (len uint32) {
-		return _pod(ptr, limit)
+		return k8sApiPod(ptr, limit)
 	})
 }
