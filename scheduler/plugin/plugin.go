@@ -74,9 +74,19 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (*wasmPlugin, error
 		return nil, err
 	}
 
-	var guestExports exports
-	if guestExports, err = detectExports(guestModule.ExportedFunctions()); err != nil {
+	pl, err := newWasmPlugin(ctx, runtime, guestModule, config)
+	if err != nil {
 		_ = runtime.Close(ctx)
+	}
+	return pl, err
+}
+
+// newWasmPlugin is extracted to prevent small bugs: The caller must close the
+// wazero.Runtime to avoid leaking mmapped files.
+func newWasmPlugin(ctx context.Context, runtime wazero.Runtime, guestModule wazero.CompiledModule, config PluginConfig) (*wasmPlugin, error) {
+	var guestExports exports
+	var err error
+	if guestExports, err = detectExports(guestModule.ExportedFunctions()); err != nil {
 		return nil, err
 	} else if guestExports == 0 {
 		return nil, fmt.Errorf("wasm: guest doesn't export plugin functions")
@@ -96,11 +106,9 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (*wasmPlugin, error
 		instanceCounter:   atomic.Uint64{},
 	}
 
-	pl.pool, err = newGuestPool(ctx, pl.newGuest)
-	if err != nil {
+	if pl.pool, err = newGuestPool(ctx, pl.newGuest); err != nil {
 		return nil, fmt.Errorf("failed to create a guest pool: %w", err)
 	}
-
 	return pl, nil
 }
 
