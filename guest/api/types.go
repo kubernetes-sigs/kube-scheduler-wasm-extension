@@ -23,15 +23,32 @@ import (
 
 // FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
 type FilterPlugin interface {
-	Filter(nodeInfo NodeInfo, pod Pod) *Status
+	Filter(pod Pod, nodeInfo NodeInfo) *Status
 }
 
+var _ FilterPlugin = FilterFunc(nil)
+
 // FilterFunc adapts an ordinary function to a FilterPlugin.
-type FilterFunc func(nodeInfo NodeInfo, pod Pod) *Status
+type FilterFunc func(pod Pod, nodeInfo NodeInfo) *Status
 
 // Filter returns f(a).
-func (f FilterFunc) Filter(nodeInfo NodeInfo, pod Pod) *Status {
-	return f(nodeInfo, pod)
+func (f FilterFunc) Filter(pod Pod, nodeInfo NodeInfo) *Status {
+	return f(pod, nodeInfo)
+}
+
+// ScorePlugin is a WebAssembly implementation of framework.ScorePlugin.
+type ScorePlugin interface {
+	Score(pod Pod, nodeName string) (int64, *Status)
+}
+
+var _ ScorePlugin = ScoreFunc(nil)
+
+// ScoreFunc adapts an ordinary function to a ScorePlugin.
+type ScoreFunc func(pod Pod, nodeName string) (int64, *Status)
+
+// Score returns f(a).
+func (f ScoreFunc) Score(pod Pod, nodeName string) (int64, *Status) {
+	return f(pod, nodeName)
 }
 
 type NodeInfo interface {

@@ -17,16 +17,16 @@
 package main
 
 import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 )
 
 func main() {
-	guest.FilterPlugin = api.FilterFunc(nameEqualsPodSpec)
+	filter.Plugin = api.FilterFunc(nameEqualsPodSpec)
 }
 
 // nameEqualsPodSpec schedules this node if its name equals its pod spec.
-func nameEqualsPodSpec(nodeInfo api.NodeInfo, pod api.Pod) *api.Status {
+func nameEqualsPodSpec(pod api.Pod, nodeInfo api.NodeInfo) *api.Status {
 	// First, check if the pod spec node name is empty. If so, pass!
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if len(podSpecNodeName) == 0 {

@@ -19,6 +19,7 @@ package wasm
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"sync/atomic"
 	"time"
@@ -41,12 +42,28 @@ func New(configuration runtime.Object, frameworkHandle framework.Handle) (framew
 		return nil, fmt.Errorf("failed to decode into %s PluginConfig: %w", PluginName, err)
 	}
 
-	return NewFromConfig(context.Background(), config)
+	plugin, err := NewFromConfig(context.Background(), config)
+	return maskInterfaces(plugin), err
+}
+
+// maskInterfaces ensures the caller can do type checking to detect what the
+// plugin supports.
+func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
+	if plugin == nil {
+		return nil
+	}
+	if plugin.guestExports == exportFilterPlugin {
+		return struct {
+			framework.FilterPlugin
+			io.Closer
+		}{plugin, plugin}
+	}
+	panic("BUG: unhandled exports")
 }
 
 // NewFromConfig is like New, except it allows us to explicitly provide the
 // context and configuration of the plugin. This allows flexibility in tests.
-func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, error) {
+func NewFromConfig(ctx context.Context, config PluginConfig) (*wasmPlugin, error) {
 	guestBin, err := os.ReadFile(config.GuestPath)
 	if err != nil {
 		return nil, fmt.Errorf("wasm: error reading guest binary at %s: %w", config.GuestPath, err)
@@ -55,6 +72,14 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, 
 	runtime, guestModule, err := prepareRuntime(ctx, guestBin)
 	if err != nil {
 		return nil, err
+	}
+
+	var guestExports exports
+	if guestExports, err = detectExports(guestModule.ExportedFunctions()); err != nil {
+		_ = runtime.Close(ctx)
+		return nil, err
+	} else if guestExports == 0 {
+		return nil, fmt.Errorf("wasm: guest doesn't export plugin functions")
 	}
 
 	guestName := config.GuestName
@@ -66,6 +91,7 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, 
 		runtime:           runtime,
 		guestName:         guestName,
 		guestModule:       guestModule,
+		guestExports:      guestExports,
 		guestModuleConfig: wazero.NewModuleConfig(),
 		instanceCounter:   atomic.Uint64{},
 	}
@@ -82,6 +108,7 @@ type wasmPlugin struct {
 	runtime           wazero.Runtime
 	guestName         string
 	guestModule       wazero.CompiledModule
+	guestExports      exports
 	guestModuleConfig wazero.ModuleConfig
 	instanceCounter   atomic.Uint64
 	pool              *guestPool[*guest]

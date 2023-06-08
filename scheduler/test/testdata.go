@@ -28,9 +28,11 @@ func NewPluginExampleFilterSimple(ctx context.Context) (frameworkruntime.Plugin,
 	})
 }
 
+var PathErrorNotPlugin = pathError("not_plugin")
+
 var PathErrorPanicOnFilter = pathError("panic_on_filter")
 
-var PathTestPanicOnStart = pathError("panic_on_start")
+var PathErrorPanicOnStart = pathError("panic_on_start")
 
 var PathExampleFilterSimple = pathExample("filter-simple")
 

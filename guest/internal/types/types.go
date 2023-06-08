@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package guest
+package types
 
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
@@ -27,42 +27,17 @@ import (
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
-// FilterPlugin should be assigned in `main` to a FilterPlugin instance.
-//
-// For example:
-//
-//	func main() {
-//		guest.FilterPlugin = api.FilterFunc(nameEqualsPodSpec)
-//	}
-var FilterPlugin api.FilterPlugin
+var _ api.NodeInfo = (*NodeInfo)(nil)
 
-// filter is only exported to the host.
-//
-//go:export filter
-func filter() uint32 { //nolint
-	// Pass on unconfigured filter
-	if FilterPlugin == nil {
-		return uint32(api.StatusCodeSuccess)
-	}
-
-	// The parameters passed are lazy with regard to host functions. This means
-	// a no-op plugin should not have any unmarshal penalty.
-	// TODO: Make these fields and reset on pre-filter or similar.
-	s := FilterPlugin.Filter(&nodeInfo{}, &pod{})
-	return imports.StatusToCode(s)
-}
-
-var _ api.NodeInfo = (*nodeInfo)(nil)
-
-type nodeInfo struct {
+type NodeInfo struct {
 	n *protoapi.Node
 }
 
-func (n *nodeInfo) Node() *protoapi.Node {
+func (n *NodeInfo) Node() *protoapi.Node {
 	return n.node()
 }
 
-func (n *nodeInfo) node() *protoapi.Node {
+func (n *NodeInfo) node() *protoapi.Node {
 	if node := n.n; node != nil {
 		return node
 	}
@@ -76,26 +51,26 @@ func (n *nodeInfo) node() *protoapi.Node {
 	return n.n
 }
 
-var _ api.Pod = (*pod)(nil)
+var _ api.Pod = (*Pod)(nil)
 
-type pod struct {
+type Pod struct {
 	p *protoapi.Pod
 }
 
-func (p *pod) Metadata() *meta.ObjectMeta {
+func (p *Pod) Metadata() *meta.ObjectMeta {
 	return p.pod().Metadata
 }
 
-func (p *pod) Spec() *protoapi.PodSpec {
+func (p *Pod) Spec() *protoapi.PodSpec {
 	return p.pod().Spec
 }
 
-func (p *pod) Status() *protoapi.PodStatus {
+func (p *Pod) Status() *protoapi.PodStatus {
 	return p.pod().Status
 }
 
-// pod lazy initializes p from the imported host function imports.Pod.
-func (p *pod) pod() *protoapi.Pod {
+// Pod lazy initializes p from the imported host function imports.Pod.
+func (p *Pod) pod() *protoapi.Pod {
 	if pod := p.p; pod != nil {
 		return pod
 	}
