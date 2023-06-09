@@ -35,7 +35,6 @@ func prepareRuntime(ctx context.Context, guestBin []byte) (runtime wazero.Runtim
 		if err != nil {
 			_ = runtime.Close(context.Background())
 			runtime = nil
-			return
 		}
 	}()
 
@@ -76,7 +75,8 @@ const (
 	importK8sScheduler
 )
 
-func detectImports(importedFns []api.FunctionDefinition) (imports imports) {
+func detectImports(importedFns []api.FunctionDefinition) imports {
+	var imports imports
 	for _, f := range importedFns {
 		moduleName, _, _ := f.Import()
 		switch moduleName {
@@ -88,5 +88,5 @@ func detectImports(importedFns []api.FunctionDefinition) (imports imports) {
 			imports |= importWasiP1
 		}
 	}
-	return
+	return imports
 }

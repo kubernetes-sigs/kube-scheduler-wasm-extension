@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package guest
+package types
 
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
@@ -24,57 +24,62 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
-// Filter should be assigned in `main` to a FilterFunc function.
-//
-// For example:
-//
-//	func main() {
-//		guest.Filter = api.FilterFunc(nameEqualsPodSpec)
-//	}
-var Filter api.Filter
+var _ api.NodeInfo = (*NodeInfo)(nil)
 
-// filter is only exported to the host.
-//
-//go:export filter
-func filter() (code uint32) { //nolint
-	if Filter == nil {
-		return
-	}
-	c, reason := Filter.Filter(filterArgs{})
-	if reason != "" {
-		imports.StatusReason(reason)
-	}
-	return uint32(c)
+type NodeInfo struct {
+	n *protoapi.Node
 }
 
-var _ api.FilterArgs = filterArgs{}
-
-type filterArgs struct{}
-
-func (filterArgs) NodeInfo() api.NodeInfo {
-	return nodeInfo{}
+func (n *NodeInfo) Node() *protoapi.Node {
+	return n.node()
 }
 
-func (filterArgs) Pod() *protoapi.Pod {
-	b := imports.Pod()
-	var msg protoapi.Pod
-	if err := msg.UnmarshalVT(b); err != nil {
-		panic(err.Error())
+func (n *NodeInfo) node() *protoapi.Node {
+	if node := n.n; node != nil {
+		return node
 	}
-	return &msg
-}
 
-var _ api.NodeInfo = nodeInfo{}
-
-type nodeInfo struct{}
-
-func (nodeInfo) Node() *protoapi.Node {
 	b := imports.NodeInfoNode()
 	var msg protoapi.Node
 	if err := msg.UnmarshalVT(b); err != nil {
 		panic(err)
 	}
-	return &msg
+	n.n = &msg
+	return n.n
+}
+
+var _ api.Pod = (*Pod)(nil)
+
+type Pod struct {
+	p *protoapi.Pod
+}
+
+func (p *Pod) Metadata() *meta.ObjectMeta {
+	return p.pod().Metadata
+}
+
+func (p *Pod) Spec() *protoapi.PodSpec {
+	return p.pod().Spec
+}
+
+func (p *Pod) Status() *protoapi.PodStatus {
+	return p.pod().Status
+}
+
+// Pod lazy initializes p from the imported host function imports.Pod.
+func (p *Pod) pod() *protoapi.Pod {
+	if pod := p.p; pod != nil {
+		return pod
+	}
+
+	b := imports.Pod()
+	var msg protoapi.Pod
+	if err := msg.UnmarshalVT(b); err != nil {
+		panic(err.Error())
+	}
+	p.p = &msg
+	return p.p
 }

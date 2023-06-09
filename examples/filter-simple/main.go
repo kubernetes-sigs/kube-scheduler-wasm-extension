@@ -17,29 +17,38 @@
 package main
 
 import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 )
 
 func main() {
-	guest.Filter = api.FilterFunc(nameEqualsPodSpec)
+	filter.Plugin = api.FilterFunc(nameEqualsPodSpec)
 }
 
 // nameEqualsPodSpec schedules this node if its name equals its pod spec.
-func nameEqualsPodSpec(args api.FilterArgs) (api.StatusCode, string) {
-	nodeName := nilToEmpty(args.NodeInfo().Node().Metadata.Name)
-	podSpecNodeName := nilToEmpty(args.Pod().Spec.NodeName)
+func nameEqualsPodSpec(pod api.Pod, nodeInfo api.NodeInfo) *api.Status {
+	// First, check if the pod spec node name is empty. If so, pass!
+	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
+	if len(podSpecNodeName) == 0 {
+		return nil
+	}
 
-	if len(podSpecNodeName) == 0 || podSpecNodeName == nodeName {
-		return api.StatusCodeSuccess, ""
-	} else {
-		return api.StatusCodeUnschedulable, podSpecNodeName + " != " + nodeName
+	// Next, check if the node name matches the spec node. If so, pass!
+	nodeName := nilToEmpty(nodeInfo.Node().Metadata.Name)
+	if podSpecNodeName == nodeName {
+		return nil
+	}
+
+	// Otherwise, this is unschedulable, so note the reason.
+	return &api.Status{
+		Code:   api.StatusCodeUnschedulable,
+		Reason: podSpecNodeName + " != " + nodeName,
 	}
 }
 
-func nilToEmpty(ptr *string) (s string) {
+func nilToEmpty(ptr *string) string {
 	if ptr != nil {
-		s = *ptr
+		return *ptr
 	}
-	return
+	return ""
 }

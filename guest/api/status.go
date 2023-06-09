@@ -16,6 +16,14 @@
 
 package api
 
+// Status is the status from a scheduler plugin function.
+//
+// Note: nil status is the same as one with StatusCodeSuccess.
+type Status struct {
+	Code   StatusCode
+	Reason string
+}
+
 // StatusCode is the Status code/type which is returned from plugins.
 type StatusCode int
 

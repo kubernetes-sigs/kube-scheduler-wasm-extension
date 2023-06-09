@@ -18,10 +18,12 @@ package wasm_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
@@ -160,6 +162,28 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 	}
 }
 
+// TestNew_masksInterfaces ensures the type returned by New can be asserted
+// against, based on the code in the guest.
+func TestNew_masksInterfaces(t *testing.T) {
+	p, err := wasm.New(&runtime.Unknown{
+		ContentType: runtime.ContentTypeJSON,
+		Raw:         []byte(fmt.Sprintf(`{"guestPath": "%s"}`, test.PathExampleFilterSimple)),
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.(io.Closer).Close()
+
+	// Check the plugin was masked as a filter but not a score plugin.
+	if _, ok := p.(framework.FilterPlugin); !ok {
+		t.Fatalf("expected FilterPlugin %v", p)
+	} else if _, ok := p.(io.Closer); !ok {
+		t.Fatalf("expected Closer %v", p)
+	} else if _, ok := p.(framework.ScorePlugin); ok {
+		t.Fatalf("unexpected to be ScorePlugin %v", p)
+	}
+}
+
 func TestNewFromConfig(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -171,8 +195,13 @@ func TestNewFromConfig(t *testing.T) {
 			guestPath: test.PathExampleFilterSimple,
 		},
 		{
+			name:          "not plugin",
+			guestPath:     test.PathErrorNotPlugin,
+			expectedError: `wasm: guest does not export any plugin functions`,
+		},
+		{
 			name:      "panic on _start",
-			guestPath: test.PathTestPanicOnStart,
+			guestPath: test.PathErrorPanicOnStart,
 			expectedError: `failed to create a guest pool: wasm: instantiate error: panic!
 module[panic_on_start-1] function[_start] failed: wasm error: unreachable
 wasm stack trace:
@@ -195,7 +224,7 @@ wasm stack trace:
 				t.Fatalf("expected error %v", want)
 			}
 			if p != nil {
-				p.(io.Closer).Close()
+				p.Close()
 			}
 		})
 	}
@@ -249,13 +278,13 @@ wasm stack trace:
 
 			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
 			if err != nil {
-				t.Fatalf("failed to create plugin: %v", err)
+				t.Fatal(err)
 			}
-			defer p.(io.Closer).Close()
+			defer p.Close()
 
 			ni := framework.NewNodeInfo()
 			ni.SetNode(tc.node)
-			s := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
+			s := p.Filter(ctx, nil, tc.pod, ni)
 			if want, have := tc.expectedCode, s.Code(); want != have {
 				t.Fatalf("unexpected code: want %v, have %v", want, have)
 			}

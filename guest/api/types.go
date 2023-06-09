@@ -16,29 +16,47 @@
 
 package api
 
-import protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+import (
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
+)
 
-// Filter is a WebAssembly implementation of framework.FilterPlugin.
-type Filter interface {
-	Filter(FilterArgs) (statusCode StatusCode, statusReason string)
+// FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
+type FilterPlugin interface {
+	Filter(pod Pod, nodeInfo NodeInfo) *Status
 }
 
-// FilterFunc adapts an ordinary function to a Filter.
-type FilterFunc func(FilterArgs) (statusCode StatusCode, statusReason string)
+var _ FilterPlugin = FilterFunc(nil)
+
+// FilterFunc adapts an ordinary function to a FilterPlugin.
+type FilterFunc func(pod Pod, nodeInfo NodeInfo) *Status
 
 // Filter returns f(a).
-func (f FilterFunc) Filter(a FilterArgs) (statusCode StatusCode, statusReason string) {
-	return f(a)
+func (f FilterFunc) Filter(pod Pod, nodeInfo NodeInfo) *Status {
+	return f(pod, nodeInfo)
 }
 
-// FilterArgs are the arguments to a Filter.
-//
-// Note: The arguments are lazy fetched to avoid overhead for properties not in use.
-type FilterArgs interface {
-	NodeInfo() NodeInfo
-	Pod() *protoapi.Pod
+// ScorePlugin is a WebAssembly implementation of framework.ScorePlugin.
+type ScorePlugin interface {
+	Score(pod Pod, nodeName string) (int64, *Status)
+}
+
+var _ ScorePlugin = ScoreFunc(nil)
+
+// ScoreFunc adapts an ordinary function to a ScorePlugin.
+type ScoreFunc func(pod Pod, nodeName string) (int64, *Status)
+
+// Score returns f(a).
+func (f ScoreFunc) Score(pod Pod, nodeName string) (int64, *Status) {
+	return f(pod, nodeName)
 }
 
 type NodeInfo interface {
 	Node() *protoapi.Node
+}
+
+type Pod interface {
+	Metadata() *meta.ObjectMeta
+	Spec() *protoapi.PodSpec
+	Status() *protoapi.PodStatus
 }

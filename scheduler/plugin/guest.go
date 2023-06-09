@@ -41,11 +41,7 @@ type guest struct {
 func compileGuest(ctx context.Context, runtime wazero.Runtime, guestBin []byte) (guest wazero.CompiledModule, err error) {
 	if guest, err = runtime.CompileModule(ctx, guestBin); err != nil {
 		err = fmt.Errorf("wasm: error compiling guest: %w", err)
-	} else if handleRequest, ok := guest.ExportedFunctions()[guestExportFilter]; !ok {
-		err = fmt.Errorf("wasm: guest doesn't export func[%s]", guestExportFilter)
-	} else if len(handleRequest.ParamTypes()) != 0 || !bytes.Equal(handleRequest.ResultTypes(), []wazeroapi.ValueType{i32}) {
-		err = fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", guestExportFilter)
-	} else if _, ok = guest.ExportedMemories()[guestExportMemory]; !ok {
+	} else if _, ok := guest.ExportedMemories()[guestExportMemory]; !ok {
 		err = fmt.Errorf("wasm: guest doesn't export memory[%s]", guestExportMemory)
 	}
 	return
@@ -97,4 +93,27 @@ func decorateError(out fmt.Stringer, fn string, err error) error {
 		err = fmt.Errorf("wasm: %s error: %v", fn, err)
 	}
 	return err
+}
+
+type exports uint
+
+const (
+	exportFilterPlugin exports = 1 << iota
+)
+
+func detectExports(exportedFns map[string]wazeroapi.FunctionDefinition) (exports, error) {
+	var e exports
+	for name, f := range exportedFns {
+		switch name {
+		case guestExportFilter:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", guestExportFilter)
+			}
+			e |= exportFilterPlugin
+		}
+	}
+	if e == 0 {
+		return 0, fmt.Errorf("wasm: guest does not export any plugin functions")
+	}
+	return e, nil
 }

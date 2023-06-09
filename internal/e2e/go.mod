@@ -7,6 +7,7 @@ require (
 	github.com/stealthrocket/wzprof v0.1.5
 	github.com/tetratelabs/wazero v1.2.0
 	k8s.io/api v0.26.2
+	k8s.io/apimachinery v0.26.2
 	k8s.io/kubernetes v1.26.2
 	sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/kube-scheduler-wasm-extension/scheduler v0.0.0-00010101000000-000000000000
@@ -84,7 +85,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apimachinery v0.26.2 // indirect
 	k8s.io/client-go v0.26.2 // indirect
 	k8s.io/component-base v0.26.2 // indirect
 	k8s.io/component-helpers v0.26.2 // indirect

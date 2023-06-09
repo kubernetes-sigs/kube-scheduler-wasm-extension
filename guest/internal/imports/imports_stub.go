@@ -18,15 +18,11 @@
 
 package imports
 
-// reason is stubbed for compilation outside TinyGo.
-func _statusReason(ptr, size uint32) {}
+// _statusReason is stubbed for compilation outside TinyGo.
+func _statusReason(uint32, uint32) {}
 
-// nodeInfoNodeName is stubbed for compilation outside TinyGo.
-func _nodeInfoNode(ptr uint32, limit bufLimit) (len uint32) {
-	return 0
-}
+// _nodeInfoNode is stubbed for compilation outside TinyGo.
+func _nodeInfoNode(uint32, bufLimit) (len uint32) { return }
 
-// pod is stubbed for compilation outside TinyGo.
-func _pod(ptr uint32, limit bufLimit) (len uint32) {
-	return 0
-}
+// _pod is stubbed for compilation outside TinyGo.
+func _pod(uint32, bufLimit) (len uint32) { return }

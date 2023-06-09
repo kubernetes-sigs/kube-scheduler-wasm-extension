@@ -17,15 +17,13 @@
 package main
 
 import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 )
 
 func main() {
-	guest.Filter = api.FilterFunc(filterNoop)
+	filter.Plugin = api.FilterFunc(filterNoop)
 }
 
 // filterNoop doesn't do anything. This is used to test base-case performance.
-func filterNoop(api.FilterArgs) (api.StatusCode, string) {
-	return api.StatusCodeSuccess, ""
-}
+func filterNoop(api.Pod, api.NodeInfo) (status *api.Status) { return }
