@@ -25,6 +25,8 @@ Optionally add one or more of the following kinds if applicable:
 /kind regression
 -->
 
+/label tide/merge-method-squash
+
 #### What this PR does / why we need it:
 
 #### Which issue(s) this PR fixes:
@@ -36,6 +38,7 @@ _If PR is about `failing-tests or flakes`, please post the related issues/tests 
 Fixes #
 
 #### Special notes for your reviewer:
+
 
 #### Does this PR introduce a user-facing change?
 <!--
