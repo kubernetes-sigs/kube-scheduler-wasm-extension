@@ -33,9 +33,10 @@ const (
 )
 
 type guest struct {
-	guest    wazeroapi.Module
-	out      *bytes.Buffer
-	filterFn wazeroapi.Function
+	guest     wazeroapi.Module
+	out       *bytes.Buffer
+	filterFn  wazeroapi.Function
+	callStack []uint64
 }
 
 func compileGuest(ctx context.Context, runtime wazero.Runtime, guestBin []byte) (guest wazero.CompiledModule, err error) {
@@ -67,22 +68,23 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 	}
 
 	return &guest{
-		guest:    g,
-		out:      &out,
-		filterFn: g.ExportedFunction(guestExportFilter),
+		guest:     g,
+		out:       &out,
+		filterFn:  g.ExportedFunction(guestExportFilter),
+		callStack: make([]uint64, 1), // Sized to max of params / return values of filterFn
 	}, nil
 }
 
 // filter calls the WebAssembly guest function handler.FuncHandleRequest.
 func (g *guest) filter(ctx context.Context) *framework.Status {
 	defer g.out.Reset()
-	if results, err := g.filterFn.Call(ctx); err != nil {
+	callStack := g.callStack
+	if err := g.filterFn.CallWithStack(ctx, callStack); err != nil {
 		return framework.AsStatus(decorateError(g.out, "filter", err))
-	} else {
-		code := uint32(results[0])
-		reason := filterParamsFromContext(ctx).reason
-		return framework.NewStatus(framework.Code(code), reason)
 	}
+	code := uint32(callStack[0])
+	reason := filterParamsFromContext(ctx).reason
+	return framework.NewStatus(framework.Code(code), reason)
 }
 
 func decorateError(out fmt.Stringer, fn string, err error) error {
