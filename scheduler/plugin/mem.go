@@ -54,3 +54,22 @@ func marshalIfUnderLimit(mem wazeroapi.Memory, vt valueType, buf uint32, bufLimi
 	// a sized buffer.
 	return vLen
 }
+
+func writeStringIfUnderLimit(mem wazeroapi.Memory, v string, buf uint32, bufLimit bufLimit) int {
+	vLen := len(v)
+	if vLen == 0 {
+		return 0 // nothing to write
+	}
+
+	// Next, see if the value will fit inside the buffer.
+	if vLen > int(bufLimit) {
+		// If it doesn't fit, the caller can decide to retry with a larger
+		// buffer or fail.
+		return vLen
+	}
+
+	// Success: return the bytes written, so that the caller knows how to read
+	// from buf.
+	mem.WriteString(buf, v)
+	return vLen
+}

@@ -17,19 +17,29 @@
 package wasm
 
 import (
+	wazeroapi "github.com/tetratelabs/wazero/api"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
 type WasmPlugin struct{ *wasmPlugin }
 
-func NewTestWasmPlugin(p framework.Plugin) (*WasmPlugin, bool) {
-	pl, ok := p.(*wasmPlugin)
-	if !ok {
-		return nil, false
+func NewTestWasmPlugin(p framework.Plugin) *WasmPlugin {
+	return &WasmPlugin{wasmPlugin: p.(*wasmPlugin)} // panic on test bug
+}
+
+func (w *WasmPlugin) SetGlobals(globals map[string]int32) {
+	defer w.pool.unassignForScheduling()
+
+	g, err := w.pool.getOrCreateGuest(ctx, "a")
+	if err != nil {
+		panic(err)
 	}
 
-	return &WasmPlugin{wasmPlugin: pl}, true
+	// Use test conventions to set a global used to test value range.
+	for n, v := range globals {
+		g.guest.ExportedGlobal(n + "_global").(wazeroapi.MutableGlobal).Set(uint64(v))
+	}
 }
 
 func (w *WasmPlugin) ClearGuestModule() {

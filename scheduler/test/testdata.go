@@ -28,23 +28,25 @@ func NewPluginExampleFilterSimple(ctx context.Context) (frameworkruntime.Plugin,
 	})
 }
 
-var PathErrorNotPlugin = pathError("not_plugin")
+var PathErrorNotPlugin = pathWatError("not_plugin")
 
-var PathErrorPanicOnFilter = pathError("panic_on_filter")
+var PathErrorPanicOnFilter = pathWatError("panic_on_filter")
 
-var PathErrorPanicOnStart = pathError("panic_on_start")
+var PathErrorPanicOnScore = pathWatError("panic_on_score")
 
-var PathExampleFilterSimple = pathExample("filter-simple")
+var PathErrorPanicOnStart = pathWatError("panic_on_start")
 
-// NewPluginExampleNoop returns a new plugin configured with PathExampleNoop.
-func NewPluginExampleNoop(ctx context.Context) (frameworkruntime.Plugin, error) {
-	return wasm.NewFromConfig(ctx, wasm.PluginConfig{
-		GuestName: "noop",
-		GuestPath: PathExampleNoop,
-	})
-}
+var PathExampleFilterSimple = pathTinyGoExample("filter-simple")
 
-var PathExampleNoop = pathExample("noop")
+var PathExampleScoreSimple = pathTinyGoExample("score-simple")
+
+var PathTestFilterFromGlobal = pathWatTest("filter_from_global")
+
+var PathTestNoopTinyGo = pathTinyGoTest("noop")
+
+var PathTestNoopWat = pathWatTest("noop")
+
+var PathTestScoreFromGlobal = pathWatTest("score_from_global")
 
 //go:embed testdata/yaml/node.yaml
 var yamlNodeReal string
@@ -94,14 +96,24 @@ func decodeYaml[O apiruntime.Object](yaml string, object O) {
 	}
 }
 
-// pathExample gets the absolute path to a given example.
-func pathExample(name string) string {
+// pathTinyGoExample gets the absolute path to a given TinyGo example.
+func pathTinyGoExample(name string) string {
 	return relativePath(path.Join("..", "..", "examples", name, "main.wasm"))
 }
 
-// pathError gets the absolute path wasm compiled from a %.wat source.
-func pathError(name string) string {
+// pathTinyGoTest gets the absolute path to a given TinyGo test.
+func pathTinyGoTest(name string) string {
+	return relativePath(path.Join("..", "..", "guest", "testdata", name, "main.wasm"))
+}
+
+// pathWatError gets the absolute path wasm compiled from a %.wat source.
+func pathWatError(name string) string {
 	return relativePath(path.Join("testdata", "error", name+".wasm"))
+}
+
+// pathWatTest gets the absolute path wasm compiled from a %.wat source.
+func pathWatTest(name string) string {
+	return relativePath(path.Join("testdata", "test", name+".wasm"))
 }
 
 // relativePath gets the absolute from this file.

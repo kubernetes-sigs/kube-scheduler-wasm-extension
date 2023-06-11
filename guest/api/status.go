@@ -25,7 +25,9 @@ type Status struct {
 }
 
 // StatusCode is the Status code/type which is returned from plugins.
-type StatusCode int
+//
+// Note: This is int32, not int. See /RATIONALE.md for why.
+type StatusCode int32
 
 // These are predefined codes used in a Status.
 const (

@@ -52,11 +52,24 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 	if plugin == nil {
 		return nil
 	}
-	if plugin.guestExports == exportFilterPlugin {
+	switch plugin.guestExports {
+	case exportFilterPlugin:
 		return struct {
 			framework.FilterPlugin
 			io.Closer
 		}{plugin, plugin}
+	case exportScorePlugin:
+		return struct {
+			framework.ScorePlugin
+			io.Closer
+		}{plugin, plugin}
+	case exportFilterPlugin | exportScorePlugin:
+		type filterScore interface {
+			framework.FilterPlugin
+			framework.ScorePlugin
+			io.Closer
+		}
+		return struct{ filterScore }{plugin}
 	}
 	panic("BUG: unhandled exports")
 }
@@ -186,10 +199,10 @@ func (pl *wasmPlugin) Filter(ctx context.Context, _ *framework.CycleState, pod *
 		return framework.AsStatus(err)
 	}
 
-	// The guest calls host functions to access the pod and node data. Add
-	// this to the context, so that they are accessible.
-	params := &filterParams{pod: pod, nodeInfo: nodeInfo}
-	ctx = context.WithValue(ctx, filterParamsKey{}, params)
+	// Add the params to the go context so that the corresponding host function
+	// can look them up.
+	params := &params{pod: pod, nodeInfo: nodeInfo}
+	ctx = context.WithValue(ctx, paramsKey{}, params)
 	return g.filter(ctx)
 }
 
@@ -217,8 +230,20 @@ func (pl *wasmPlugin) NormalizeScore(ctx context.Context, state *framework.Cycle
 var _ framework.ScorePlugin = (*wasmPlugin)(nil)
 
 // Score implements the same method as documented on framework.ScorePlugin.
-func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, p *v1.Pod, nodeName string) (int64, *framework.Status) {
-	panic("TODO: Score")
+func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
+	pl.pool.assignedToSchedulingPodLock.Lock()
+	defer pl.pool.assignedToSchedulingPodLock.Unlock()
+
+	g, err := pl.pool.getOrCreateGuest(ctx, pod.GetUID())
+	if err != nil {
+		return 0, framework.AsStatus(err)
+	}
+
+	// Add the params to the go context so that the corresponding host function
+	// can look them up.
+	params := &params{pod: pod, nodeName: nodeName}
+	ctx = context.WithValue(ctx, paramsKey{}, params)
+	return g.score(ctx)
 }
 
 // ScoreExtensions implements the same method as documented on framework.ScorePlugin.

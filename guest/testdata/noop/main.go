@@ -19,11 +19,17 @@ package main
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
 func main() {
+	// These plugins don't do anything, and this style isn't recommended. This
+	// shows the impact two things:
+	//  * implementing multiple interfaces
+	//  * overhead of constructing function parameters
 	filter.Plugin = api.FilterFunc(filterNoop)
+	score.Plugin = api.ScoreFunc(scoreNoop)
 }
 
-// filterNoop doesn't do anything. This is used to test base-case performance.
-func filterNoop(api.Pod, api.NodeInfo) (status *api.Status) { return }
+func filterNoop(api.Pod, api.NodeInfo) (status *api.Status)       { return }
+func scoreNoop(api.Pod, string) (score int32, status *api.Status) { return }
