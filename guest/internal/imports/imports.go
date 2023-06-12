@@ -18,18 +18,14 @@
 
 package imports
 
-//go:wasm-module k8s.io/api
-//go:export nodeInfo/node
+//go:wasmimport k8s.io/api nodeInfo/node
 func k8sApiNodeInfoNode(ptr uint32, limit bufLimit) (len uint32)
 
-//go:wasm-module k8s.io/api
-//go:export nodeName
+//go:wasmimport k8s.io/api nodeName
 func k8sApiNodeName(ptr uint32, limit bufLimit) (len uint32)
 
-//go:wasm-module k8s.io/api
-//go:export pod
+//go:wasmimport k8s.io/api pod
 func k8sApiPod(ptr uint32, limit bufLimit) (len uint32)
 
-//go:wasm-module k8s.io/scheduler
-//go:export status_reason
+//go:wasmimport k8s.io/scheduler status_reason
 func k8sSchedulerStatusReason(ptr, size uint32)

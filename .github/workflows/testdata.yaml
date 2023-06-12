@@ -29,7 +29,7 @@ jobs:
         go-version:  # Note: Go only supports 2 versions: https://go.dev/doc/devel/release#policy
           - "1.20"
         tinygo-version:  # Note: TinyGo only supports latest: https://github.com/tinygo-org/tinygo/releases
-          - "0.27.0"  # Latest
+          - "0.28.1"  # Latest
 
     steps:
       - uses: actions/checkout@v3
