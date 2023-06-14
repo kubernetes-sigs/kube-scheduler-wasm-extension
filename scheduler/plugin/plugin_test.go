@@ -38,11 +38,11 @@ var ctx = context.Background()
 
 // Test_guestPool_assignedToBindingPod tests that the assignedToBindingPod field is set correctly.
 func Test_guestPool_assignedToBindingPod(t *testing.T) {
-	p, err := test.NewPluginExampleFilterSimple(ctx)
+	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleFilterSimple})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
-	defer p.(io.Closer).Close()
+	defer p.Close()
 
 	pl := wasm.NewTestWasmPlugin(p)
 	pod := st.MakePod().UID("uid1").Name("test-pod").Node("good-node").Obj()
@@ -115,11 +115,11 @@ func Test_guestPool_assignedToBindingPod(t *testing.T) {
 
 // Test_guestPool_assignedToSchedulingPod tests that the schedulingPodUID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
-	p, err := test.NewPluginExampleFilterSimple(ctx)
+	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleFilterSimple})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
-	defer p.(io.Closer).Close()
+	defer p.Close()
 
 	pl := wasm.NewTestWasmPlugin(p)
 	pod := st.MakePod().UID("uid1").Name("test-pod").Node("good-node").Obj()
@@ -177,7 +177,7 @@ func TestNew_masksInterfaces(t *testing.T) {
 		},
 		{
 			name:         "filter|score",
-			guestPath:    test.PathTestNoopWat,
+			guestPath:    test.PathTestAllNoopWat,
 			expectFilter: true,
 			expectScore:  true,
 		},
