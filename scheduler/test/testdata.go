@@ -2,7 +2,6 @@ package test
 
 import (
 	"bufio"
-	"context"
 	_ "embed"
 	"fmt"
 	"path"
@@ -15,18 +14,7 @@ import (
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	apiyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/kubectl/pkg/scheme"
-	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework"
-
-	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 )
-
-// NewPluginExampleFilterSimple returns a new plugin configured with PathExampleFilterSimple.
-func NewPluginExampleFilterSimple(ctx context.Context) (frameworkruntime.Plugin, error) {
-	return wasm.NewFromConfig(ctx, wasm.PluginConfig{
-		GuestName: "filter-simple",
-		GuestPath: PathExampleFilterSimple,
-	})
-}
 
 var PathErrorNotPlugin = pathWatError("not_plugin")
 
@@ -40,11 +28,17 @@ var PathExampleFilterSimple = pathTinyGoExample("filter-simple")
 
 var PathExampleScoreSimple = pathTinyGoExample("score-simple")
 
+var PathTestAll = pathTinyGoTest("all")
+
+var PathTestAllNoopTinyGo = pathTinyGoTest("all-noop")
+
+var PathTestAllNoopWat = pathWatTest("all_noop")
+
+var PathTestFilter = pathTinyGoTest("filter")
+
 var PathTestFilterFromGlobal = pathWatTest("filter_from_global")
 
-var PathTestNoopTinyGo = pathTinyGoTest("noop")
-
-var PathTestNoopWat = pathWatTest("noop")
+var PathTestScore = pathTinyGoTest("score")
 
 var PathTestScoreFromGlobal = pathWatTest("score_from_global")
 

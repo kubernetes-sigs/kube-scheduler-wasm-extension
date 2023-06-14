@@ -30,10 +30,7 @@ import (
 func BenchmarkPluginFilter(b *testing.B) {
 	ctx := context.Background()
 
-	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{
-		GuestName: "filter-simple",
-		GuestPath: test.PathExampleFilterSimple,
-	})
+	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{GuestPath: test.PathTestFilter})
 	defer close()
 
 	tests := []struct {
@@ -77,10 +74,7 @@ func BenchmarkPluginFilter(b *testing.B) {
 func BenchmarkPluginScore(b *testing.B) {
 	ctx := context.Background()
 
-	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{
-		GuestName: "score-simple",
-		GuestPath: test.PathExampleScoreSimple,
-	})
+	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{GuestPath: test.PathTestScore})
 	defer close()
 
 	tests := []struct {
@@ -115,23 +109,65 @@ func BenchmarkPluginScore(b *testing.B) {
 	}
 }
 
+func BenchmarkPluginFilterAndScore(b *testing.B) {
+	ctx := context.Background()
+
+	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{GuestPath: test.PathTestAll})
+	defer close()
+
+	tests := []struct {
+		name string
+		pod  *v1.Pod
+		node *v1.Node
+	}{
+		{
+			name: "params: small",
+			pod:  test.PodSmall,
+			node: test.NodeSmall,
+		},
+		{
+			name: "params: real",
+			pod:  test.PodReal,
+			node: test.NodeReal,
+		},
+	}
+
+	for _, tp := range plugins {
+		pl := tp
+		b.Run(pl.name, func(b *testing.B) {
+			for _, tc := range tests {
+				b.Run(tc.name, func(b *testing.B) {
+					ni := framework.NewNodeInfo()
+					ni.SetNode(tc.node)
+
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
+						if want, have := framework.Success, s.Code(); want != have {
+							b.Fatalf("unexpected code: got %v, expected %v, got reason: %v", want, have, s.Message())
+						}
+						_, s = pl.plugin.(framework.ScorePlugin).Score(ctx, nil, tc.pod, tc.pod.Spec.NodeName)
+						if want, have := framework.Success, s.Code(); want != have {
+							b.Fatalf("unexpected status code: got %v, expected %v, got reason: %v", want, have, s.Message())
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
 func newTestPlugins(b *testing.B, ctx context.Context, config wasm.PluginConfig) ([]struct {
 	name   string
 	plugin framework.Plugin
 }, func(),
 ) {
-	noopTinyGo, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
-		GuestName: "noop",
-		GuestPath: test.PathTestNoopTinyGo,
-	})
+	noopTinyGo, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestAllNoopTinyGo})
 	if err != nil {
 		b.Fatalf("failed to create plugin: %v", err)
 	}
 
-	noopWat, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
-		GuestName: "noop-wat",
-		GuestPath: test.PathTestNoopWat,
-	})
+	noopWat, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestAllNoopWat})
 	if err != nil {
 		b.Fatalf("failed to create plugin: %v", err)
 	}
@@ -154,7 +190,7 @@ func newTestPlugins(b *testing.B, ctx context.Context, config wasm.PluginConfig)
 				plugin: noopTinyGo,
 			},
 			{
-				name:   plugin.Name(),
+				name:   "test",
 				plugin: plugin,
 			},
 		}, func() {
