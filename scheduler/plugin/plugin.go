@@ -231,9 +231,6 @@ var _ framework.ScorePlugin = (*wasmPlugin)(nil)
 
 // Score implements the same method as documented on framework.ScorePlugin.
 func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
-	pl.pool.assignedToSchedulingPodLock.Lock()
-	defer pl.pool.assignedToSchedulingPodLock.Unlock()
-
 	g, err := pl.pool.getOrCreateGuest(ctx, pod.GetUID())
 	if err != nil {
 		return 0, framework.AsStatus(err)
