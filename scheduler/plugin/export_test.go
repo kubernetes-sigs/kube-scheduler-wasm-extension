@@ -28,14 +28,13 @@ func NewTestWasmPlugin(p framework.Plugin) *WasmPlugin {
 }
 
 func (w *WasmPlugin) SetGlobals(globals map[string]int32) {
-	g, err := w.pool.getForScheduling(ctx, 0)
-	if err != nil {
+	if err := w.pool.doWithSchedulingGuest(ctx, 0, func(g *guest) {
+		// Use test conventions to set a global used to test value range.
+		for n, v := range globals {
+			g.guest.ExportedGlobal(n + "_global").(wazeroapi.MutableGlobal).Set(uint64(v))
+		}
+	}); err != nil {
 		panic(err)
-	}
-
-	// Use test conventions to set a global used to test value range.
-	for n, v := range globals {
-		g.guest.ExportedGlobal(n + "_global").(wazeroapi.MutableGlobal).Set(uint64(v))
 	}
 }
 

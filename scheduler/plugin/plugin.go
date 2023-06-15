@@ -165,31 +165,29 @@ func (pl *wasmPlugin) PreFilterExtensions() framework.PreFilterExtensions {
 
 // PreFilter implements the same method as documented on
 // framework.PreFilterPlugin.
-func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod) (*framework.PreFilterResult, *framework.Status) {
-	_, err := pl.pool.getForScheduling(ctx, cycleID(pod))
-	if err != nil {
-		return nil, framework.AsStatus(err)
+func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod) (result *framework.PreFilterResult, status *framework.Status) {
+	if err := pl.pool.doWithSchedulingGuest(ctx, cycleID(pod), func(g *guest) {
+		// TODO: partially implemented for testing
+	}); err != nil {
+		status = framework.AsStatus(err)
 	}
-
-	// TODO: partially implemented for testing
-
-	return nil, nil
+	return
 }
 
 var _ framework.FilterPlugin = (*wasmPlugin)(nil)
 
 // Filter implements the same method as documented on framework.FilterPlugin.
-func (pl *wasmPlugin) Filter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, nodeInfo *framework.NodeInfo) *framework.Status {
-	g, err := pl.pool.getForScheduling(ctx, cycleID(pod))
-	if err != nil {
-		return framework.AsStatus(err)
-	}
-
+func (pl *wasmPlugin) Filter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, nodeInfo *framework.NodeInfo) (status *framework.Status) {
 	// Add the params to the go context so that the corresponding host function
 	// can look them up.
 	params := &params{pod: pod, nodeInfo: nodeInfo}
 	ctx = context.WithValue(ctx, paramsKey{}, params)
-	return g.filter(ctx)
+	if err := pl.pool.doWithSchedulingGuest(ctx, cycleID(pod), func(g *guest) {
+		status = g.filter(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	return
 }
 
 var _ framework.PostFilterPlugin = (*wasmPlugin)(nil)
@@ -216,17 +214,17 @@ func (pl *wasmPlugin) NormalizeScore(ctx context.Context, state *framework.Cycle
 var _ framework.ScorePlugin = (*wasmPlugin)(nil)
 
 // Score implements the same method as documented on framework.ScorePlugin.
-func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
-	g, err := pl.pool.getForScheduling(ctx, cycleID(pod))
-	if err != nil {
-		return 0, framework.AsStatus(err)
-	}
-
+func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (score int64, status *framework.Status) {
 	// Add the params to the go context so that the corresponding host function
 	// can look them up.
 	params := &params{pod: pod, nodeName: nodeName}
 	ctx = context.WithValue(ctx, paramsKey{}, params)
-	return g.score(ctx)
+	if err := pl.pool.doWithSchedulingGuest(ctx, cycleID(pod), func(g *guest) {
+		score, status = g.score(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	return
 }
 
 // ScoreExtensions implements the same method as documented on framework.ScorePlugin.
@@ -237,15 +235,13 @@ func (pl *wasmPlugin) ScoreExtensions() framework.ScoreExtensions {
 var _ framework.ReservePlugin = (*wasmPlugin)(nil)
 
 // Reserve implements the same method as documented on framework.ReservePlugin.
-func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
-	_, err := pl.pool.getForScheduling(ctx, cycleID(pod))
-	if err != nil {
-		return framework.AsStatus(err)
+func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
+	if err := pl.pool.doWithSchedulingGuest(ctx, cycleID(pod), func(g *guest) {
+		// TODO: partially implemented for testing
+	}); err != nil {
+		status = framework.AsStatus(err)
 	}
-
-	// TODO: partially implemented for testing
-
-	return nil
+	return
 }
 
 // Unreserve implements the same method as documented on framework.ReservePlugin.

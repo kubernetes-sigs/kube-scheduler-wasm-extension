@@ -41,8 +41,10 @@ func Test_guestPool_getForScheduling(t *testing.T) {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 
-	g1, err := pl.getForScheduling(ctx, id)
-	if err != nil {
+	var g1 *testGuest
+	if err = pl.doWithSchedulingGuest(ctx, id, func(t *testGuest) {
+		g1 = t
+	}); err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 	if g1 == nil {
@@ -50,8 +52,10 @@ func Test_guestPool_getForScheduling(t *testing.T) {
 	}
 
 	// Scheduling is sequential, so we expect a different ID to re-use the prior
-	g2, err := pl.getForScheduling(ctx, differentID)
-	if err != nil {
+	var g2 *testGuest
+	if err = pl.doWithSchedulingGuest(ctx, differentID, func(t *testGuest) {
+		g2 = t
+	}); err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 	if g2 == nil {
@@ -76,8 +80,10 @@ func Test_guestPool_getForBinding(t *testing.T) {
 	}
 
 	// assign for scheduling
-	g1, err := pl.getForScheduling(ctx, id)
-	if err != nil {
+	var g1 *testGuest
+	if err = pl.doWithSchedulingGuest(ctx, id, func(t *testGuest) {
+		g1 = t
+	}); err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 
@@ -93,8 +99,10 @@ func Test_guestPool_getForBinding(t *testing.T) {
 	}
 
 	// assign another for scheduling
-	g2, err := pl.getForScheduling(ctx, differentID)
-	if err != nil {
+	var g2 *testGuest
+	if err = pl.doWithSchedulingGuest(ctx, differentID, func(t *testGuest) {
+		g2 = t
+	}); err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 

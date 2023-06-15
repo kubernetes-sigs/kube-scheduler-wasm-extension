@@ -56,12 +56,20 @@ func newGuestPool[guest comparable](ctx context.Context, newGuest func(context.C
 	}, nil
 }
 
-// getForScheduling returns a guest for the current cycleID or an error.
+// doWithSchedulingGuest runs the function with a guest used for scheduling
+// cycles.
 //
-// There can be up to one scheduling cycle in-progress, so this returns the
-// current guest, possibly reclaimed from a prior cycle. Otherwise, one will
-// be created.
-func (p *guestPool[guest]) getForScheduling(ctx context.Context, cycleID uint32) (guest, error) {
+// There can be only one scheduling cycle in-progress and in most cases it is
+// sequential. The only exception is preemption, a framework.PostFilterPlugin
+// called when all nodes are filtered out, to make space available for the pod.
+//
+// The built-in defaultpreemption.DefaultPreemption might make parallel calls
+// to wasmPlugin.Filter, wasmPlugin.AddPod and wasmPlugin.RemovePod in its
+// `SelectVictimsOnNode` function.
+//
+// Hence, we need to serialize access to the scheduling guest, so that it isn't
+// corrupted from overlapping use.
+func (p *guestPool[guest]) doWithSchedulingGuest(ctx context.Context, cycleID uint32, fn func(guest)) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
@@ -73,7 +81,8 @@ func (p *guestPool[guest]) getForScheduling(ctx context.Context, cycleID uint32)
 	if scheduled := p.scheduled; scheduled != zero {
 		// TODO: consider explicitly resetting the guest when
 		// schedulingCycleID != cycleID
-		return scheduled, nil
+		fn(scheduled)
+		return nil
 	}
 
 	// Prefer the free pool
@@ -81,16 +90,18 @@ func (p *guestPool[guest]) getForScheduling(ctx context.Context, cycleID uint32)
 		g := p.free[0]
 		p.free = p.free[1:]
 		p.scheduled = g
-		return g, nil
+		fn(g)
+		return nil
 	}
 
 	// If we're at this point, the guest previously scheduled was re-assigned
 	// to the binding cycle. Create a new guest.
 	if g, err := p.newGuest(ctx); err == nil {
 		p.scheduled = g
-		return g, nil
+		fn(g)
+		return nil
 	} else {
-		return zero, err
+		return err
 	}
 }
 
