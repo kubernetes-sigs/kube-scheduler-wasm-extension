@@ -41,26 +41,31 @@ func stringToPtr(s string) (uint32, uint32) {
 	return uint32(uintptr(ptr)), uint32(len(s))
 }
 
-func getBytes(fn func(ptr uint32, limit bufLimit) (len uint32)) []byte {
+// update is for decoding values from memory. The updater doesn't keep a reference to the underlying bytes, so we
+// don't need to copy them.
+func update(
+	fn func(ptr uint32, limit bufLimit) (len uint32),
+	updater func([]byte) error) error {
+
+	// Run the update function, which returns the size needed, possibly larger
+	// than our buffer.
 	size := fn(uint32(readBufPtr), readBufLimit)
-	if size == 0 {
-		return nil
-	}
 
-	// Ensure the result isn't a shared buffer.
-	buf := make([]byte, size)
-
-	// If the function result fit in our read buffer, copy it out.
+	// When the size fits in our buffer, run the update function as the
+	// data have been copied to it.
 	if size <= readBufLimit {
-		copy(buf, readBuf)
-		return buf
+		return updater(readBuf[:size])
 	}
 
-	// If the size returned from the function was larger than our read buffer,
-	// we need to execute it again. buf is exactly the right size now.
-	ptr := uintptr(unsafe.Pointer(&buf[0]))
-	_ = fn(uint32(ptr), size)
-	return buf
+	// If the size in bytes to update is larger than our read buffer, make it
+	// larger. This avoids having to garbage collect between larger types.
+	readBufLimit = size
+	readBuf = make([]byte, readBufLimit)
+	readBufPtr = uintptr(unsafe.Pointer(&readBuf[0]))
+
+	// Run the function again to copy data into the correct size buffer.
+	_ = fn(uint32(readBufPtr), readBufLimit)
+	return updater(readBuf)
 }
 
 func getString(fn func(ptr uint32, limit bufLimit) (len uint32)) string {
