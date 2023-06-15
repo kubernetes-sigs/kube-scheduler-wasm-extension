@@ -18,7 +18,6 @@ package wasm
 
 import (
 	wazeroapi "github.com/tetratelabs/wazero/api"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
@@ -29,9 +28,7 @@ func NewTestWasmPlugin(p framework.Plugin) *WasmPlugin {
 }
 
 func (w *WasmPlugin) SetGlobals(globals map[string]int32) {
-	defer w.pool.unassignForScheduling()
-
-	g, err := w.pool.getOrCreateGuest(ctx, "a")
+	g, err := w.pool.getForScheduling(ctx, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -46,14 +43,14 @@ func (w *WasmPlugin) ClearGuestModule() {
 	w.guestModule = nil
 }
 
-func (w *WasmPlugin) GetSchedulingPodUID() types.UID {
-	return w.pool.schedulingPodUID
+func (w *WasmPlugin) GetSchedulingCycleID() uint32 {
+	return w.pool.schedulingCycleID
 }
 
-func (w *WasmPlugin) GetAssignedToBindingPod() map[types.UID]*guest {
-	return w.pool.assignedToBindingPod
+func (w *WasmPlugin) GetBindingCycles() map[uint32]*guest {
+	return w.pool.binding
 }
 
-func (w *WasmPlugin) GetInstanceFromPool() any {
-	return w.pool.pool.Get()
+func (w *WasmPlugin) GetFreePool() []*guest {
+	return w.pool.free
 }

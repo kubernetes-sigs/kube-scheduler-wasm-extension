@@ -18,9 +18,8 @@ package wasm
 
 import (
 	"context"
+	"reflect"
 	"testing"
-
-	"k8s.io/apimachinery/pkg/types"
 )
 
 var ctx = context.Background()
@@ -29,9 +28,9 @@ type testGuest struct {
 	val int
 }
 
-func Test_guestPool_getOrCreateGuest(t *testing.T) {
-	uid := types.UID("test-uid")
-	differentUID := types.UID("different-uid")
+func Test_guestPool_getForScheduling(t *testing.T) {
+	id := uint32(1)
+	differentID := uint32(2)
 
 	var counter int
 	pl, err := newGuestPool(ctx, func(ctx2 context.Context) (*testGuest, error) {
@@ -42,7 +41,7 @@ func Test_guestPool_getOrCreateGuest(t *testing.T) {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 
-	g1, err := pl.getOrCreateGuest(ctx, uid)
+	g1, err := pl.getForScheduling(ctx, id)
 	if err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
@@ -50,28 +49,59 @@ func Test_guestPool_getOrCreateGuest(t *testing.T) {
 		t.Fatalf("have nil guest instance")
 	}
 
-	// We expect a new guest instance when created with a different podUID.
-	g2, err := pl.getOrCreateGuest(ctx, differentUID)
+	// Scheduling is sequential, so we expect a different ID to re-use the prior
+	g2, err := pl.getForScheduling(ctx, differentID)
 	if err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 	if g2 == nil {
 		t.Fatalf("have nil guest instance")
 	}
-	if g2 == g1 {
-		t.Fatalf("expected different guests, but they are the same")
+	if want, have := g1, g2; !reflect.DeepEqual(want, have) {
+		t.Fatalf("expected the same guest: want %v, have %v", want, have)
 	}
+}
 
-	// Put the first back into the pool
-	pl.put(g1)
+func Test_guestPool_getForBinding(t *testing.T) {
+	id := uint32(1)
+	differentID := uint32(2)
 
-	// This should return the first guest instance because we pass the same
-	// podUID.
-	g3, err := pl.getOrCreateGuest(ctx, uid)
+	var counter int
+	pl, err := newGuestPool(ctx, func(ctx2 context.Context) (*testGuest, error) {
+		counter++
+		return &testGuest{val: counter}, nil
+	})
 	if err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
-	if g3 != g1 {
-		t.Fatalf("unexpected guest: want %v, have %v", g1, g3)
+
+	// assign for scheduling
+	g1, err := pl.getForScheduling(ctx, id)
+	if err != nil {
+		t.Fatalf("failed to get guest instance: %v", err)
+	}
+
+	// reassign for binding
+	pl.getForBinding(id)
+
+	if pl.schedulingCycleID != 0 {
+		t.Fatalf("expected no scheduling cycles")
+	}
+
+	if pl.scheduled != nil {
+		t.Fatalf("expected no scheduling cycles")
+	}
+
+	// assign another for scheduling
+	g2, err := pl.getForScheduling(ctx, differentID)
+	if err != nil {
+		t.Fatalf("failed to get guest instance: %v", err)
+	}
+
+	// reassign it for binding
+	pl.getForBinding(differentID)
+
+	if want, have := map[uint32]*testGuest{id: g1, differentID: g2}, pl.binding; !reflect.DeepEqual(want, have) {
+		t.Fatalf("expected two guests in the binding cycle: want %v, have %v", want, have)
 	}
 }

@@ -60,9 +60,12 @@ func BenchmarkPluginFilter(b *testing.B) {
 
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
+						// Intentionally change the pointer to simulate a new scheduling cycle.
+						pod := *tc.pod
+
+						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, &pod, ni)
 						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected code: got %v, expected %v, got reason: %v", want, have, s.Message())
+							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
 						}
 					}
 				})
@@ -98,9 +101,12 @@ func BenchmarkPluginScore(b *testing.B) {
 				b.Run(tc.name, func(b *testing.B) {
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						_, s := pl.plugin.(framework.ScorePlugin).Score(ctx, nil, tc.pod, tc.pod.Spec.NodeName)
+						// Intentionally change the pointer to simulate a new scheduling cycle.
+						pod := *tc.pod
+
+						_, s := pl.plugin.(framework.ScorePlugin).Score(ctx, nil, &pod, pod.Spec.NodeName)
 						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected status code: got %v, expected %v, got reason: %v", want, have, s.Message())
+							b.Fatalf("unexpected status code: have %v, expected %v, have reason: %v", want, have, s.Message())
 						}
 					}
 				})
@@ -142,13 +148,16 @@ func BenchmarkPluginFilterAndScore(b *testing.B) {
 
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
+						// Intentionally change the pointer to simulate a new scheduling cycle.
+						pod := *tc.pod
+
+						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, &pod, ni)
 						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected code: got %v, expected %v, got reason: %v", want, have, s.Message())
+							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
 						}
-						_, s = pl.plugin.(framework.ScorePlugin).Score(ctx, nil, tc.pod, tc.pod.Spec.NodeName)
+						_, s = pl.plugin.(framework.ScorePlugin).Score(ctx, nil, &pod, tc.pod.Spec.NodeName)
 						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected status code: got %v, expected %v, got reason: %v", want, have, s.Message())
+							b.Fatalf("unexpected status code: have %v, expected %v, have reason: %v", want, have, s.Message())
 						}
 					}
 				})
