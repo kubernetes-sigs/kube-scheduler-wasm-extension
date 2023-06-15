@@ -22,10 +22,10 @@ import (
 	"io"
 	"math"
 	"testing"
+	"unsafe"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
@@ -36,8 +36,8 @@ import (
 
 var ctx = context.Background()
 
-// Test_guestPool_assignedToBindingPod tests that the assignedToBindingPod field is set correctly.
-func Test_guestPool_assignedToBindingPod(t *testing.T) {
+// Test_guestPool_bindingCycles tests that the bindingCycles field is set correctly.
+func Test_guestPool_bindingCycles(t *testing.T) {
 	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleFilterSimple})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
@@ -53,8 +53,8 @@ func Test_guestPool_assignedToBindingPod(t *testing.T) {
 		t.Fatalf("prefilter failed: %v", status)
 	}
 
-	if pl.GetSchedulingPodUID() != pod.UID {
-		t.Fatalf("expected schedulingPodUID to be %v, got %v", pod.UID, pl.GetSchedulingPodUID())
+	if pl.GetSchedulingCycleID() != cycleID(pod) {
+		t.Fatalf("expected schedulingCycleID to be %v, have %v", cycleID(pod), pl.GetSchedulingCycleID())
 	}
 
 	// pod is going to the binding cycle.
@@ -63,8 +63,8 @@ func Test_guestPool_assignedToBindingPod(t *testing.T) {
 		t.Fatalf("filter failed: %v", status)
 	}
 
-	if len(pl.GetAssignedToBindingPod()) != 1 {
-		t.Fatalf("expected assignedToBindingPod to have 1 entry for `pod`, got %v", len(pl.GetAssignedToBindingPod()))
+	if len(pl.GetBindingCycles()) != 1 {
+		t.Fatalf("expected bindingCycles to have 1 entry for `pod`, have %v", len(pl.GetBindingCycles()))
 	}
 
 	// another scheduling cycle for nextPod is started.
@@ -74,8 +74,8 @@ func Test_guestPool_assignedToBindingPod(t *testing.T) {
 		t.Fatalf("prefilter failed: %v", status)
 	}
 
-	if pl.GetSchedulingPodUID() != nextPod.UID {
-		t.Fatalf("expected schedulingPodUID to be %v, got %v", pod.UID, pl.GetSchedulingPodUID())
+	if want, have := cycleID(nextPod), pl.GetSchedulingCycleID(); want != have {
+		t.Fatalf("unexpected scheduling cycle ID: want %v, have %v", want, have)
 	}
 
 	status, _ = pl.Permit(ctx, nil, nextPod, "node")
@@ -83,37 +83,38 @@ func Test_guestPool_assignedToBindingPod(t *testing.T) {
 		t.Fatalf("filter failed: %v", status)
 	}
 
-	if len(pl.GetAssignedToBindingPod()) != 2 {
-		t.Fatalf("expected assignedToBindingPod to have 2 entry for `pod`, got %v", len(pl.GetAssignedToBindingPod()))
+	if len(pl.GetBindingCycles()) != 2 {
+		t.Fatalf("expected bindingCycles to have 2 entry for `pod`, have %v", len(pl.GetBindingCycles()))
 	}
 
-	// make sure that the assignedToBindingPod has entries for both `pod` and `nextPod`.
+	// make sure that the bindingCycles has entries for both `pod` and `nextPod`.
 
-	registeredPodUIDs := sets.New[types.UID]()
-	for podUID := range pl.GetAssignedToBindingPod() {
-		registeredPodUIDs.Insert(podUID)
+	registeredPodUIDs := sets.New[uint32]()
+	for cycleID := range pl.GetBindingCycles() {
+		registeredPodUIDs.Insert(cycleID)
 	}
-	if !registeredPodUIDs.Has(pod.UID) || !registeredPodUIDs.Has(nextPod.UID) {
-		t.Fatalf("expected assignedToBindingPod to have entries for `pod` and `nextPod`, but got %v", registeredPodUIDs)
+	if !registeredPodUIDs.Has(cycleID(pod)) || !registeredPodUIDs.Has(cycleID(nextPod)) {
+		t.Fatalf("expected bindingCycles to have entries for `pod` and `nextPod`, but have %v", registeredPodUIDs)
 	}
 
 	// pod is rejected in the binding cycle.
 	pl.Unreserve(ctx, nil, pod, "node")
-	if len(pl.GetAssignedToBindingPod()) != 1 {
-		t.Fatalf("expected assignedToBindingPod to have 1 entry for `nextPod`, got %v", len(pl.GetAssignedToBindingPod()))
+	bindingCycles := pl.GetBindingCycles()
+	if len(bindingCycles) != 1 {
+		t.Fatalf("expected bindingCycles to have 1 entry for `nextPod`, have %v", bindingCycles)
 	}
-	if _, ok := pl.GetAssignedToBindingPod()[nextPod.UID]; !ok {
-		t.Fatalf("expected assignedToBindingPod to have entry for `nextPod`, got %v", pl.GetAssignedToBindingPod())
+	if _, ok := bindingCycles[cycleID(nextPod)]; !ok {
+		t.Fatalf("expected bindingCycles to have entry for `nextPod`, have %v", bindingCycles)
 	}
 
 	// nextPod is rejected in the binding cycle.
 	pl.PostBind(ctx, nil, nextPod, "node")
-	if len(pl.GetAssignedToBindingPod()) != 0 {
-		t.Fatalf("expected assignedToBindingPod to have 0 entry, got %v", len(pl.GetAssignedToBindingPod()))
+	if len(pl.GetBindingCycles()) != 0 {
+		t.Fatalf("expected bindingCycles to have 0 entry, have %v", len(pl.GetBindingCycles()))
 	}
 }
 
-// Test_guestPool_assignedToSchedulingPod tests that the schedulingPodUID is assigned during PreFilter expectedly.
+// Test_guestPool_assignedToSchedulingPod tests that the schedulingCycleID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleFilterSimple})
 	if err != nil {
@@ -139,19 +140,19 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 		t.Fatalf("filter failed: %v", status)
 	}
 
-	if pl.GetSchedulingPodUID() != pod.UID {
-		t.Fatalf("expected schedulingPodUID to be %v, got %v", pod.UID, pl.GetSchedulingPodUID())
+	if pl.GetSchedulingCycleID() != cycleID(pod) {
+		t.Fatalf("expected schedulingCycleID to be %v, have %v", cycleID(pod), pl.GetSchedulingCycleID())
 	}
 
 	// PreFilter is called with a different pod, meaning the past scheduling cycle of `pod` is finished.
 	pl.PreFilter(ctx, nil, nextPod)
 
-	if pl.GetSchedulingPodUID() != nextPod.UID {
-		t.Fatalf("expected schedulingPodUID to be %v, got %v", nextPod.UID, pl.GetSchedulingPodUID())
+	if want, have := cycleID(nextPod), pl.GetSchedulingCycleID(); want != have {
+		t.Fatalf("unexpected scheduling cycle ID: want %v, have %v", want, have)
 	}
 
-	if pl.GetInstanceFromPool() == nil {
-		t.Fatal("expected guest instance that is used for `pod` to be in the pool, but it's not")
+	if len(pl.GetFreePool()) != 0 {
+		t.Fatal("expected guest instance that is used for `pod` to be reused, but it wasn't")
 	}
 }
 
@@ -465,4 +466,9 @@ wasm stack trace:
 			}
 		})
 	}
+}
+
+func cycleID(pod *v1.Pod) uint32 {
+	podPtr := uintptr(unsafe.Pointer(pod))
+	return uint32(podPtr)
 }

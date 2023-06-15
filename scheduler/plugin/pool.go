@@ -19,124 +19,142 @@ package wasm
 import (
 	"context"
 	"sync"
-
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // guestPool manages guest to pod assignments in a scheduling or binding cycle.
-type guestPool[guest any] struct {
+//
+// Assumptions made about the lifecycle are taken from the below diagram
+// https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/#extension-points
+type guestPool[guest comparable] struct {
 	// newGuest is a function to create a new guest.
 	newGuest func(context.Context) (guest, error)
 
-	// pool is a pool of unused guest instances.
-	pool sync.Pool
+	mux sync.RWMutex
 
-	// schedulingPodUID is the UID of the pod that is being scheduled.
-	// The plugin updates this field at the beginning of each scheduling cycle (PreFilter).
-	//
-	// Note: We cannot unassign the guest instance in PostFilter/Permit
-	// because PostFilter is not enough to notice failures in the scheduling cycle,
-	// it's called only when the Pod is rejected in PreFilter or Filter.
-	// So, we need to trach Pods in the scheduling cycle and the binding cycle separately
-	// so that we can know which guest instance to unassign at PreFilter.
-	schedulingPodUID types.UID
+	// scheduled is up to one guest in the scheduling cycle.
+	schedulingCycleID uint32
+	scheduled         guest
 
-	// assignedToSchedulingPod has the guest instance assignedToSchedulingPod to the pod.
-	// assignedToSchedulingPod instance won't be put back to the pool until the scheduling cycle of this Pod is finished.
-	// The plugin will update this field at the beginning of each scheduling cycle (PreFilter) along with schedulingPodUID.
-	assignedToSchedulingPod guest
+	// binding are any guests in the binding cycle.
+	binding map[uint32]guest
 
-	// assignedToSchedulingPodLock is a lock to protect the access to the assigned instance.
-	// The scheduler may call Filter(), AddPod(), RemovePod() concurrently, and we need to take a lock.
-	// But, other methods of the plugin should be invoked for the same Pod serially.
-	assignedToSchedulingPodLock sync.Mutex
-
-	// assignedToBindingPod has the guest instances for Pods in binding cycle.
-	assignedToBindingPod map[types.UID]guest
+	// free pool of guests not in use
+	free []guest
 }
 
-func newGuestPool[guest any](ctx context.Context, newGuest func(context.Context) (guest, error)) (*guestPool[guest], error) {
-	p := &guestPool[guest]{
-		newGuest:             newGuest,
-		assignedToBindingPod: make(map[types.UID]guest),
-	}
-
+func newGuestPool[guest comparable](ctx context.Context, newGuest func(context.Context) (guest, error)) (*guestPool[guest], error) {
 	// Eagerly add one instance to the pool. Doing so helps to fail fast.
 	g, createErr := newGuest(ctx)
 	if createErr != nil {
 		return nil, createErr
 	}
-	p.put(g)
 
-	return p, nil
+	return &guestPool[guest]{
+		newGuest: newGuest,
+		binding:  make(map[uint32]guest),
+		free:     []guest{g},
+	}, nil
 }
 
-func (p *guestPool[guest]) getOrCreateGuest(ctx context.Context, podUID types.UID) (g guest, err error) {
-	var ok bool
-	if g, ok = p.getInstanceForSchedulingPod(ctx, podUID); !ok {
-		if g, err = p.newGuest(ctx); err != nil {
-			return
-		}
-	}
+// doWithSchedulingGuest runs the function with a guest used for scheduling
+// cycles.
+//
+// There can be only one scheduling cycle in-progress and in most cases it is
+// sequential. The only exception is preemption, a framework.PostFilterPlugin
+// called when all nodes are filtered out, to make space available for the pod.
+//
+// The built-in defaultpreemption.DefaultPreemption might make parallel calls
+// to wasmPlugin.Filter, wasmPlugin.AddPod and wasmPlugin.RemovePod in its
+// `SelectVictimsOnNode` function.
+//
+// Hence, we need to serialize access to the scheduling guest, so that it isn't
+// corrupted from overlapping use.
+func (p *guestPool[guest]) doWithSchedulingGuest(ctx context.Context, cycleID uint32, fn func(guest)) error {
+	p.mux.Lock()
+	defer p.mux.Unlock()
 
-	// Assign the guest to the pod.
-	p.assignForScheduling(g, podUID)
+	// The scheduling cycle runs sequentially. If we still have an association,
+	// take it over.
+	p.schedulingCycleID = cycleID
 
-	return
-}
-
-// assignForScheduling assigns the guest instance to the pod in the scheduling
-// cycle, so that the same pod can always get the same guest instance.
-func (p *guestPool[guest]) assignForScheduling(g guest, podUID types.UID) {
-	p.assignedToSchedulingPod = g
-	p.schedulingPodUID = podUID
-}
-
-// assignForBinding assigns the guest instance to the pod in the binding cycle.
-// This function doesn't take a lock because it is supposed to be called in the
-// scheduling cycle: it will never be called in parallel.
-func (p *guestPool[guest]) assignForBinding(podUID types.UID) {
-	g := p.assignedToSchedulingPod
-	p.assignedToBindingPod[podUID] = g
-}
-
-// unassignForScheduling unassigns the guest instance from the pod puts it back
-// into the pool.
-func (p *guestPool[guest]) unassignForScheduling() {
-	assigned := p.assignedToSchedulingPod
 	var zero guest
-	p.assignedToSchedulingPod = zero
-	p.schedulingPodUID = ""
-	p.put(assigned)
+	if scheduled := p.scheduled; scheduled != zero {
+		// TODO: consider explicitly resetting the guest when
+		// schedulingCycleID != cycleID
+		fn(scheduled)
+		return nil
+	}
+
+	// Prefer the free pool
+	if len(p.free) > 0 {
+		g := p.free[0]
+		p.free = p.free[1:]
+		p.scheduled = g
+		fn(g)
+		return nil
+	}
+
+	// If we're at this point, the guest previously scheduled was re-assigned
+	// to the binding cycle. Create a new guest.
+	if g, err := p.newGuest(ctx); err == nil {
+		p.scheduled = g
+		fn(g)
+		return nil
+	} else {
+		return err
+	}
 }
 
-// unassignForBinding unassigns the guest instance from the pod in the binding
-// cycle.
-func (p *guestPool[guest]) unassignForBinding(podUID types.UID) {
-	assigned := p.assignedToBindingPod[podUID]
-	delete(p.assignedToBindingPod, podUID)
-	p.put(assigned)
+// getForBinding returns a guest for the current cycleID or an error.
+//
+// There can be multiple scheduling cycles in-progress, but they always start
+// after a schedule. If there's an existing association with the cycleID, it
+// is re-used. Otherwise, the current scheduling guest is re-associated for
+// binding.
+func (p *guestPool[guest]) getForBinding(cycleID uint32) guest {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	// Fast path is we are in an existing binding cycle.
+	var zero guest
+	if g := p.binding[cycleID]; g != zero {
+		return g // current guest is still correct.
+	}
+
+	// The pod pointer of the scheduling cycle will differ from the pointer in
+	// the binding one. Take over the currently scheduled guest.
+	if scheduled := p.scheduled; scheduled != zero {
+		p.schedulingCycleID = 0
+		p.scheduled = zero
+		p.binding[cycleID] = scheduled
+		return scheduled
+	}
+
+	// Reaching here is unexpected, because the binding cycle must happen after
+	// a scheduling one, even if binding cycles can run in parallel.
+	panic("unexpected pod pointer")
 }
 
-// put puts the guest instance back to the pool.
+// freeFromBinding should be called when a binding cycle ends for any reason.
+func (p *guestPool[guest]) freeFromBinding(cycleID uint32) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	if g, ok := p.binding[cycleID]; ok {
+		delete(p.binding, cycleID)
+		p.put(g)
+	}
+}
+
+// put puts the guest instance back to the pool. This must be called under a
+// lock.
 func (p *guestPool[guest]) put(g guest) {
-	p.pool.Put(g)
-}
-
-// getInstanceForSchedulingPod gets a guest instance for the Pod in the
-// scheduling cycle. If the pod has already got a guest, it returns the guest.
-// Otherwise, it gets a guest from the pool.
-func (p *guestPool[guest]) getInstanceForSchedulingPod(ctx context.Context, podUID types.UID) (g guest, ok bool) {
-	// Check if the pod has already got a guest.
-	if podUID == p.schedulingPodUID {
-		return p.assignedToSchedulingPod, true
+	var zero guest
+	if g == zero {
+		panic("nil guest")
 	}
 
-	// If not, get a guest from the pool.
-	pG := p.pool.Get()
-	if pG == nil {
-		return
-	}
-	g, ok = pG.(guest)
-	return
+	// TODO consider allowing the guest to reset its state
+
+	p.free = append(p.free, g)
 }

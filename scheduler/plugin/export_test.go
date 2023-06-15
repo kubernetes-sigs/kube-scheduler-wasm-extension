@@ -18,7 +18,6 @@ package wasm
 
 import (
 	wazeroapi "github.com/tetratelabs/wazero/api"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
@@ -29,16 +28,13 @@ func NewTestWasmPlugin(p framework.Plugin) *WasmPlugin {
 }
 
 func (w *WasmPlugin) SetGlobals(globals map[string]int32) {
-	defer w.pool.unassignForScheduling()
-
-	g, err := w.pool.getOrCreateGuest(ctx, "a")
-	if err != nil {
+	if err := w.pool.doWithSchedulingGuest(ctx, 0, func(g *guest) {
+		// Use test conventions to set a global used to test value range.
+		for n, v := range globals {
+			g.guest.ExportedGlobal(n + "_global").(wazeroapi.MutableGlobal).Set(uint64(v))
+		}
+	}); err != nil {
 		panic(err)
-	}
-
-	// Use test conventions to set a global used to test value range.
-	for n, v := range globals {
-		g.guest.ExportedGlobal(n + "_global").(wazeroapi.MutableGlobal).Set(uint64(v))
 	}
 }
 
@@ -46,14 +42,14 @@ func (w *WasmPlugin) ClearGuestModule() {
 	w.guestModule = nil
 }
 
-func (w *WasmPlugin) GetSchedulingPodUID() types.UID {
-	return w.pool.schedulingPodUID
+func (w *WasmPlugin) GetSchedulingCycleID() uint32 {
+	return w.pool.schedulingCycleID
 }
 
-func (w *WasmPlugin) GetAssignedToBindingPod() map[types.UID]*guest {
-	return w.pool.assignedToBindingPod
+func (w *WasmPlugin) GetBindingCycles() map[uint32]*guest {
+	return w.pool.binding
 }
 
-func (w *WasmPlugin) GetInstanceFromPool() any {
-	return w.pool.pool.Get()
+func (w *WasmPlugin) GetFreePool() []*guest {
+	return w.pool.free
 }
