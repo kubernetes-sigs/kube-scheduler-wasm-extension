@@ -42,9 +42,8 @@ func (n *NodeInfo) node() *protoapi.Node {
 		return node
 	}
 
-	b := imports.NodeInfoNode()
 	var msg protoapi.Node
-	if err := msg.UnmarshalVT(b); err != nil {
+	if err := imports.NodeInfoNode(msg.UnmarshalVT); err != nil {
 		panic(err)
 	}
 	n.n = &msg
@@ -75,9 +74,8 @@ func (p *Pod) pod() *protoapi.Pod {
 		return pod
 	}
 
-	b := imports.Pod()
 	var msg protoapi.Pod
-	if err := msg.UnmarshalVT(b); err != nil {
+	if err := imports.Pod(msg.UnmarshalVT); err != nil {
 		panic(err.Error())
 	}
 	p.p = &msg

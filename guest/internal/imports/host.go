@@ -52,16 +52,16 @@ func NodeName() string {
 	})
 }
 
-func NodeInfoNode() []byte {
+func NodeInfoNode(updater func([]byte) error) error {
 	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
-	return getBytes(func(ptr uint32, limit bufLimit) (len uint32) {
+	return update(func(ptr uint32, limit bufLimit) (len uint32) {
 		return k8sApiNodeInfoNode(ptr, limit)
-	})
+	}, updater)
 }
 
-func Pod() []byte {
+func Pod(updater func([]byte) error) error {
 	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
-	return getBytes(func(ptr uint32, limit bufLimit) (len uint32) {
+	return update(func(ptr uint32, limit bufLimit) (len uint32) {
 		return k8sApiPod(ptr, limit)
-	})
+	}, updater)
 }
