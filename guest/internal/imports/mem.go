@@ -45,8 +45,8 @@ func stringToPtr(s string) (uint32, uint32) {
 // don't need to copy them.
 func update(
 	fn func(ptr uint32, limit bufLimit) (len uint32),
-	updater func([]byte) error) error {
-
+	updater func([]byte) error,
+) error {
 	// Run the update function, which returns the size needed, possibly larger
 	// than our buffer.
 	size := fn(uint32(readBufPtr), readBufLimit)
