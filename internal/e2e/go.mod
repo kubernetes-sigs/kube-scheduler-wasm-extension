@@ -5,7 +5,7 @@ go 1.20
 
 require (
 	github.com/stealthrocket/wzprof v0.1.5
-	github.com/tetratelabs/wazero v1.2.0
+	github.com/tetratelabs/wazero v1.2.1
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
 	k8s.io/kubernetes v1.26.2
