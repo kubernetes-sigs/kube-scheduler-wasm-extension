@@ -19,6 +19,8 @@ package wasm
 import (
 	"context"
 	"sync"
+
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // guestPool manages guest to pod assignments in a scheduling or binding cycle.
@@ -31,12 +33,13 @@ type guestPool[guest comparable] struct {
 
 	mux sync.RWMutex
 
-	// scheduled is up to one guest in the scheduling cycle.
-	schedulingCycleID uint32
-	scheduled         guest
+	// scheduledPodUID is the UID of the pod being scheduled.
+	scheduledPodUID types.UID
+	// scheduled is the guest being scheduled.
+	scheduled guest
 
 	// binding are any guests in the binding cycle.
-	binding map[uint32]guest
+	binding map[types.UID]guest
 
 	// free pool of guests not in use
 	free []guest
@@ -51,7 +54,7 @@ func newGuestPool[guest comparable](ctx context.Context, newGuest func(context.C
 
 	return &guestPool[guest]{
 		newGuest: newGuest,
-		binding:  make(map[uint32]guest),
+		binding:  make(map[types.UID]guest),
 		free:     []guest{g},
 	}, nil
 }
@@ -69,18 +72,16 @@ func newGuestPool[guest comparable](ctx context.Context, newGuest func(context.C
 //
 // Hence, we need to serialize access to the scheduling guest, so that it isn't
 // corrupted from overlapping use.
-func (p *guestPool[guest]) doWithSchedulingGuest(ctx context.Context, cycleID uint32, fn func(guest)) error {
+func (p *guestPool[guest]) doWithSchedulingGuest(ctx context.Context, podUID types.UID, fn func(guest)) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
 	// The scheduling cycle runs sequentially. If we still have an association,
-	// take it over.
-	p.schedulingCycleID = cycleID
-
+	// take it over. Guests who cache state should use the podUID to identify a
+	// difference.
+	p.scheduledPodUID = podUID
 	var zero guest
 	if scheduled := p.scheduled; scheduled != zero {
-		// TODO: consider explicitly resetting the guest when
-		// schedulingCycleID != cycleID
 		fn(scheduled)
 		return nil
 	}
@@ -105,43 +106,43 @@ func (p *guestPool[guest]) doWithSchedulingGuest(ctx context.Context, cycleID ui
 	}
 }
 
-// getForBinding returns a guest for the current cycleID or an error.
+// getForBinding returns a guest for the current podUID or an error.
 //
 // There can be multiple scheduling cycles in-progress, but they always start
-// after a schedule. If there's an existing association with the cycleID, it
+// after a schedule. If there's an existing association with the podUID, it
 // is re-used. Otherwise, the current scheduling guest is re-associated for
 // binding.
-func (p *guestPool[guest]) getForBinding(cycleID uint32) guest {
+func (p *guestPool[guest]) getForBinding(podUID types.UID) guest {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
 	// Fast path is we are in an existing binding cycle.
 	var zero guest
-	if g := p.binding[cycleID]; g != zero {
+	if g := p.binding[podUID]; g != zero {
 		return g // current guest is still correct.
 	}
 
-	// The pod pointer of the scheduling cycle will differ from the pointer in
-	// the binding one. Take over the currently scheduled guest.
+	// We re-used the guest from the scheduling cycle for the binding cycle,
+	// so that it doesn't have to unmarshal the pod again.
 	if scheduled := p.scheduled; scheduled != zero {
-		p.schedulingCycleID = 0
+		p.scheduledPodUID = ""
 		p.scheduled = zero
-		p.binding[cycleID] = scheduled
+		p.binding[podUID] = scheduled
 		return scheduled
 	}
 
 	// Reaching here is unexpected, because the binding cycle must happen after
 	// a scheduling one, even if binding cycles can run in parallel.
-	panic("unexpected pod pointer")
+	panic("unexpected podUID")
 }
 
 // freeFromBinding should be called when a binding cycle ends for any reason.
-func (p *guestPool[guest]) freeFromBinding(cycleID uint32) {
+func (p *guestPool[guest]) freeFromBinding(podUID types.UID) {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	if g, ok := p.binding[cycleID]; ok {
-		delete(p.binding, cycleID)
+	if g, ok := p.binding[podUID]; ok {
+		delete(p.binding, podUID)
 		p.put(g)
 	}
 }
@@ -153,8 +154,5 @@ func (p *guestPool[guest]) put(g guest) {
 	if g == zero {
 		panic("nil guest")
 	}
-
-	// TODO consider allowing the guest to reset its state
-
 	p.free = append(p.free, g)
 }
