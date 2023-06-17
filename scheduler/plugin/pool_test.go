@@ -20,6 +20,9 @@ import (
 	"context"
 	"reflect"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 var ctx = context.Background()
@@ -29,8 +32,8 @@ type testGuest struct {
 }
 
 func Test_guestPool_getForScheduling(t *testing.T) {
-	id := uint32(1)
-	differentID := uint32(2)
+	uid := uuid.NewUUID()
+	differentUID := uuid.NewUUID()
 
 	var counter int
 	pl, err := newGuestPool(ctx, func(ctx2 context.Context) (*testGuest, error) {
@@ -42,7 +45,7 @@ func Test_guestPool_getForScheduling(t *testing.T) {
 	}
 
 	var g1 *testGuest
-	if err = pl.doWithSchedulingGuest(ctx, id, func(t *testGuest) {
+	if err = pl.doWithSchedulingGuest(ctx, uid, func(t *testGuest) {
 		g1 = t
 	}); err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
@@ -53,7 +56,7 @@ func Test_guestPool_getForScheduling(t *testing.T) {
 
 	// Scheduling is sequential, so we expect a different ID to re-use the prior
 	var g2 *testGuest
-	if err = pl.doWithSchedulingGuest(ctx, differentID, func(t *testGuest) {
+	if err = pl.doWithSchedulingGuest(ctx, differentUID, func(t *testGuest) {
 		g2 = t
 	}); err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
@@ -67,8 +70,8 @@ func Test_guestPool_getForScheduling(t *testing.T) {
 }
 
 func Test_guestPool_getForBinding(t *testing.T) {
-	id := uint32(1)
-	differentID := uint32(2)
+	uid := uuid.NewUUID()
+	differentUID := uuid.NewUUID()
 
 	var counter int
 	pl, err := newGuestPool(ctx, func(ctx2 context.Context) (*testGuest, error) {
@@ -81,16 +84,16 @@ func Test_guestPool_getForBinding(t *testing.T) {
 
 	// assign for scheduling
 	var g1 *testGuest
-	if err = pl.doWithSchedulingGuest(ctx, id, func(t *testGuest) {
+	if err = pl.doWithSchedulingGuest(ctx, uid, func(t *testGuest) {
 		g1 = t
 	}); err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 
 	// reassign for binding
-	pl.getForBinding(id)
+	pl.getForBinding(uid)
 
-	if pl.schedulingCycleID != 0 {
+	if pl.scheduledPodUID != "" {
 		t.Fatalf("expected no scheduling cycles")
 	}
 
@@ -100,16 +103,16 @@ func Test_guestPool_getForBinding(t *testing.T) {
 
 	// assign another for scheduling
 	var g2 *testGuest
-	if err = pl.doWithSchedulingGuest(ctx, differentID, func(t *testGuest) {
+	if err = pl.doWithSchedulingGuest(ctx, differentUID, func(t *testGuest) {
 		g2 = t
 	}); err != nil {
 		t.Fatalf("failed to get guest instance: %v", err)
 	}
 
 	// reassign it for binding
-	pl.getForBinding(differentID)
+	pl.getForBinding(differentUID)
 
-	if want, have := map[uint32]*testGuest{id: g1, differentID: g2}, pl.binding; !reflect.DeepEqual(want, have) {
+	if want, have := map[types.UID]*testGuest{uid: g1, differentUID: g2}, pl.binding; !reflect.DeepEqual(want, have) {
 		t.Fatalf("expected two guests in the binding cycle: want %v, have %v", want, have)
 	}
 }

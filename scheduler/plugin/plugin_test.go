@@ -22,10 +22,11 @@ import (
 	"io"
 	"math"
 	"testing"
-	"unsafe"
 
+	"github.com/google/uuid"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
@@ -45,16 +46,16 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	defer p.Close()
 
 	pl := wasm.NewTestWasmPlugin(p)
-	pod := st.MakePod().UID("uid1").Name("test-pod").Node("good-node").Obj()
-	nextPod := st.MakePod().UID("uid2").Name("test-pod2").Node("good-node").Obj()
+	pod := st.MakePod().UID(uuid.New().String()).Name("test-pod").Node("good-node").Obj()
+	nextPod := st.MakePod().UID(uuid.New().String()).Name("test-pod2").Node("good-node").Obj()
 
 	_, status := pl.PreFilter(ctx, nil, pod)
 	if !status.IsSuccess() {
 		t.Fatalf("prefilter failed: %v", status)
 	}
 
-	if pl.GetSchedulingCycleID() != cycleID(pod) {
-		t.Fatalf("expected schedulingCycleID to be %v, have %v", cycleID(pod), pl.GetSchedulingCycleID())
+	if pl.GetScheduledPodUID() != pod.UID {
+		t.Fatalf("expected scheduledPodUID to be %v, have %v", pod.UID, pl.GetScheduledPodUID())
 	}
 
 	// pod is going to the binding cycle.
@@ -74,8 +75,8 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 		t.Fatalf("prefilter failed: %v", status)
 	}
 
-	if want, have := cycleID(nextPod), pl.GetSchedulingCycleID(); want != have {
-		t.Fatalf("unexpected scheduling cycle ID: want %v, have %v", want, have)
+	if want, have := nextPod.UID, pl.GetScheduledPodUID(); want != have {
+		t.Fatalf("unexpected pod UID: want %v, have %v", want, have)
 	}
 
 	status, _ = pl.Permit(ctx, nil, nextPod, "node")
@@ -89,11 +90,11 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 	// make sure that the bindingCycles has entries for both `pod` and `nextPod`.
 
-	registeredPodUIDs := sets.New[uint32]()
-	for cycleID := range pl.GetBindingCycles() {
-		registeredPodUIDs.Insert(cycleID)
+	registeredPodUIDs := sets.New[types.UID]()
+	for podUID := range pl.GetBindingCycles() {
+		registeredPodUIDs.Insert(podUID)
 	}
-	if !registeredPodUIDs.Has(cycleID(pod)) || !registeredPodUIDs.Has(cycleID(nextPod)) {
+	if !registeredPodUIDs.Has(pod.UID) || !registeredPodUIDs.Has(nextPod.UID) {
 		t.Fatalf("expected bindingCycles to have entries for `pod` and `nextPod`, but have %v", registeredPodUIDs)
 	}
 
@@ -103,7 +104,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	if len(bindingCycles) != 1 {
 		t.Fatalf("expected bindingCycles to have 1 entry for `nextPod`, have %v", bindingCycles)
 	}
-	if _, ok := bindingCycles[cycleID(nextPod)]; !ok {
+	if _, ok := bindingCycles[nextPod.UID]; !ok {
 		t.Fatalf("expected bindingCycles to have entry for `nextPod`, have %v", bindingCycles)
 	}
 
@@ -114,7 +115,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	}
 }
 
-// Test_guestPool_assignedToSchedulingPod tests that the schedulingCycleID is assigned during PreFilter expectedly.
+// Test_guestPool_assignedToSchedulingPod tests that the scheduledPodUID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleFilterSimple})
 	if err != nil {
@@ -123,8 +124,8 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 	defer p.Close()
 
 	pl := wasm.NewTestWasmPlugin(p)
-	pod := st.MakePod().UID("uid1").Name("test-pod").Node("good-node").Obj()
-	nextPod := st.MakePod().UID("uid2").Name("test-pod2").Node("good-node").Obj()
+	pod := st.MakePod().UID(uuid.New().String()).Name("test-pod").Node("good-node").Obj()
+	nextPod := st.MakePod().UID(uuid.New().String()).Name("test-pod2").Node("good-node").Obj()
 
 	_, status := pl.PreFilter(ctx, nil, pod)
 	if !status.IsSuccess() {
@@ -140,15 +141,15 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 		t.Fatalf("filter failed: %v", status)
 	}
 
-	if pl.GetSchedulingCycleID() != cycleID(pod) {
-		t.Fatalf("expected schedulingCycleID to be %v, have %v", cycleID(pod), pl.GetSchedulingCycleID())
+	if pl.GetScheduledPodUID() != pod.UID {
+		t.Fatalf("expected scheduledPodUID to be %v, have %v", pod.UID, pl.GetScheduledPodUID())
 	}
 
 	// PreFilter is called with a different pod, meaning the past scheduling cycle of `pod` is finished.
 	pl.PreFilter(ctx, nil, nextPod)
 
-	if want, have := cycleID(nextPod), pl.GetSchedulingCycleID(); want != have {
-		t.Fatalf("unexpected scheduling cycle ID: want %v, have %v", want, have)
+	if want, have := nextPod.UID, pl.GetScheduledPodUID(); want != have {
+		t.Fatalf("unexpected pod UID: want %v, have %v", want, have)
 	}
 
 	if len(pl.GetFreePool()) != 0 {
@@ -466,9 +467,4 @@ wasm stack trace:
 			}
 		})
 	}
-}
-
-func cycleID(pod *v1.Pod) uint32 {
-	podPtr := uintptr(unsafe.Pointer(pod))
-	return uint32(podPtr)
 }

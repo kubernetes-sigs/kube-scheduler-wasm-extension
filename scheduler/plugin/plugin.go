@@ -23,7 +23,6 @@ import (
 	"os"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/tetratelabs/wazero"
 	v1 "k8s.io/api/core/v1"
@@ -166,7 +165,10 @@ func (pl *wasmPlugin) PreFilterExtensions() framework.PreFilterExtensions {
 // PreFilter implements the same method as documented on
 // framework.PreFilterPlugin.
 func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod) (result *framework.PreFilterResult, status *framework.Status) {
-	if err := pl.pool.doWithSchedulingGuest(ctx, cycleID(pod), func(g *guest) {
+	// TODO: The guest should always implement PreFilter, so it can know to
+	// reset state when the same pod has been re-scheduled due to an error. We
+	// need to both implement and test this.
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		// TODO: partially implemented for testing
 	}); err != nil {
 		status = framework.AsStatus(err)
@@ -182,7 +184,7 @@ func (pl *wasmPlugin) Filter(ctx context.Context, _ *framework.CycleState, pod *
 	// can look them up.
 	params := &params{pod: pod, nodeInfo: nodeInfo}
 	ctx = context.WithValue(ctx, paramsKey{}, params)
-	if err := pl.pool.doWithSchedulingGuest(ctx, cycleID(pod), func(g *guest) {
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		status = g.filter(ctx)
 	}); err != nil {
 		status = framework.AsStatus(err)
@@ -219,7 +221,7 @@ func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, po
 	// can look them up.
 	params := &params{pod: pod, nodeName: nodeName}
 	ctx = context.WithValue(ctx, paramsKey{}, params)
-	if err := pl.pool.doWithSchedulingGuest(ctx, cycleID(pod), func(g *guest) {
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		score, status = g.score(ctx)
 	}); err != nil {
 		status = framework.AsStatus(err)
@@ -236,7 +238,7 @@ var _ framework.ReservePlugin = (*wasmPlugin)(nil)
 
 // Reserve implements the same method as documented on framework.ReservePlugin.
 func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
-	if err := pl.pool.doWithSchedulingGuest(ctx, cycleID(pod), func(g *guest) {
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		// TODO: partially implemented for testing
 	}); err != nil {
 		status = framework.AsStatus(err)
@@ -250,8 +252,7 @@ func (pl *wasmPlugin) Unreserve(ctx context.Context, state *framework.CycleState
 	// cycle, rather the binding on error.
 	// https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/#extension-points
 
-	cycleID := cycleID(pod)
-	defer pl.pool.freeFromBinding(cycleID) // the cycle is over, put it back into the pool.
+	defer pl.pool.freeFromBinding(pod.UID) // the cycle is over, put it back into the pool.
 
 	// TODO: partially implemented for testing
 }
@@ -267,8 +268,7 @@ var _ framework.PostBindPlugin = (*wasmPlugin)(nil)
 
 // PostBind implements the same method as documented on framework.PostBindPlugin.
 func (pl *wasmPlugin) PostBind(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) {
-	cycleID := cycleID(pod)
-	defer pl.pool.freeFromBinding(cycleID) // the cycle is over, put it back into the pool.
+	defer pl.pool.freeFromBinding(pod.UID) // the cycle is over, put it back into the pool.
 
 	// TODO: partially implemented for testing
 }
@@ -277,7 +277,7 @@ var _ framework.PermitPlugin = (*wasmPlugin)(nil)
 
 // Permit implements the same method as documented on framework.PermitPlugin.
 func (pl *wasmPlugin) Permit(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (*framework.Status, time.Duration) {
-	_ = pl.pool.getForBinding(cycleID(pod))
+	_ = pl.pool.getForBinding(pod.UID)
 
 	// TODO: partially implemented for testing
 
@@ -298,17 +298,4 @@ func (pl *wasmPlugin) Close() error {
 		return rt.Close(context.Background())
 	}
 	return nil
-}
-
-// cycleID is stable through a scheduling or binding cycle. For example, it
-// will be different when the same pod is rescheduled due to an error. The
-// cycleID is not derived from the v1.Pod UID for this reason.
-//
-// We use the last 32-bits of the pod's pointer as its ID, as the struct is
-// re-instantiated each scheduling cycle, but the same object is used for each
-// callback within one.
-// See https://github.com/kubernetes/kubernetes/blob/9740bc0e0a10aad753cf7fcbed0c7be25ab200dd/pkg/scheduler/schedule_one.go#L133
-func cycleID(pod *v1.Pod) uint32 {
-	podPtr := uintptr(unsafe.Pointer(pod))
-	return uint32(podPtr)
 }
