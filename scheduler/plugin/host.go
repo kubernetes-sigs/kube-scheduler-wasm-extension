@@ -26,13 +26,14 @@ import (
 )
 
 const (
-	i32, i64                 = wazeroapi.ValueTypeI32, wazeroapi.ValueTypeI64
-	k8sApi                   = "k8s.io/api"
-	k8sApiNodeInfoNode       = "nodeInfo/node"
-	k8sApiNodeName           = "nodeName"
-	k8sApiPod                = "pod"
-	k8sScheduler             = "k8s.io/scheduler"
-	k8sSchedulerStatusReason = "status_reason"
+	i32, i64                       = wazeroapi.ValueTypeI32, wazeroapi.ValueTypeI64
+	k8sApi                         = "k8s.io/api"
+	k8sApiNodeInfoNode             = "nodeInfo/node"
+	k8sApiNodeName                 = "nodeName"
+	k8sApiPod                      = "pod"
+	k8sScheduler                   = "k8s.io/scheduler"
+	k8sSchedulerResultStatusReason = "result.status_reason"
+	k8sSchedulerResultNodeNames    = "result.node_names"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
@@ -52,16 +53,29 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
 	return runtime.NewHostModuleBuilder(k8sScheduler).
 		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerStatusReasonFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
-		WithParameterNames("buf", "buf_len").Export(k8sSchedulerStatusReason).
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultNodeNamesFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultNodeNames).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultStatusReasonFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultStatusReason).
 		Instantiate(ctx)
 }
 
-// paramsKey is a context.Context value associated with a params
+// stackKey is a context.Context value associated with a stack
 // pointer to the current request.
-type paramsKey struct{}
+type stackKey struct{}
 
-type params struct {
+// stack holds any parameters or results from functions implemented by the
+// guest. An instance of stack is only used for a single function invocation,
+// such as guest.filterFn.
+//
+// # Notes
+//
+//   - This is needed because WebAssembly types are numeric only.
+//   - Result fields are conventionally prefixed with "result".
+//   - Declaring one type is less complicated than one+context key per
+//     function. Functions should ignore fields they don't use.
+type stack struct {
 	// pod is used by guest.filterFn and guest.scoreFn
 	pod *v1.Pod
 
@@ -71,16 +85,19 @@ type params struct {
 	// nodeName is used by guest.scoreFn
 	nodeName string
 
+	// resultNodeNames is returned by guest.prefilterFn
+	resultNodeNames []string
+
 	// reason returned by all guest exports.
 	//
 	// It is a field to avoid compiler-specific malloc/free functions, and to
 	// avoid having to deal with out-params because TinyGo only supports a
 	// single result.
-	reason string
+	resultStatusReason string
 }
 
-func paramsFromContext(ctx context.Context) *params {
-	return ctx.Value(paramsKey{}).(*params)
+func paramsFromContext(ctx context.Context) *stack {
+	return ctx.Value(stackKey{}).(*stack)
 }
 
 func k8sApiNodeInfoNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
@@ -109,11 +126,26 @@ func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
 }
 
-// k8sSchedulerStatusReasonFn is a function used by the wasm guest to set the
-// framework.Status reason.
-func k8sSchedulerStatusReasonFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+// k8sSchedulerResultNodeNamesFn is a function used by the wasm guest to set the
+// node names result from guestExportPreFilter.
+func k8sSchedulerResultNodeNamesFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	ptr := uint32(stack[0])
-	size := bufLimit(stack[1])
+	size := uint32(stack[1])
+
+	var nodeNames []string
+	if b, ok := mod.Memory().Read(ptr, size); !ok {
+		panic("out of memory reading nodeNames")
+	} else {
+		nodeNames = fromNULTerminated(b)
+	}
+	paramsFromContext(ctx).resultNodeNames = nodeNames
+}
+
+// k8sSchedulerResultStatusReasonFn is a function used by the wasm guest to set the
+// framework.Status reason result from all functions.
+func k8sSchedulerResultStatusReasonFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	ptr := uint32(stack[0])
+	size := uint32(stack[1])
 
 	var reason string
 	if b, ok := mod.Memory().Read(ptr, size); !ok {
@@ -122,5 +154,5 @@ func k8sSchedulerStatusReasonFn(ctx context.Context, mod wazeroapi.Module, stack
 	} else {
 		reason = string(b)
 	}
-	paramsFromContext(ctx).reason = reason
+	paramsFromContext(ctx).resultStatusReason = reason
 }

@@ -46,7 +46,7 @@ jobs:
 
       - run: make check
 
-  test-scheduler:
+  test:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -60,4 +60,29 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - run: make test-scheduler
+      - run: make test
+
+  test-guest:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        go-version:  # Note: Go only supports 2 versions: https://go.dev/doc/devel/release#policy
+          - "1.20"
+        tinygo-version:  # Note: TinyGo only supports latest: https://github.com/tinygo-org/tinygo/releases
+          - "0.28.1"  # Latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: "Set up TinyGo"
+        run: |  # Installing via curl so commands are similar on OS/x
+          tinygo_version=${{ matrix.tinygo-version }}
+          curl -sSL https://github.com/tinygo-org/tinygo/releases/download/v${tinygo_version}/tinygo${tinygo_version}.linux-amd64.tar.gz | sudo tar -C /usr/local -xzf -
+          echo "TINYGOROOT=/usr/local/tinygo" >> $GITHUB_ENV
+          echo "/usr/local/tinygo/bin" >> $GITHUB_PATH
+
+      - run: make test-guest

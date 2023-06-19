@@ -9,12 +9,12 @@
   (memory (export "memory") 1 1)
 
   ;; Pre-populate memory with the panic message, in iovec format
-  (data (i32.const 0) "\08")     ;; iovs[0].offset
-  (data (i32.const 4) "\06")     ;; iovs[0].length
+  (data (i32.const 0) "\08")    ;; iovs[0].offset
+  (data (i32.const 4) "\06")    ;; iovs[0].length
   (data (i32.const 8) "panic!") ;; iovs[0]
 
   ;; On score, write "panic!" to stdout and crash.
-  (func $score (export "score") (result i64)
+  (func (export "score") (result i64)
     ;; Write the panic to stdout via its iovec [offset, len].
     (call $wasi.fd_write
       (i32.const 1) ;; stdout

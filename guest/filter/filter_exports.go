@@ -1,5 +1,3 @@
-//go:build tinygo.wasm
-
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -22,6 +20,9 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/types"
 )
+
+// prevent unused lint errors (lint is run with normal go).
+var _ func() uint32 = filter
 
 // filter is only exported to the host.
 //

@@ -6,16 +6,28 @@ golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
 	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi main.go)
 
 .PHONY: build-tinygo
-build-tinygo: examples/filter-simple/main.wasm examples/score-simple/main.wasm guest/testdata/all/main.wasm guest/testdata/all-noop/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
+build-tinygo: examples/prefilter-simple/main.wasm examples/filter-simple/main.wasm examples/score-simple/main.wasm guest/testdata/all/main.wasm guest/testdata/all-noop/main.wasm guest/testdata/prefilter/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
 
 %/main-debug.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi main.go)
+
+# Testing the guest code means running it with TinyGo, which internally
+# compiles the unit tests to a wasm binary, then runs it in a WASI runtime.
+.PHONY: test-guest
+test-guest: guest/.tinygo-target.json
+	@(cd guest; tinygo test -v -target .tinygo-target.json ./...)
+
+# By default, TinyGo's wasi target uses wasmtime. but our plugin uses wazero.
+# This makes a wasi target that uses the same wazero version as the scheduler.
+wazero_version := $(shell (cd scheduler; go list -f '{{ .Module.Version }}' github.com/tetratelabs/wazero))
+guest/.tinygo-target.json: scheduler/go.mod
+	@sed 's~"wasmtime.*"~"go run github.com/tetratelabs/wazero/cmd/wazero@$(wazero_version) run {}"~' $(shell tinygo env TINYGOROOT)/targets/wasi.json > $@
 
 .PHONY: build-wat
 build-wat: $(wildcard scheduler/test/testdata/*/*.wat)
 	@for f in $^; do \
         wasm=$$(echo $$f | sed -e 's/\.wat/\.wasm/'); \
-	    wat2wasm -o $$wasm --debug-names $$f; \
+		wat2wasm -o $$wasm --debug-names $$f; \
 	done
 
 .PHONY: testdata
@@ -89,10 +101,10 @@ format:
 	@go run $(gofumpt) -l -w .
 	@go run $(gosimports) -local sigs.k8s.io/kube-scheduler-wasm-extension/ -w $(shell find . -name '*.go' -type f)
 
-all_examples :=  $(wildcard ./examples/*/go.mod)
 # all_mods are the go modules including examples. Examples should also be
 # formatted, lint checked, etc. even if they are are built with TinyGo.
-all_mods     := ./internal/e2e/go.mod ./scheduler/go.mod ./guest/go.mod ./kubernetes/proto/go.mod $(all_examples)
+all_mods      := ./internal/e2e/go.mod ./scheduler/go.mod ./guest/go.mod ./guest/testdata/go.mod ./kubernetes/proto/go.mod ./examples/go.mod
+all_nottinygo := ./examples/go.mod ./guest/testdata/go.mod
 
 .PHONY: tidy
 tidy:
@@ -102,17 +114,17 @@ tidy:
 
 .PHONY: build
 build:
-	@# We filter out the examples main packages, as nottinygo cannot compiled \
+	@# We filter out the examples main packages, as nottinygo cannot compile \
      # to a normal platform executable.
-	@for f in $(filter-out $(all_examples), $(all_mods)); do \
+	@for f in $(filter-out $(all_nottinygo), $(all_mods)); do \
         (cd $$(dirname $$f); go build ./...); \
 	done
 
-.PHONY: test-scheduler
-test-scheduler:
-	@for d in ./scheduler ./internal/e2e; do \
-        (cd $$d; go test ./...); \
-	done
+# Test runs both host and guest unit tests with normal go.
+.PHONY: test
+test:
+	@(cd scheduler; go test -v ./...)
+	@(cd guest; go test -v ./...)
 
 .PHONY: check  # Pre-flight check for pull requests
 check:

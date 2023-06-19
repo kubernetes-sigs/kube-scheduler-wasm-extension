@@ -14,14 +14,14 @@
    limitations under the License.
 */
 
-package imports
+package mem
 
 import "unsafe"
 
 // BufLimit is the possibly zero maximum length of a result value to write in
 // bytes. If the actual value is larger than this, nothing is written to
 // memory.
-type bufLimit = uint32
+type BufLimit = uint32
 
 var (
 	// readBuf is sharable because there is no parallelism in wasm.
@@ -32,19 +32,19 @@ var (
 	readBufLimit = uint32(2048)
 )
 
-// stringToPtr returns a pointer and size pair for the given string in a way
+// StringToPtr returns a pointer and size pair for the given string in a way
 // compatible with WebAssembly numeric types.
 // The returned pointer aliases the string hence the string must be kept alive
 // until ptr is no longer needed.
-func stringToPtr(s string) (uint32, uint32) {
+func StringToPtr(s string) (uint32, uint32) {
 	ptr := unsafe.Pointer(unsafe.StringData(s))
 	return uint32(uintptr(ptr)), uint32(len(s))
 }
 
-// update is for decoding values from memory. The updater doesn't keep a reference to the underlying bytes, so we
-// don't need to copy them.
-func update(
-	fn func(ptr uint32, limit bufLimit) (len uint32),
+// Update is for decoding values from memory. The updater doesn't keep a
+// reference to the underlying bytes, so we don't need to copy them.
+func Update(
+	fn func(ptr uint32, limit BufLimit) (len uint32),
 	updater func([]byte) error,
 ) error {
 	// Run the update function, which returns the size needed, possibly larger
@@ -68,7 +68,7 @@ func update(
 	return updater(readBuf)
 }
 
-func getString(fn func(ptr uint32, limit bufLimit) (len uint32)) string {
+func GetString(fn func(ptr uint32, limit BufLimit) (len uint32)) string {
 	size := fn(uint32(readBufPtr), readBufLimit)
 	if size == 0 {
 		return ""

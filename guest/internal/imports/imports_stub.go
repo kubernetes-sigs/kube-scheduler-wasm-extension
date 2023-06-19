@@ -18,14 +18,16 @@
 
 package imports
 
+import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
+
 // k8sApiNodeInfoNode is stubbed for compilation outside TinyGo.
-func k8sApiNodeInfoNode(uint32, bufLimit) (len uint32) { return }
+func k8sApiNodeInfoNode(uint32, mem.BufLimit) (len uint32) { return }
 
 // k8sApiNodeName is stubbed for compilation outside TinyGo.
-func k8sApiNodeName(uint32, bufLimit) (len uint32) { return }
+func k8sApiNodeName(uint32, mem.BufLimit) (len uint32) { return }
 
 // k8sApiPod is stubbed for compilation outside TinyGo.
-func k8sApiPod(uint32, bufLimit) (len uint32) { return }
+func k8sApiPod(uint32, mem.BufLimit) (len uint32) { return }
 
-// k8sSchedulerStatusReason is stubbed for compilation outside TinyGo.
-func k8sSchedulerStatusReason(uint32, uint32) {}
+// k8sSchedulerResultStatusReason is stubbed for compilation outside TinyGo.
+func k8sSchedulerResultStatusReason(uint32, uint32) {}

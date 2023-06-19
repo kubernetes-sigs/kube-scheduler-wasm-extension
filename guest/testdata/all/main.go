@@ -16,17 +16,28 @@
 
 package main
 
+// Override the default GC with a more performant one.
+// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
+	_ "github.com/wasilibs/nottinygc"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
 func main() {
 	// These plugins don't do anything, except evaluate each parameter. This
 	// helps show if caching works.
+	prefilter.Plugin = api.PreFilterFunc(prefilterNoop)
 	filter.Plugin = api.FilterFunc(filterNoop)
 	score.Plugin = api.ScoreFunc(scoreNoop)
+}
+
+func prefilterNoop(pod api.Pod) (nodeNames []string, status *api.Status) {
+	_ = pod.Spec()
+	return
 }
 
 func filterNoop(pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {

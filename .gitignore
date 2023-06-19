@@ -1,6 +1,9 @@
 # debug builds are too big to check in
 main-debug.wasm
 
+# make sure the version of wazero used for TinyGo tests is fresh
+.tinygo-target.json
+
 # don't check in profiler data
 cpu.pprof
 mem.pprof

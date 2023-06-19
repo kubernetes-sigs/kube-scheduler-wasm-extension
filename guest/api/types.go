@@ -21,6 +21,28 @@ import (
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
+// PreFilterPlugin is a WebAssembly implementation of
+// framework.PreFilterPlugin. When non-nil, the `nodeNames` result contains a
+// unique set of node names to process.
+//
+// # Notes
+//
+//   - Any state kept in the plugin should be reset in PreFilter.
+//   - Duplicate nodeNames are a bug, but will not cause a failure.
+type PreFilterPlugin interface {
+	PreFilter(pod Pod) (nodeNames []string, status *Status)
+}
+
+var _ PreFilterPlugin = PreFilterFunc(nil)
+
+// PreFilterFunc adapts an ordinary function to a PreFilterPlugin.
+type PreFilterFunc func(pod Pod) (nodeNames []string, status *Status)
+
+// PreFilter returns f(pod).
+func (f PreFilterFunc) PreFilter(pod Pod) (nodeNames []string, status *Status) {
+	return f(pod)
+}
+
 // FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
 type FilterPlugin interface {
 	Filter(pod Pod, nodeInfo NodeInfo) *Status
