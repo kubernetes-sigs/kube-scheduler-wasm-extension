@@ -17,32 +17,35 @@
 package score
 
 import (
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/types"
 )
 
 // prevent unused lint errors (lint is run with normal go).
 var _ func() uint64 = score
 
+var plugin api.ScorePlugin
+
 // score is only exported to the host.
 //
 //export score
 func score() uint64 {
-	if Plugin == nil {
+	if plugin == nil {
 		// If we got here, someone imported the package, but forgot to set the
 		// filter. Panic with what's wrong.
-		panic("score imported, but score.Plugin nil")
+		panic("score imported, but score.SetPlugin not called")
 	}
 
-	// Pod is lazy. Later its value will be shared across the plugin lifecycle.
-	pod := &types.Pod{}
+	// Pod is lazy and the same value for all plugins in a scheduling cycle.
+	pod := cyclestate.Pod
 
 	// For ergonomics, we eagerly fetch the nodeName vs making a lazy string.
 	// This is less awkward than a lazy string. It is possible in a future
 	// refactor we can get this from a `nodeInfo.Node().Metadata.Name` cached
 	// in an upstream plugin stage.
 	nodeName := imports.NodeName()
-	score, status := Plugin.Score(pod, nodeName)
+	score, status := plugin.Score(pod, nodeName)
 
 	// Pack the score and status code into a single WebAssembly 1.0 compatible
 	// result

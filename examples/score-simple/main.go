@@ -26,7 +26,7 @@ import (
 )
 
 func main() {
-	score.Plugin = api.ScoreFunc(score100IfNameEqualsPodSpec)
+	score.SetPlugin(api.ScoreFunc(score100IfNameEqualsPodSpec))
 }
 
 // score100IfNameEqualsPodSpec scores 100 if this node name equals its pod spec.

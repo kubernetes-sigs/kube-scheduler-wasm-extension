@@ -27,7 +27,7 @@ import (
 
 func main() {
 	// This plugin doesn't do anything, except evaluate each parameter.
-	score.Plugin = api.ScoreFunc(scoreNoop)
+	score.SetPlugin(api.ScoreFunc(scoreNoop))
 }
 
 func scoreNoop(pod api.Pod, nodeName string) (score int32, status *api.Status) {

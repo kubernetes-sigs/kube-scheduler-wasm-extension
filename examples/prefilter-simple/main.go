@@ -26,7 +26,7 @@ import (
 )
 
 func main() {
-	prefilter.Plugin = api.PreFilterFunc(podSpecName)
+	prefilter.SetPlugin(api.PreFilterFunc(podSpecName))
 }
 
 // podSpecName returns the pod spec name, unless there is none.

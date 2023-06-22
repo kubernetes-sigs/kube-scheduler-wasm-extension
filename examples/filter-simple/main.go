@@ -26,7 +26,7 @@ import (
 )
 
 func main() {
-	filter.Plugin = api.FilterFunc(nameEqualsPodSpec)
+	filter.SetPlugin(api.FilterFunc(nameEqualsPodSpec))
 }
 
 // nameEqualsPodSpec schedules this node if its name equals its pod spec.

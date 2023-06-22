@@ -158,9 +158,9 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 	}
 }
 
-// TestNew_masksInterfaces ensures the type returned by New can be asserted
+// TestNew_maskInterfaces ensures the type returned by New can be asserted
 // against, based on the statusCode in the guest.
-func TestNew_masksInterfaces(t *testing.T) {
+func TestNew_maskInterfaces(t *testing.T) {
 	tests := []struct {
 		name            string
 		guestPath       string
@@ -175,13 +175,27 @@ func TestNew_masksInterfaces(t *testing.T) {
 			expectPrefilter: true,
 		},
 		{
+			name:      "prefilter|filter",
+			guestPath: test.PathExampleFilterSimple,
+			// Our guest SDK implements cached state reset on pre-filter.
+			expectPrefilter: true,
+			expectFilter:    true,
+		},
+		{
 			name:         "filter",
-			guestPath:    test.PathExampleFilterSimple,
+			guestPath:    test.PathErrorPanicOnFilter,
 			expectFilter: true,
 		},
 		{
+			name:      "prefilter|score",
+			guestPath: test.PathExampleScoreSimple,
+			// Our guest SDK implements cached state reset on pre-filter.
+			expectPrefilter: true,
+			expectScore:     true,
+		},
+		{
 			name:        "score",
-			guestPath:   test.PathExampleScoreSimple,
+			guestPath:   test.PathErrorPanicOnScore,
 			expectScore: true,
 		},
 		{
@@ -209,16 +223,16 @@ func TestNew_masksInterfaces(t *testing.T) {
 				t.Fatalf("expected Closer %v", p)
 			}
 			if _, ok := p.(framework.PreFilterPlugin); tc.expectPrefilter != ok {
-				t.Fatalf("expected PreFilterPlugin %v", p)
+				t.Fatalf("didn't expect PreFilterPlugin %v", p)
 			}
 			if _, ok := p.(framework.FilterPlugin); tc.expectFilter != ok {
-				t.Fatalf("expected FilterPlugin %v", p)
+				t.Fatalf("didn't expect FilterPlugin %v", p)
 			}
 			if _, ok := p.(framework.ScorePlugin); tc.expectScore != ok {
-				t.Fatalf("expected ScorePlugin %v", p)
+				t.Fatalf("didn't expect ScorePlugin %v", p)
 			}
 			if _, ok := p.(framework.BindPlugin); tc.expectBind != ok {
-				t.Fatalf("expected BindPlugin %v", p)
+				t.Fatalf("didn't expect BindPlugin %v", p)
 			}
 		})
 	}

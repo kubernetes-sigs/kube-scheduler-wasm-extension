@@ -47,6 +47,24 @@ mean amplifying that overhead to a point where second or longer latency would
 be possible. For reasons like this, we dismissed Go 1.21 for TinyGo, and will
 revisit when Go 1.22 introduces [`//go:wasmexport`][3].
 
+## Why are plugins assigned with functions instead of global variables?
+
+At first, we designed the guest SDK to assign plugins with global variables.
+For example, `prefilter.Plugin = api.PreFilterFunc(podSpecName)`. This worked
+until we needed to control cycle state.
+
+When we moved cycle state to an internal package, we had to move the `Plugin`
+field also, to avoid package cycles. In Go, we cannot map a global variable in
+one package to another, such that setting one sets the other. The simplest way
+out was to change to a function instead.
+
+```diff
+ func main() {
+-       prefilter.Plugin = api.PreFilterFunc(podSpecName)
++       prefilter.SetPlugin(api.PreFilterFunc(podSpecName))
+ }
+```
+
 ## Why do host functions use protobuf messages?
 
 Kubernetes Scheduler plugins need to access very large model data, specifically

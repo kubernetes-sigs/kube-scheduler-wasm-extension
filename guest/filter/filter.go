@@ -20,11 +20,16 @@ package filter
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 
-// Plugin should be assigned in `main` to an api.FilterPlugin instance.
+// SetPlugin should be called in `main` to assign an api.FilterPlugin instance.
 //
 // For example:
 //
 //	func main() {
-//		filter.Plugin = api.FilterFunc(nameEqualsPodSpec)
+//		filter.SetPlugin(nameEqualsPodSpec)
 //	}
-var Plugin api.FilterPlugin
+func SetPlugin(filterPlugin api.FilterPlugin) {
+	if filterPlugin == nil {
+		panic("nil filterPlugin")
+	}
+	plugin = filterPlugin
+}

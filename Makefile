@@ -125,6 +125,7 @@ build:
 test:
 	@(cd scheduler; go test -v ./...)
 	@(cd guest; go test -v ./...)
+	@(cd internal/e2e; go test -v ./...)
 
 .PHONY: check  # Pre-flight check for pull requests
 check:
