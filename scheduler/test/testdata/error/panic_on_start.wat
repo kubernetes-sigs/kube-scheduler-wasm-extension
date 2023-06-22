@@ -17,7 +17,7 @@
   (data (i32.const 8) "panic!") ;; iovs[0]
 
   ;; On start, write "panic!" to stdout and crash.
-  (func $main (export "_start")
+  (func (export "_start")
     ;; Write the panic to stdout via its iovec [offset, len].
     (call $wasi.fd_write
       (i32.const 1) ;; stdout

@@ -20,6 +20,7 @@ import (
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 )
 
 // StatusToCode returns a WebAssembly compatible result for the input status,
@@ -33,35 +34,35 @@ func StatusToCode(s *api.Status) uint32 {
 	// WebAssembly Core 2.0 (DRAFT) only includes numeric types. Return the
 	// reason using a host function.
 	if reason := s.Reason; reason != "" {
-		statusReason(reason)
+		setStatusReason(reason)
 	}
 	return uint32(s.Code)
 }
 
-// statusReason overwrites the status reason
-func statusReason(reason string) {
-	ptr, size := stringToPtr(reason)
-	k8sSchedulerStatusReason(ptr, size)
-	runtime.KeepAlive(reason) // keep reason alive until ptr is no longer needed.
+// setStatusReason overwrites the status reason
+func setStatusReason(reason string) {
+	ptr, size := mem.StringToPtr(reason)
+	k8sSchedulerResultStatusReason(ptr, size)
+	runtime.KeepAlive(reason) // until ptr is no longer needed.
 }
 
 func NodeName() string {
-	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
-	return getString(func(ptr uint32, limit bufLimit) (len uint32) {
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	return mem.GetString(func(ptr uint32, limit mem.BufLimit) (len uint32) {
 		return k8sApiNodeName(ptr, limit)
 	})
 }
 
 func NodeInfoNode(updater func([]byte) error) error {
-	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
-	return update(func(ptr uint32, limit bufLimit) (len uint32) {
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	return mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
 		return k8sApiNodeInfoNode(ptr, limit)
 	}, updater)
 }
 
 func Pod(updater func([]byte) error) error {
-	// Wrap to avoid TinyGo 0.27: cannot use an exported function as value
-	return update(func(ptr uint32, limit bufLimit) (len uint32) {
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	return mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
 		return k8sApiPod(ptr, limit)
 	}, updater)
 }

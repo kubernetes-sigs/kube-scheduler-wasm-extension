@@ -129,7 +129,7 @@ noted below, and also there are options for mitigation not yet implemented:
   * [polyglot][4] can generate code from protos and might automatically convert
     protos to its more efficient representation.
 
-## Why do we use nottinygc?
+## Why do we recommend nottinygc, but not import it by default?
 
 Unmarshalling protobuf messages with default tooling creates a lot of garbage.
 As WebAssembly has only one thread, garbage collection is inlined. TinyGo's
@@ -137,15 +137,14 @@ compiler optimized for code size not speed. In the default configuration, we
 found inlined GC overhead to be over half the latency of a plugin execution.
 
 [nottinygc][5] is an alternate garbage collection implementation for TinyGo.
-This optimizes for performance instead of bytecode size. Swapping this added
-110KB to the base size of the wasm guest, but resulted in 48pct drop in
+This optimizes for performance instead of bytecode size. Swapping this adds
+110KB to the base size of the wasm guest, but results in a 48pct drop in
 execution time of a simple plugin, in a scale of hundreds of microseconds.
 
 nottinygc has tradeoffs besides size. One is that it isn't built-in to TinyGo.
 To use nottinygc requires custom flags in the build process, in addition to the
-custom ones we already have. We expect end users to use our SDK scripts, to
-avoid the chance of missing these flags. We also added tests so that lack
-thereof will be easy to identify.
+custom ones we already have. Running unit tests via (`tinygo test`) against
+packages that import nottinygc have resulted in segfaults during GC.
 
 nottinygc also requires a flag `-scheduler=none`, which means end users can't
 use tools like asyncify. However, they can't anyway. Scheduler plugin functions
@@ -154,11 +153,12 @@ goroutines inside `main`. Elsewhere, causes a runtime panic, as noted on
 [wazero's concurrency page][6]. Hence, this is not a new constraint.
 
 A last understood tradeoff is nottinygc is new and currently only one
-contributor. The lead maintainer is very responsive and the scheduler plugin
-itself is early. If the dependency causes a problem, the worst outcome would be
-reverting back to the default Tinygo plugin and suffering the performance hit.
-It isn't a viral setup difficult to undo: literally a one line import in one
-source file.
+contributor. That said, the lead maintainer is very responsive and the
+scheduler plugin itself is early.
+
+Considering the above, we recommend nottinygc, but as an opt-in process. Our
+examples default to configure it, and all our integration tests use it.
+However, we can't make this default until it no longer crashes our unit tests.
 
 [1]: https://tinygo.org/
 [2]: https://pkg.go.dev/golang.org/dl/gotip

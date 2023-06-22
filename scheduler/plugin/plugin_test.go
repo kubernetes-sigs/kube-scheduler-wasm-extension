@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
@@ -39,7 +40,7 @@ var ctx = context.Background()
 
 // Test_guestPool_bindingCycles tests that the bindingCycles field is set correctly.
 func Test_guestPool_bindingCycles(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleFilterSimple})
+	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestAll})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -72,7 +73,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 	_, status = pl.PreFilter(ctx, nil, nextPod)
 	if !status.IsSuccess() {
-		t.Fatalf("prefilter failed: %v", status)
+		t.Fatalf("PreFilter failed: %v", status)
 	}
 
 	if want, have := nextPod.UID, pl.GetScheduledPodUID(); want != have {
@@ -117,7 +118,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 // Test_guestPool_assignedToSchedulingPod tests that the scheduledPodUID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleFilterSimple})
+	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestAll})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -161,12 +162,18 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 // against, based on the statusCode in the guest.
 func TestNew_masksInterfaces(t *testing.T) {
 	tests := []struct {
-		name         string
-		guestPath    string
-		expectFilter bool
-		expectScore  bool
-		expectBind   bool // currently a mask test until we implement bind
+		name            string
+		guestPath       string
+		expectPrefilter bool
+		expectFilter    bool
+		expectScore     bool
+		expectBind      bool // currently a mask test until we implement bind
 	}{
+		{
+			name:            "prefilter",
+			guestPath:       test.PathExamplePrefilterSimple,
+			expectPrefilter: true,
+		},
 		{
 			name:         "filter",
 			guestPath:    test.PathExampleFilterSimple,
@@ -178,19 +185,16 @@ func TestNew_masksInterfaces(t *testing.T) {
 			expectScore: true,
 		},
 		{
-			name:         "filter|score",
-			guestPath:    test.PathTestAllNoopWat,
-			expectFilter: true,
-			expectScore:  true,
+			name:            "prefilter|filter|score",
+			guestPath:       test.PathTestAllNoopWat,
+			expectPrefilter: true,
+			expectFilter:    true,
+			expectScore:     true,
 		},
 	}
 
-	for _, tt := range tests {
-		tc := tt
-
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			p, err := wasm.New(&runtime.Unknown{
 				ContentType: runtime.ContentTypeJSON,
 				Raw:         []byte(fmt.Sprintf(`{"guestPath": "%s"}`, tc.guestPath)),
@@ -203,6 +207,9 @@ func TestNew_masksInterfaces(t *testing.T) {
 			// All plugins should be a closer
 			if _, ok := p.(io.Closer); !ok {
 				t.Fatalf("expected Closer %v", p)
+			}
+			if _, ok := p.(framework.PreFilterPlugin); tc.expectPrefilter != ok {
+				t.Fatalf("expected PreFilterPlugin %v", p)
 			}
 			if _, ok := p.(framework.FilterPlugin); tc.expectFilter != ok {
 				t.Fatalf("expected FilterPlugin %v", p)
@@ -238,16 +245,12 @@ func TestNewFromConfig(t *testing.T) {
 			expectedError: `failed to create a guest pool: wasm: instantiate error: panic!
 module[panic_on_start-1] function[_start] failed: wasm error: unreachable
 wasm stack trace:
-	panic_on_start.main()`,
+	panic_on_start.$2()`,
 		},
 	}
 
-	for _, tt := range tests {
-		tc := tt
-
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: tc.guestPath})
 			if err != nil {
 				if want, have := tc.expectedError, err.Error(); want != have {
@@ -258,6 +261,85 @@ wasm stack trace:
 			}
 			if p != nil {
 				p.Close()
+			}
+		})
+	}
+}
+
+func TestPreFilter(t *testing.T) {
+	tests := []struct {
+		name                  string
+		guestPath             string
+		globals               map[string]int32
+		pod                   *v1.Pod
+		expectedResult        *framework.PreFilterResult
+		expectedStatusCode    framework.Code
+		expectedStatusMessage string
+	}{
+		{
+			name:               "success: pod has spec.NodeName",
+			pod:                test.PodSmall,
+			expectedResult:     &framework.PreFilterResult{NodeNames: sets.NewString("good-node")},
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:               "success: pod has no spec.NodeName",
+			pod:                &v1.Pod{ObjectMeta: test.PodSmall.ObjectMeta},
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:               "min statusCode",
+			guestPath:          test.PathTestPrefilterFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"status_code": math.MinInt32},
+			expectedStatusCode: math.MinInt32,
+		},
+		{
+			name:               "max statusCode",
+			guestPath:          test.PathTestPrefilterFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"status_code": math.MaxInt32},
+			expectedStatusCode: math.MaxInt32,
+		},
+		{
+			name:               "panic",
+			guestPath:          test.PathErrorPanicOnPrefilter,
+			pod:                test.PodSmall,
+			expectedStatusCode: framework.Error,
+			expectedStatusMessage: `wasm: prefilter error: panic!
+wasm error: unreachable
+wasm stack trace:
+	panic_on_prefilter.$1() i32`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestPath := tc.guestPath
+			if guestPath == "" {
+				guestPath = test.PathExamplePrefilterSimple
+			}
+
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			nodeNames, status := p.PreFilter(ctx, nil, tc.pod)
+			if want, have := tc.expectedResult, nodeNames; !reflect.DeepEqual(want, have) {
+				t.Fatalf("unexpected node names: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
 			}
 		})
 	}
@@ -311,16 +393,12 @@ func TestFilter(t *testing.T) {
 			expectedStatusMessage: `wasm: filter error: panic!
 wasm error: unreachable
 wasm stack trace:
-	panic_on_filter.filter() i32`,
+	panic_on_filter.$1() i32`,
 		},
 	}
 
-	for _, tt := range tests {
-		tc := tt
-
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			guestPath := tc.guestPath
 			if guestPath == "" {
 				guestPath = test.PathExampleFilterSimple
@@ -429,16 +507,12 @@ func TestScore(t *testing.T) {
 			expectedStatusMessage: `wasm: score error: panic!
 wasm error: unreachable
 wasm stack trace:
-	panic_on_score.score() i64`,
+	panic_on_score.$1() i64`,
 		},
 	}
 
-	for _, tt := range tests {
-		tc := tt
-
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			guestPath := tc.guestPath
 			if guestPath == "" {
 				guestPath = test.PathExampleScoreSimple

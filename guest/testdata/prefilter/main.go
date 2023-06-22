@@ -22,16 +22,15 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 )
 
 func main() {
-	// This plugin doesn't do anything, except evaluate each parameter.
-	score.Plugin = api.ScoreFunc(scoreNoop)
+	// This plugin doesn't do anything, except evaluate each parameter,
+	prefilter.Plugin = api.PreFilterFunc(prefilterNoop)
 }
 
-func scoreNoop(pod api.Pod, nodeName string) (score int32, status *api.Status) {
+func prefilterNoop(pod api.Pod) (nodeNames []string, status *api.Status) {
 	_ = pod.Spec()
-	_ = nodeName
 	return
 }

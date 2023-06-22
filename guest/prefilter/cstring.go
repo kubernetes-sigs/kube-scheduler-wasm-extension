@@ -14,24 +14,29 @@
    limitations under the License.
 */
 
-package main
+package prefilter
 
-// Override the default GC with a more performant one.
-// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
-import (
-	_ "github.com/wasilibs/nottinygc"
+func toNULTerminated(input []string) []byte {
+	count := uint32(len(input))
+	if count == 0 {
+		return nil
+	}
 
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
-)
+	size := count // NUL terminator count
+	for _, s := range input {
+		size += uint32(len(s))
+	}
 
-func main() {
-	// This plugin doesn't do anything, except evaluate each parameter.
-	score.Plugin = api.ScoreFunc(scoreNoop)
-}
-
-func scoreNoop(pod api.Pod, nodeName string) (score int32, status *api.Status) {
-	_ = pod.Spec()
-	_ = nodeName
-	return
+	// Write the NUL-terminated string to a byte slice.
+	cStrings := make([]byte, size)
+	pos := 0
+	for _, s := range input {
+		if len(s) == 0 {
+			size--
+			continue // skip empty
+		}
+		copy(cStrings[pos:], s)
+		pos += len(s) + 1 // +1 for NUL-terminator
+	}
+	return cStrings[:size]
 }

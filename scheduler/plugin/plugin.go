@@ -27,6 +27,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
 )
@@ -53,6 +54,11 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 		return nil
 	}
 	switch plugin.guestExports {
+	case exportPreFilterPlugin:
+		return struct {
+			framework.PreFilterPlugin
+			io.Closer
+		}{plugin, plugin}
 	case exportFilterPlugin:
 		return struct {
 			framework.FilterPlugin
@@ -63,6 +69,28 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 			framework.ScorePlugin
 			io.Closer
 		}{plugin, plugin}
+	case exportPreFilterPlugin | exportFilterPlugin:
+		type prefilterFilter interface {
+			framework.PreFilterPlugin
+			framework.FilterPlugin
+			io.Closer
+		}
+		return struct{ prefilterFilter }{plugin}
+	case exportPreFilterPlugin | exportScorePlugin:
+		type prefilterFilter interface {
+			framework.PreFilterPlugin
+			framework.ScorePlugin
+			io.Closer
+		}
+		return struct{ prefilterFilter }{plugin}
+	case exportPreFilterPlugin | exportFilterPlugin | exportScorePlugin:
+		type prefilterFilterScore interface {
+			framework.PreFilterPlugin
+			framework.FilterPlugin
+			framework.ScorePlugin
+			io.Closer
+		}
+		return struct{ prefilterFilterScore }{plugin}
 	case exportFilterPlugin | exportScorePlugin:
 		type filterScore interface {
 			framework.FilterPlugin
@@ -165,11 +193,16 @@ func (pl *wasmPlugin) PreFilterExtensions() framework.PreFilterExtensions {
 // PreFilter implements the same method as documented on
 // framework.PreFilterPlugin.
 func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod) (result *framework.PreFilterResult, status *framework.Status) {
-	// TODO: The guest should always implement PreFilter, so it can know to
-	// reset state when the same pod has been re-scheduled due to an error. We
-	// need to both implement and test this.
+	// Add the stack to the go context so that the corresponding host function
+	// can look them up.
+	params := &stack{pod: pod}
+	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
-		// TODO: partially implemented for testing
+		var nodeNames []string
+		nodeNames, status = g.PreFilter(ctx)
+		if nodeNames != nil {
+			result = &framework.PreFilterResult{NodeNames: sets.NewString(nodeNames...)}
+		}
 	}); err != nil {
 		status = framework.AsStatus(err)
 	}
@@ -180,10 +213,10 @@ var _ framework.FilterPlugin = (*wasmPlugin)(nil)
 
 // Filter implements the same method as documented on framework.FilterPlugin.
 func (pl *wasmPlugin) Filter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, nodeInfo *framework.NodeInfo) (status *framework.Status) {
-	// Add the params to the go context so that the corresponding host function
+	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &params{pod: pod, nodeInfo: nodeInfo}
-	ctx = context.WithValue(ctx, paramsKey{}, params)
+	params := &stack{pod: pod, nodeInfo: nodeInfo}
+	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		status = g.filter(ctx)
 	}); err != nil {
@@ -217,10 +250,10 @@ var _ framework.ScorePlugin = (*wasmPlugin)(nil)
 
 // Score implements the same method as documented on framework.ScorePlugin.
 func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (score int64, status *framework.Status) {
-	// Add the params to the go context so that the corresponding host function
+	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &params{pod: pod, nodeName: nodeName}
-	ctx = context.WithValue(ctx, paramsKey{}, params)
+	params := &stack{pod: pod, nodeName: nodeName}
+	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		score, status = g.score(ctx)
 	}); err != nil {

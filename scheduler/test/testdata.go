@@ -18,11 +18,15 @@ import (
 
 var PathErrorNotPlugin = pathWatError("not_plugin")
 
+var PathErrorPanicOnPrefilter = pathWatError("panic_on_prefilter")
+
 var PathErrorPanicOnFilter = pathWatError("panic_on_filter")
 
 var PathErrorPanicOnScore = pathWatError("panic_on_score")
 
 var PathErrorPanicOnStart = pathWatError("panic_on_start")
+
+var PathExamplePrefilterSimple = pathTinyGoExample("prefilter-simple")
 
 var PathExampleFilterSimple = pathTinyGoExample("filter-simple")
 
@@ -33,6 +37,10 @@ var PathTestAll = pathTinyGoTest("all")
 var PathTestAllNoopTinyGo = pathTinyGoTest("all-noop")
 
 var PathTestAllNoopWat = pathWatTest("all_noop")
+
+var PathTestPrefilter = pathTinyGoTest("PreFilter")
+
+var PathTestPrefilterFromGlobal = pathWatTest("prefilter_from_global")
 
 var PathTestFilter = pathTinyGoTest("filter")
 

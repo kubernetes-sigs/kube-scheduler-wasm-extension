@@ -1,3 +1,5 @@
+//go:build tinygo.wasm
+
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -14,24 +16,7 @@
    limitations under the License.
 */
 
-package main
+package prefilter
 
-// Override the default GC with a more performant one.
-// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
-import (
-	_ "github.com/wasilibs/nottinygc"
-
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
-)
-
-func main() {
-	// This plugin doesn't do anything, except evaluate each parameter.
-	score.Plugin = api.ScoreFunc(scoreNoop)
-}
-
-func scoreNoop(pod api.Pod, nodeName string) (score int32, status *api.Status) {
-	_ = pod.Spec()
-	_ = nodeName
-	return
-}
+//go:wasmimport k8s.io/scheduler result.node_names
+func setNodeNamesResult(ptr, size uint32)

@@ -22,16 +22,26 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 )
 
 func main() {
-	// This plugin doesn't do anything, except evaluate each parameter.
-	score.Plugin = api.ScoreFunc(scoreNoop)
+	prefilter.Plugin = api.PreFilterFunc(podSpecName)
 }
 
-func scoreNoop(pod api.Pod, nodeName string) (score int32, status *api.Status) {
-	_ = pod.Spec()
-	_ = nodeName
-	return
+// podSpecName returns the pod spec name, unless there is none.
+func podSpecName(pod api.Pod) ([]string, *api.Status) {
+	// First, check if the pod spec node name is empty. If so, pass!
+	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
+	if len(podSpecNodeName) == 0 {
+		return nil, nil
+	}
+	return []string{podSpecNodeName}, nil
+}
+
+func nilToEmpty(ptr *string) string {
+	if ptr != nil {
+		return *ptr
+	}
+	return ""
 }

@@ -14,37 +14,42 @@
    limitations under the License.
 */
 
-package score
+package prefilter
 
 import (
+	"runtime"
+	"unsafe"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/types"
 )
 
 // prevent unused lint errors (lint is run with normal go).
-var _ func() uint64 = score
+var _ func() uint32 = prefilter
 
-// score is only exported to the host.
+// prefilter is only exported to the host.
 //
-//export score
-func score() uint64 {
+//export prefilter
+func prefilter() uint32 { //nolint
 	if Plugin == nil {
 		// If we got here, someone imported the package, but forgot to set the
 		// filter. Panic with what's wrong.
-		panic("score imported, but score.Plugin nil")
+		panic("PreFilter imported, but PreFilter.Plugin nil")
 	}
 
-	// Pod is lazy. Later its value will be shared across the plugin lifecycle.
-	pod := &types.Pod{}
+	// The parameters passed are lazy with regard to host functions. This means
+	// a no-op plugin should not have any unmarshal penalty.
+	nodeNames, status := Plugin.PreFilter(&types.Pod{})
 
-	// For ergonomics, we eagerly fetch the nodeName vs making a lazy string.
-	// This is less awkward than a lazy string. It is possible in a future
-	// refactor we can get this from a `nodeInfo.Node().Metadata.Name` cached
-	// in an upstream plugin stage.
-	nodeName := imports.NodeName()
-	score, status := Plugin.Score(pod, nodeName)
+	// If plugin returned nodeNames, concatenate them into a C-string and call
+	// the host with the count and memory region.
+	cString := toNULTerminated(nodeNames)
+	if cString != nil {
+		ptr := uint32(uintptr(unsafe.Pointer(&cString[0])))
+		size := uint32(len(cString))
+		setNodeNamesResult(ptr, size)
+		runtime.KeepAlive(cString) // until ptr is no longer needed.
+	}
 
-	// Pack the score and status code into a single WebAssembly 1.0 compatible
-	// result
-	return (uint64(score) << uint64(32)) | uint64(imports.StatusToCode(status))
+	return imports.StatusToCode(status)
 }

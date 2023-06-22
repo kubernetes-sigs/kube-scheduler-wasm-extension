@@ -27,6 +27,47 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
+func BenchmarkPluginPreFilter(b *testing.B) {
+	ctx := context.Background()
+
+	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{GuestPath: test.PathTestPrefilter})
+	defer close()
+
+	tests := []struct {
+		name string
+		pod  *v1.Pod
+	}{
+		{
+			name: "params: small",
+			pod:  test.PodSmall,
+		},
+		{
+			name: "params: real",
+			pod:  test.PodReal,
+		},
+	}
+
+	for _, tp := range plugins {
+		pl := tp
+		b.Run(pl.name, func(b *testing.B) {
+			for _, tc := range tests {
+				b.Run(tc.name, func(b *testing.B) {
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						// Intentionally change the pointer to simulate a new scheduling cycle.
+						pod := *tc.pod
+
+						_, s := pl.plugin.(framework.PreFilterPlugin).PreFilter(ctx, nil, &pod)
+						if want, have := framework.Success, s.Code(); want != have {
+							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
 func BenchmarkPluginFilter(b *testing.B) {
 	ctx := context.Background()
 
@@ -115,7 +156,7 @@ func BenchmarkPluginScore(b *testing.B) {
 	}
 }
 
-func BenchmarkPluginFilterAndScore(b *testing.B) {
+func BenchmarkPluginPrefilterFilterAndScore(b *testing.B) {
 	ctx := context.Background()
 
 	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{GuestPath: test.PathTestAll})
@@ -151,7 +192,12 @@ func BenchmarkPluginFilterAndScore(b *testing.B) {
 						// Intentionally change the pointer to simulate a new scheduling cycle.
 						pod := *tc.pod
 
-						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, &pod, ni)
+						_, s := pl.plugin.(framework.PreFilterPlugin).PreFilter(ctx, nil, &pod)
+						if want, have := framework.Success, s.Code(); want != have {
+							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
+						}
+
+						s = pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, &pod, ni)
 						if want, have := framework.Success, s.Code(); want != have {
 							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
 						}
