@@ -77,12 +77,12 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 		}
 		return struct{ prefilterFilter }{plugin}
 	case exportPreFilterPlugin | exportScorePlugin:
-		type prefilterFilter interface {
+		type prefilterScore interface {
 			framework.PreFilterPlugin
 			framework.ScorePlugin
 			io.Closer
 		}
-		return struct{ prefilterFilter }{plugin}
+		return struct{ prefilterScore }{plugin}
 	case exportPreFilterPlugin | exportFilterPlugin | exportScorePlugin:
 		type prefilterFilterScore interface {
 			framework.PreFilterPlugin
@@ -199,7 +199,7 @@ func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, po
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		var nodeNames []string
-		nodeNames, status = g.PreFilter(ctx)
+		nodeNames, status = g.preFilter(ctx)
 		if nodeNames != nil {
 			result = &framework.PreFilterResult{NodeNames: sets.NewString(nodeNames...)}
 		}
