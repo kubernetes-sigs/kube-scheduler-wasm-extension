@@ -14,32 +14,47 @@
    limitations under the License.
 */
 
+// Package prefilter is defined internally so that it can export Pod as
+// cyclestate.Pod, without circular dependencies or exporting it publicly.
 package prefilter
 
 import (
 	"runtime"
 	"unsafe"
 
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/types"
 )
 
 // prevent unused lint errors (lint is run with normal go).
 var _ func() uint32 = prefilter
 
+var plugin api.PreFilterPlugin
+
+// SetPlugin is exposed to prevent package cycles.
+func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
+	if prefilterPlugin == nil {
+		panic("nil prefilterPlugin")
+	}
+	plugin = prefilterPlugin
+}
+
 // prefilter is only exported to the host.
 //
 //export prefilter
 func prefilter() uint32 { //nolint
-	if Plugin == nil {
-		// If we got here, someone imported the package, but forgot to set the
-		// filter. Panic with what's wrong.
-		panic("PreFilter imported, but PreFilter.Plugin nil")
+	// This function begins a new scheduling cycle: zero out any cycle state.
+	currentPod = nil
+
+	if plugin == nil { // Then, the user didn't define one.
+		// Unlike most plugins we always export prefilter so that we can reset
+		// the cycle state: return success to avoid no-op overhead.
+		return 0
 	}
 
 	// The parameters passed are lazy with regard to host functions. This means
 	// a no-op plugin should not have any unmarshal penalty.
-	nodeNames, status := Plugin.PreFilter(&types.Pod{})
+	nodeNames, status := plugin.PreFilter(Pod)
 
 	// If plugin returned nodeNames, concatenate them into a C-string and call
 	// the host with the count and memory region.

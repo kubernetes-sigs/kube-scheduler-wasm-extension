@@ -27,7 +27,7 @@ import (
 
 func main() {
 	// This plugin doesn't do anything, except evaluate each parameter.
-	filter.Plugin = api.FilterFunc(filterNoop)
+	filter.SetPlugin(api.FilterFunc(filterNoop))
 }
 
 func filterNoop(pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {

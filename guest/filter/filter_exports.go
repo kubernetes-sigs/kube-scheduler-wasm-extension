@@ -17,26 +17,53 @@
 package filter
 
 import (
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/types"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 // prevent unused lint errors (lint is run with normal go).
 var _ func() uint32 = filter
 
+var plugin api.FilterPlugin
+
 // filter is only exported to the host.
 //
 //export filter
 func filter() uint32 { //nolint
-	if Plugin == nil {
+	if plugin == nil {
 		// If we got here, someone imported the package, but forgot to set the
 		// filter. Panic with what's wrong.
-		panic("filter imported, but filter.Plugin nil")
+		panic("filter imported, but filter.SetPlugin not called")
 	}
 
-	// The parameters passed are lazy with regard to host functions. This means
-	// a no-op plugin should not have any unmarshal penalty.
-	// TODO: Make these fields and reset on pre-filter or similar.
-	s := Plugin.Filter(&types.Pod{}, &types.NodeInfo{})
+	s := plugin.Filter(cyclestate.Pod, &nodeInfo{})
+
 	return imports.StatusToCode(s)
+}
+
+var _ api.NodeInfo = (*nodeInfo)(nil)
+
+// nodeInfo is lazy so that a plugin which doesn't read fields avoids a
+// relatively expensive unmarshal penalty.
+type nodeInfo struct {
+	n *protoapi.Node
+}
+
+func (n *nodeInfo) Node() *protoapi.Node {
+	return n.node()
+}
+
+func (n *nodeInfo) node() *protoapi.Node {
+	if node := n.n; node != nil {
+		return node
+	}
+
+	var msg protoapi.Node
+	if err := imports.NodeInfoNode(msg.UnmarshalVT); err != nil {
+		panic(err)
+	}
+	n.n = &msg
+	return n.n
 }

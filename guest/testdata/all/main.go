@@ -19,35 +19,49 @@ package main
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
+	"unsafe"
+
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 func main() {
 	// These plugins don't do anything, except evaluate each parameter. This
 	// helps show if caching works.
-	prefilter.Plugin = api.PreFilterFunc(prefilterNoop)
-	filter.Plugin = api.FilterFunc(filterNoop)
-	score.Plugin = api.ScoreFunc(scoreNoop)
+	prefilter.SetPlugin(api.PreFilterFunc(prefilterNoop))
+	filter.SetPlugin(api.FilterFunc(filterNoop))
+	score.SetPlugin(api.ScoreFunc(scoreNoop))
 }
 
+// podSpec is used to test cycle state coherency.
+var podSpec *protoapi.PodSpec
+
 func prefilterNoop(pod api.Pod) (nodeNames []string, status *api.Status) {
-	_ = pod.Spec()
+	if nextPodSpec := pod.Spec(); unsafe.Pointer(nextPodSpec) == unsafe.Pointer(podSpec) {
+		panic("didn't reset pod on pre-filter")
+	} else {
+		podSpec = nextPodSpec
+	}
 	return
 }
 
 func filterNoop(pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
-	_ = pod.Spec()
-	_ = nodeInfo.Node()
+	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
+		panic("didn't cache pod from pre-filter")
+	}
+	_ = nodeInfo.Node() // this will unmarshal the node info from proto.
 	return
 }
 
 func scoreNoop(pod api.Pod, nodeName string) (score int32, status *api.Status) {
-	_ = pod.Spec()
+	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
+		panic("didn't cache pod from pre-filter")
+	}
 	_ = nodeName
 	return
 }

@@ -32,9 +32,9 @@ func main() {
 	// shows the impact two things:
 	//  * implementing multiple interfaces
 	//  * overhead of constructing function parameters
-	prefilter.Plugin = api.PreFilterFunc(prefilterNoop)
-	filter.Plugin = api.FilterFunc(filterNoop)
-	score.Plugin = api.ScoreFunc(scoreNoop)
+	prefilter.SetPlugin(api.PreFilterFunc(prefilterNoop))
+	filter.SetPlugin(api.FilterFunc(filterNoop))
+	score.SetPlugin(api.ScoreFunc(scoreNoop))
 }
 
 func prefilterNoop(pod api.Pod) (nodeNames []string, status *api.Status) { return }

@@ -20,11 +20,16 @@ package score
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 
-// Plugin should be assigned in `main` to an api.ScorePlugin instance.
+// SetPlugin should be called in `main` to assign an api.ScorePlugin instance.
 //
 // For example:
 //
 //	func main() {
-//		score.Plugin = api.ScoreFunc(score100IfNameEqualsPodSpec)
+//		score.SetPlugin(score100IfNameEqualsPodSpec)
 //	}
-var Plugin api.ScorePlugin
+func SetPlugin(scorePlugin api.ScorePlugin) {
+	if scorePlugin == nil {
+		panic("nil scorePlugin")
+	}
+	plugin = scorePlugin
+}

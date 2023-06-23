@@ -27,7 +27,7 @@ import (
 
 func main() {
 	// This plugin doesn't do anything, except evaluate each parameter,
-	prefilter.Plugin = api.PreFilterFunc(prefilterNoop)
+	prefilter.SetPlugin(api.PreFilterFunc(prefilterNoop))
 }
 
 func prefilterNoop(pod api.Pod) (nodeNames []string, status *api.Status) {

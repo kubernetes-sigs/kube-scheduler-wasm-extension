@@ -54,13 +54,8 @@ func BenchmarkPluginPreFilter(b *testing.B) {
 				b.Run(tc.name, func(b *testing.B) {
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						// Intentionally change the pointer to simulate a new scheduling cycle.
-						pod := *tc.pod
-
-						_, s := pl.plugin.(framework.PreFilterPlugin).PreFilter(ctx, nil, &pod)
-						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
-						}
+						_, s := pl.plugin.(framework.PreFilterPlugin).PreFilter(ctx, nil, tc.pod)
+						requireSuccess(b, s)
 					}
 				})
 			}
@@ -101,13 +96,11 @@ func BenchmarkPluginFilter(b *testing.B) {
 
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						// Intentionally change the pointer to simulate a new scheduling cycle.
-						pod := *tc.pod
+						// Run PreFilter to simulate a new scheduling cycle.
+						maybeRunPreFilter(ctx, b, pl.plugin, tc.pod)
 
-						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, &pod, ni)
-						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
-						}
+						s := pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
+						requireSuccess(b, s)
 					}
 				})
 			}
@@ -142,13 +135,11 @@ func BenchmarkPluginScore(b *testing.B) {
 				b.Run(tc.name, func(b *testing.B) {
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						// Intentionally change the pointer to simulate a new scheduling cycle.
-						pod := *tc.pod
+						// Run PreFilter to simulate a new scheduling cycle.
+						maybeRunPreFilter(ctx, b, pl.plugin, tc.pod)
 
-						_, s := pl.plugin.(framework.ScorePlugin).Score(ctx, nil, &pod, pod.Spec.NodeName)
-						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected status code: have %v, expected %v, have reason: %v", want, have, s.Message())
-						}
+						_, s := pl.plugin.(framework.ScorePlugin).Score(ctx, nil, tc.pod, tc.pod.Spec.NodeName)
+						requireSuccess(b, s)
 					}
 				})
 			}
@@ -189,22 +180,7 @@ func BenchmarkPluginPrefilterFilterAndScore(b *testing.B) {
 
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						// Intentionally change the pointer to simulate a new scheduling cycle.
-						pod := *tc.pod
-
-						_, s := pl.plugin.(framework.PreFilterPlugin).PreFilter(ctx, nil, &pod)
-						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
-						}
-
-						s = pl.plugin.(framework.FilterPlugin).Filter(ctx, nil, &pod, ni)
-						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected code: have %v, expected %v, have reason: %v", want, have, s.Message())
-						}
-						_, s = pl.plugin.(framework.ScorePlugin).Score(ctx, nil, &pod, tc.pod.Spec.NodeName)
-						if want, have := framework.Success, s.Code(); want != have {
-							b.Fatalf("unexpected status code: have %v, expected %v, have reason: %v", want, have, s.Message())
-						}
+						runAll(ctx, b, pl.plugin, tc.pod, ni)
 					}
 				})
 			}

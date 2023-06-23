@@ -14,21 +14,22 @@
    limitations under the License.
 */
 
-// Package prefilter exports an api.PreFilterPlugin to the host. Only import
-// this package when setting Plugin, as doing otherwise will cause overhead.
+// Package prefilter exports an api.PreFilterPlugin to the host.
 package prefilter
 
-// TODO: The guest should always implement PreFilter, so it can know to
-// reset state when the same pod has been re-scheduled due to an error. We
-// need to both implement and test this.
+import (
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	internalprefilter "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
+)
 
-import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-
-// Plugin should be assigned in `main` to an api.PreFilterPlugin instance.
+// SetPlugin should be called in `main` to assign an api.PreFilterPlugin
+// instance.
 //
 // For example:
 //
 //	func main() {
-//		filter.Plugin = api.PreFilterPlugin(podSpecName)
+//		prefilter.SetPlugin(podSpecName)
 //	}
-var Plugin api.PreFilterPlugin
+func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
+	internalprefilter.SetPlugin(prefilterPlugin)
+}
