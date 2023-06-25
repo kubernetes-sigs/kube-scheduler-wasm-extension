@@ -84,7 +84,7 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 }
 
 // PreFilter calls guestExportPreFilter.
-func (g *guest) PreFilter(ctx context.Context) ([]string, *framework.Status) {
+func (g *guest) preFilter(ctx context.Context) ([]string, *framework.Status) {
 	defer g.out.Reset()
 	callStack := g.callStack
 
