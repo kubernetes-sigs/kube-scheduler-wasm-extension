@@ -52,11 +52,14 @@ proto-tools:
 	cd ./kubernetes/proto/tools; \
 	cat tools.go | grep "_" | awk -F'"' '{print $$2}' | xargs -tI % go install %
 
+# Generate protobuf sources from the same kubernetes version as the plugin.
+kubernetes_version := v1.27.3
 .PHONY: submodule-update
 submodule-update:
 	git submodule update -i
 	cp ./kubernetes/kubernetes.checkout ./.git/modules/kubernetes/kubernetes/info/sparse-checkout
 	cd ./kubernetes/kubernetes; \
+	git checkout $(kubernetes_version); \
 	git config core.sparsecheckout true; \
 	git read-tree -mu HEAD
 
