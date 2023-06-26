@@ -38,7 +38,7 @@ func filter() uint32 { //nolint
 		panic("filter imported, but filter.SetPlugin not called")
 	}
 
-	s := plugin.Filter(cyclestate.Pod, &nodeInfo{})
+	s := plugin.Filter(cyclestate.Values, cyclestate.Pod, &nodeInfo{})
 
 	return imports.StatusToCode(s)
 }

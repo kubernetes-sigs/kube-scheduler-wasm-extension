@@ -21,58 +21,77 @@ import (
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
+// CycleState is a WebAssembly implementation of framework.CycleState.
+//
+// # Notes
+//
+//   - Values stored by one plugin cannot be read, altered, or deleted by
+//     another plugin.
+//   - See /RATIONALE.md and /guest/RATIONALE.md for design details.
+type CycleState interface {
+	// Read retrieves data with the given "key" or returns false.
+	Read(key string) (any, bool)
+
+	// Write stores the given "val" in CycleState with the given "key".
+	Write(key string, val any)
+
+	// Delete deletes data with the given key.
+	Delete(key string)
+}
+
 // PreFilterPlugin is a WebAssembly implementation of
 // framework.PreFilterPlugin. When non-nil, the `nodeNames` result contains a
 // unique set of node names to process.
 //
 // # Notes
 //
-//   - Any state kept in the plugin should be reset in PreFilter.
+//   - Any state kept in the plugin should be assigned to CycleState, not
+//     global variables.
 //   - Duplicate nodeNames are a bug, but will not cause a failure.
 type PreFilterPlugin interface {
-	PreFilter(pod Pod) (nodeNames []string, status *Status)
+	PreFilter(state CycleState, pod Pod) (nodeNames []string, status *Status)
 }
 
 var _ PreFilterPlugin = PreFilterFunc(nil)
 
 // PreFilterFunc adapts an ordinary function to a PreFilterPlugin.
-type PreFilterFunc func(pod Pod) (nodeNames []string, status *Status)
+type PreFilterFunc func(state CycleState, pod Pod) (nodeNames []string, status *Status)
 
-// PreFilter returns f(pod).
-func (f PreFilterFunc) PreFilter(pod Pod) (nodeNames []string, status *Status) {
-	return f(pod)
+// PreFilter returns f(state, pod).
+func (f PreFilterFunc) PreFilter(state CycleState, pod Pod) (nodeNames []string, status *Status) {
+	return f(state, pod)
 }
 
 // FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
 type FilterPlugin interface {
-	Filter(pod Pod, nodeInfo NodeInfo) *Status
+	Filter(state CycleState, pod Pod, nodeInfo NodeInfo) *Status
 }
 
 var _ FilterPlugin = FilterFunc(nil)
 
 // FilterFunc adapts an ordinary function to a FilterPlugin.
-type FilterFunc func(pod Pod, nodeInfo NodeInfo) *Status
+type FilterFunc func(state CycleState, pod Pod, nodeInfo NodeInfo) *Status
 
-// Filter returns f(pod, nodeInfo).
-func (f FilterFunc) Filter(pod Pod, nodeInfo NodeInfo) *Status {
-	return f(pod, nodeInfo)
+// Filter returns f(state, pod, nodeInfo).
+func (f FilterFunc) Filter(state CycleState, pod Pod, nodeInfo NodeInfo) *Status {
+	return f(state, pod, nodeInfo)
 }
 
 // ScorePlugin is a WebAssembly implementation of framework.ScorePlugin.
 //
 // Note: This is int32, not int64. See /RATIONALE.md for why.
 type ScorePlugin interface {
-	Score(pod Pod, nodeName string) (int32, *Status)
+	Score(state CycleState, pod Pod, nodeName string) (int32, *Status)
 }
 
 var _ ScorePlugin = ScoreFunc(nil)
 
 // ScoreFunc adapts an ordinary function to a ScorePlugin.
-type ScoreFunc func(pod Pod, nodeName string) (int32, *Status)
+type ScoreFunc func(state CycleState, pod Pod, nodeName string) (int32, *Status)
 
 // Score returns f(pod, nodeName).
-func (f ScoreFunc) Score(pod Pod, nodeName string) (int32, *Status) {
-	return f(pod, nodeName)
+func (f ScoreFunc) Score(state CycleState, pod Pod, nodeName string) (int32, *Status) {
+	return f(state, pod, nodeName)
 }
 
 type NodeInfo interface {

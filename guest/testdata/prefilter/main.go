@@ -30,7 +30,7 @@ func main() {
 	prefilter.SetPlugin(api.PreFilterFunc(prefilterNoop))
 }
 
-func prefilterNoop(pod api.Pod) (nodeNames []string, status *api.Status) {
+func prefilterNoop(_ api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
 	_ = pod.Spec()
 	return
 }

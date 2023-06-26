@@ -30,7 +30,7 @@ func main() {
 	score.SetPlugin(api.ScoreFunc(scoreNoop))
 }
 
-func scoreNoop(pod api.Pod, nodeName string) (score int32, status *api.Status) {
+func scoreNoop(_ api.CycleState, pod api.Pod, nodeName string) (score int32, status *api.Status) {
 	_ = pod.Spec()
 	_ = nodeName
 	return
