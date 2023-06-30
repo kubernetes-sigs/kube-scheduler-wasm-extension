@@ -30,7 +30,7 @@ func main() {
 	filter.SetPlugin(api.FilterFunc(filterNoop))
 }
 
-func filterNoop(pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func filterNoop(_ api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
 	_ = pod.Spec()
 	_ = nodeInfo.Node()
 	return

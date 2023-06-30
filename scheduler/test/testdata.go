@@ -38,6 +38,8 @@ var PathTestAllNoopTinyGo = pathTinyGoTest("all-noop")
 
 var PathTestAllNoopWat = pathWatTest("all_noop")
 
+var PathTestCycleState = pathTinyGoTest("cyclestate")
+
 var PathTestPrefilter = pathTinyGoTest("PreFilter")
 
 var PathTestPrefilterFromGlobal = pathWatTest("prefilter_from_global")

@@ -37,6 +37,6 @@ func main() {
 	score.SetPlugin(api.ScoreFunc(scoreNoop))
 }
 
-func prefilterNoop(pod api.Pod) (nodeNames []string, status *api.Status) { return }
-func filterNoop(api.Pod, api.NodeInfo) (status *api.Status)              { return }
-func scoreNoop(api.Pod, string) (score int32, status *api.Status)        { return }
+func prefilterNoop(api.CycleState, api.Pod) (nodeNames []string, status *api.Status) { return }
+func filterNoop(api.CycleState, api.Pod, api.NodeInfo) (status *api.Status)          { return }
+func scoreNoop(api.CycleState, api.Pod, string) (score int32, status *api.Status)    { return }

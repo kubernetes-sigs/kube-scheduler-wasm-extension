@@ -6,7 +6,7 @@ golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
 	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi main.go)
 
 .PHONY: build-tinygo
-build-tinygo: examples/prefilter-simple/main.wasm examples/filter-simple/main.wasm examples/score-simple/main.wasm guest/testdata/all/main.wasm guest/testdata/all-noop/main.wasm guest/testdata/prefilter/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
+build-tinygo: examples/prefilter-simple/main.wasm examples/filter-simple/main.wasm examples/score-simple/main.wasm guest/testdata/all/main.wasm guest/testdata/all-noop/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/prefilter/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
 
 %/main-debug.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi main.go)

@@ -30,7 +30,7 @@ func main() {
 }
 
 // podSpecName returns the pod spec name, unless there is none.
-func podSpecName(pod api.Pod) ([]string, *api.Status) {
+func podSpecName(_ api.CycleState, pod api.Pod) ([]string, *api.Status) {
 	// First, check if the pod spec node name is empty. If so, pass!
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if len(podSpecNodeName) == 0 {

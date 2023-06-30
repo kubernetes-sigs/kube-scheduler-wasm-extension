@@ -30,7 +30,7 @@ func main() {
 }
 
 // nameEqualsPodSpec schedules this node if its name equals its pod spec.
-func nameEqualsPodSpec(pod api.Pod, nodeInfo api.NodeInfo) *api.Status {
+func nameEqualsPodSpec(_ api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) *api.Status {
 	// First, check if the pod spec node name is empty. If so, pass!
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if len(podSpecNodeName) == 0 {

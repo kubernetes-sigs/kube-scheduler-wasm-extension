@@ -30,7 +30,7 @@ func main() {
 }
 
 // score100IfNameEqualsPodSpec scores 100 if this node name equals its pod spec.
-func score100IfNameEqualsPodSpec(pod api.Pod, nodeName string) (int32, *api.Status) {
+func score100IfNameEqualsPodSpec(_ api.CycleState, pod api.Pod, nodeName string) (int32, *api.Status) {
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if nodeName == podSpecNodeName {
 		return 100, nil

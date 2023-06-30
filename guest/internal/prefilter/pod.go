@@ -10,6 +10,26 @@ import (
 // Pod is exposed for the cyclestate package.
 var Pod api.Pod = pod{}
 
+// CycleState is exposed for the cyclestate package.
+var CycleState api.CycleState = cycleState{}
+
+var currentCycleState = map[string]any{}
+
+type cycleState struct{}
+
+func (cycleState) Read(key string) (val any, ok bool) {
+	val, ok = currentCycleState[key]
+	return
+}
+
+func (cycleState) Write(key string, val any) {
+	currentCycleState[key] = val
+}
+
+func (cycleState) Delete(key string) {
+	delete(currentCycleState, key)
+}
+
 type pod struct{}
 
 func (pod) Metadata() *meta.ObjectMeta {

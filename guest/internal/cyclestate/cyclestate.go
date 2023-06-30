@@ -16,3 +16,5 @@ import (
 // Pod is the current pod being scheduled. It is lazy and the same values are
 // returned for any plugins in a scheduling cycle.
 var Pod api.Pod = prefilter.Pod
+
+var Values api.CycleState = prefilter.CycleState

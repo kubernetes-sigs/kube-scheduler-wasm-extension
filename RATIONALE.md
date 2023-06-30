@@ -1,5 +1,117 @@
 # Notable rationale of the WebAssembly ABI
 
+## Why do some stack values (parameters and results) use protobuf encoding?
+
+Kubernetes Scheduler plugins need to access very large model data, specifically
+node and pod data. WebAssembly has a sandbox model, so the memory of a plugin
+is not the same as host scheduler process. This means the node and pod are not
+passed by reference. In fact, they cannot be copied by value either. There are
+two ways typically used considering this: ABI based model or a serialized one.
+
+An ABI based model based on stable versions of WebAssembly can only use numeric
+types and memory. For example, a string is a pre-defined encoding of a byte
+range with validation rules on either side. At least one WebAssembly function
+needs to be exported to the guest per field, to read it. If the field is
+mutable, two or three other functions per field would be needed.
+
+For example, a function to get an HTTP uri could look like this on the guest:
+```webassembly
+(import "http_handler" "get_uri" (func $get_uri
+  (param $buf i32) (param $buf_limit i32)
+  (result (; uri_len ;) i32)))
+```
+
+The host would implement that import like this:
+```go
+func (m *middleware) getURI(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := handler.BufLimit(stack[1])
+
+	uri := m.host.GetURI(ctx)
+	uriLen := writeStringIfUnderLimit(mod.Memory(), buf, bufLimit, uri)
+
+	stack[0] = uint64(uriLen)
+}
+```
+
+A small amount of stable fields (<=20) can be optimally done in an ABI model,
+even manually. In stable/small case, there isn't a lot of glue code needed and
+there is little maintenance to those functions over time. It is the most
+performant and efficient way to communicate.
+
+However, this doesn't match the use case of Kubernetes. The node and pod models
+include several hundred data types, with nearly a thousand fields. To deal with
+a model this large would require a code generator. Even if such a code
+generator were sourced or made, it would require automatic conversion from the
+incoming proto model used on the host, as the conversion logic would be too
+large to maintain manually. Many other complications would follow suit,
+including an amplified number of host calls. In summary, a usable ABI binding
+would be an effort larger than the scheduler plugin itself.
+
+The path of least resistance is a marshalling approach. Almost all parameters
+of size used in scheduler plugins are generated protobuf model types. While not
+performant, it is possible to have the host marshal these objects and unmarshal
+them as needed on the guest. Further optimizations could be made as many of the
+underlying data do not change within a plugin lifecycle.
+
+For example, a function to get a pod could look like this on the guest:
+```webassembly
+(import "k8s.io/api" "pod" (func $get_pod
+  (param $buf i32) (param $buf_limit i32)
+  (result (; pod_len ;) i32)))
+```
+
+The host would marshal the entire pod argument to protobuf like so:
+```go
+func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	pod := filterArgsFromContext(ctx).pod
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
+}
+```
+
+The main tradeoff to this approach is performance. The model is very large and
+the default unmarshaller creates a lot of garbage. We have some workarounds
+noted below, and also there are options for mitigation not yet implemented:
+
+* updating heavy objects only when they change
+    * this limits the occurrence count of decode performance
+* tracking of alternative encoding libraries which use protobuf IDL
+    * [polyglot][3] can generate code from protos and might automatically convert
+      protos to its more efficient representation.
+
+## How is `framework.CycleState` implemented in WebAssembly?
+
+`framework.CycleState` is a primarily a key value storage. Plugins store values
+in `PreFilter` or `PreScore` for use afterward. This is similar to Go context,
+except the keys must be strings and the values must implement `StateData`.
+
+While one instance of `framework.CycleState` is re-used for all plugins in a
+scheduling cycle, in practice, `StateData` are not shared. For this reason, we
+implement cycle state in the guest. The only responsibility of the wasm guest
+is to reset any state when `PreFilter` is called. All state is invisible from
+the perspective of the host.
+
+### Why isn't `StateData.Clone` handled in WebAssembly?
+
+`Clone` is a special case for preemption. When all Nodes are filtered out, the
+scheduler attempts to make space via `PostFilter`. Preemption results in a
+[parallel][4] call to `SelectVictimsOnNode` which runs in [parallel][5], and
+removes victims (pods) from `PreFilter` state and `NodeInfo` before calling
+[`RunFilterPluginsWithNominatedPods`][6]. If `StateData` wasn't cloneable, the
+original `StateData` values would be lost.
+
+The current WebAssembly implementation skips `Clone`, for now. Since the
+guest holds the cycle state, the most likely path forward would be to export
+a guest function to save the cycle state and return a state ID to restore it
+with. This function could be called when the host side knows it is in the
+process of preemption. This would be the case on any of the following:
+
+* `Filter` is called a second time (before `PreFilter`)
+* `AddNode` or `DeleteNode` are called
+
 ## Why are some return values different between Go and Wasm?
 
 Bear in mind that the scheduler framework was not initially designed for remote
@@ -89,7 +201,6 @@ result, not a parameter. The only impact would be to new plugins or those
 ported to WebAssembly. We do not expect limiting the scores to two billion
 above the valid range to be a practical concern for these authors.
 
-
 ## Why do we return a non-status, second numeric result as an i32?
 
 Most compilers that target WebAssembly Core Specification 1.0, the only REC
@@ -156,5 +267,9 @@ complexity for now. If later, we end up with more complicated, or more than two
 non-status results, we may revisit this decision and possibly setup scratch
 space instead.
 
-[1]: https://github.com/kubernetes/kubernetes/blob/master/pkg/scheduler/framework/interface.go#L79-L99
-[2]: https://github.com/kubernetes/kubernetes/blob/074900e81bdf4a0848766255561854f71c1c5a7d/pkg/scheduler/framework/interface.go#L110-L114
+[1]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/interface.go#L79-L99
+[2]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/interface.go#L110-L114
+[3]: https://github.com/loopholelabs/polyglot-go
+[4]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/preemption/preemption.go#L606
+[5]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/plugins/defaultpreemption/default_preemption.go#L139
+[6]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/runtime/framework.go#L826-L827

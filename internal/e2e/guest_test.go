@@ -32,7 +32,7 @@ import (
 func TestGuest_CycleStateCoherence(t *testing.T) {
 	ctx := context.Background()
 
-	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestAll})
+	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestCycleState})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
