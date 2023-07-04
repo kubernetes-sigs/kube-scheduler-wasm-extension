@@ -169,7 +169,8 @@ type wasmPlugin struct {
 	pool              *guestPool[*guest]
 }
 
-type WasmPlugin interface {
+// ProfilerSupport exposes functions needed to profiling the guest with wzprof.
+type ProfileSupport interface {
 	Guest() wazero.CompiledModule
 }
 
