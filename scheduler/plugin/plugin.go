@@ -43,8 +43,7 @@ func New(configuration runtime.Object, frameworkHandle framework.Handle) (framew
 		return nil, fmt.Errorf("failed to decode into %s PluginConfig: %w", PluginName, err)
 	}
 
-	plugin, err := NewFromConfig(context.Background(), config)
-	return maskInterfaces(plugin), err
+	return NewFromConfig(context.Background(), config)
 }
 
 // maskInterfaces ensures the caller can do type checking to detect what the
@@ -58,22 +57,26 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 		return struct {
 			framework.PreFilterPlugin
 			io.Closer
-		}{plugin, plugin}
+			ProfilerSupport
+		}{plugin, plugin, plugin}
 	case exportFilterPlugin:
 		return struct {
 			framework.FilterPlugin
 			io.Closer
-		}{plugin, plugin}
+			ProfilerSupport
+		}{plugin, plugin, plugin}
 	case exportScorePlugin:
 		return struct {
 			framework.ScorePlugin
 			io.Closer
-		}{plugin, plugin}
+			ProfilerSupport
+		}{plugin, plugin, plugin}
 	case exportPreFilterPlugin | exportFilterPlugin:
 		type prefilterFilter interface {
 			framework.PreFilterPlugin
 			framework.FilterPlugin
 			io.Closer
+			ProfilerSupport
 		}
 		return struct{ prefilterFilter }{plugin}
 	case exportPreFilterPlugin | exportScorePlugin:
@@ -81,6 +84,7 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 			framework.PreFilterPlugin
 			framework.ScorePlugin
 			io.Closer
+			ProfilerSupport
 		}
 		return struct{ prefilterScore }{plugin}
 	case exportPreFilterPlugin | exportFilterPlugin | exportScorePlugin:
@@ -89,6 +93,7 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 			framework.FilterPlugin
 			framework.ScorePlugin
 			io.Closer
+			ProfilerSupport
 		}
 		return struct{ prefilterFilterScore }{plugin}
 	case exportFilterPlugin | exportScorePlugin:
@@ -96,6 +101,7 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 			framework.FilterPlugin
 			framework.ScorePlugin
 			io.Closer
+			ProfilerSupport
 		}
 		return struct{ filterScore }{plugin}
 	}
@@ -104,7 +110,7 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 
 // NewFromConfig is like New, except it allows us to explicitly provide the
 // context and configuration of the plugin. This allows flexibility in tests.
-func NewFromConfig(ctx context.Context, config PluginConfig) (*wasmPlugin, error) {
+func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, error) {
 	guestBin, err := os.ReadFile(config.GuestPath)
 	if err != nil {
 		return nil, fmt.Errorf("wasm: error reading guest binary at %s: %w", config.GuestPath, err)
@@ -119,7 +125,7 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (*wasmPlugin, error
 	if err != nil {
 		_ = runtime.Close(ctx)
 	}
-	return pl, err
+	return maskInterfaces(pl), err
 }
 
 // newWasmPlugin is extracted to prevent small bugs: The caller must close the
@@ -161,6 +167,20 @@ type wasmPlugin struct {
 	guestModuleConfig wazero.ModuleConfig
 	instanceCounter   atomic.Uint64
 	pool              *guestPool[*guest]
+}
+
+// ProfilerSupport exposes functions needed to profiling the guest with wzprof.
+type ProfilerSupport interface {
+	Guest() wazero.CompiledModule
+	plugin() *wasmPlugin
+}
+
+func (pl *wasmPlugin) Guest() wazero.CompiledModule {
+	return pl.guestModule
+}
+
+func (pl *wasmPlugin) plugin() *wasmPlugin {
+	return pl
 }
 
 var _ framework.Plugin = (*wasmPlugin)(nil)

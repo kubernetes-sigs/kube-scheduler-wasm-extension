@@ -18,14 +18,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"os"
 
 	"github.com/stealthrocket/wzprof"
 	"github.com/tetratelabs/wazero/experimental"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
@@ -58,14 +56,19 @@ func main() {
 	)
 
 	// Pass the profiling context to the plugin.
-	plugin, err := wasm.New(&runtime.Unknown{
-		ContentType: runtime.ContentTypeJSON,
-		Raw:         []byte(fmt.Sprintf(`{"guestPath": "%s"}`, guestPath)),
-	}, nil)
+	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
+		GuestPath: guestPath,
+	})
 	if err != nil {
 		log.Panicln("failed to create plugin:", err)
 	}
 	defer plugin.(io.Closer).Close()
+
+	m := plugin.(wasm.ProfilerSupport).Guest()
+	err = p.Prepare(m)
+	if err != nil {
+		log.Panicln("failed to prepare profiler:", err)
+	}
 
 	// Profile around the Filter function
 	cpu.StartProfile()

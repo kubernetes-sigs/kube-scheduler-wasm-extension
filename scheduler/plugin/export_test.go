@@ -26,7 +26,7 @@ import (
 type WasmPlugin struct{ *wasmPlugin }
 
 func NewTestWasmPlugin(p framework.Plugin) *WasmPlugin {
-	return &WasmPlugin{wasmPlugin: p.(*wasmPlugin)} // panic on test bug
+	return &WasmPlugin{wasmPlugin: p.(ProfilerSupport).plugin()} // panic on test bug
 }
 
 func (w *WasmPlugin) SetGlobals(globals map[string]int32) {

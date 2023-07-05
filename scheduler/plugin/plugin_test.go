@@ -44,7 +44,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
-	defer p.Close()
+	defer p.(io.Closer).Close()
 
 	pl := wasm.NewTestWasmPlugin(p)
 	pod := st.MakePod().UID(uuid.New().String()).Name("test-pod").Node("good-node").Obj()
@@ -122,7 +122,7 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
-	defer p.Close()
+	defer p.(io.Closer).Close()
 
 	pl := wasm.NewTestWasmPlugin(p)
 	pod := st.MakePod().UID(uuid.New().String()).Name("test-pod").Node("good-node").Obj()
@@ -274,7 +274,7 @@ wasm stack trace:
 				t.Fatalf("expected error %v", want)
 			}
 			if p != nil {
-				p.Close()
+				p.(io.Closer).Close()
 			}
 		})
 	}
@@ -338,14 +338,14 @@ wasm stack trace:
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer p.Close()
+			defer p.(io.Closer).Close()
 
 			if len(tc.globals) > 0 {
 				pl := wasm.NewTestWasmPlugin(p)
 				pl.SetGlobals(tc.globals)
 			}
 
-			nodeNames, status := p.PreFilter(ctx, nil, tc.pod)
+			nodeNames, status := p.(framework.PreFilterPlugin).PreFilter(ctx, nil, tc.pod)
 			if want, have := tc.expectedResult, nodeNames; !reflect.DeepEqual(want, have) {
 				t.Fatalf("unexpected node names: want %v, have %v", want, have)
 			}
@@ -422,7 +422,7 @@ wasm stack trace:
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer p.Close()
+			defer p.(io.Closer).Close()
 
 			if len(tc.globals) > 0 {
 				pl := wasm.NewTestWasmPlugin(p)
@@ -431,7 +431,7 @@ wasm stack trace:
 
 			ni := framework.NewNodeInfo()
 			ni.SetNode(tc.node)
-			s := p.Filter(ctx, nil, tc.pod, ni)
+			s := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
 			if want, have := tc.expectedStatusCode, s.Code(); want != have {
 				t.Fatalf("unexpected status code: want %v, have %v", want, have)
 			}
@@ -536,14 +536,14 @@ wasm stack trace:
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer p.Close()
+			defer p.(io.Closer).Close()
 
 			if len(tc.globals) > 0 {
 				pl := wasm.NewTestWasmPlugin(p)
 				pl.SetGlobals(tc.globals)
 			}
 
-			score, status := p.Score(ctx, nil, tc.pod, tc.nodeName)
+			score, status := p.(framework.ScorePlugin).Score(ctx, nil, tc.pod, tc.nodeName)
 			if want, have := tc.expectedScore, score; want != have {
 				t.Fatalf("unexpected score: want %v, have %v", want, have)
 			}

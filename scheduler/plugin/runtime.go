@@ -28,7 +28,10 @@ import (
 // prepareRuntime compiles the guest and instantiates any host modules it needs.
 func prepareRuntime(ctx context.Context, guestBin []byte) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
 	// Create the runtime, which when closed releases any resources associated with it.
-	runtime = wazero.NewRuntime(ctx)
+	// Here are settings required by the wasm profiler wzprof:
+	// * DebugInfo is already true by default, so no impact.
+	// * CustomSections buffers more data into memory at compile time.
+	runtime = wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithDebugInfoEnabled(true).WithCustomSections(true))
 
 	// Close the runtime on any error
 	defer func() {
