@@ -25,6 +25,7 @@ import (
 	"github.com/stealthrocket/wzprof"
 	"github.com/tetratelabs/wazero/experimental"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
+
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
