@@ -57,26 +57,26 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 		return struct {
 			framework.PreFilterPlugin
 			io.Closer
-			WasmPlugin
+			ProfilerSupport
 		}{plugin, plugin, plugin}
 	case exportFilterPlugin:
 		return struct {
 			framework.FilterPlugin
 			io.Closer
-			WasmPlugin
+			ProfilerSupport
 		}{plugin, plugin, plugin}
 	case exportScorePlugin:
 		return struct {
 			framework.ScorePlugin
 			io.Closer
-			WasmPlugin
+			ProfilerSupport
 		}{plugin, plugin, plugin}
 	case exportPreFilterPlugin | exportFilterPlugin:
 		type prefilterFilter interface {
 			framework.PreFilterPlugin
 			framework.FilterPlugin
 			io.Closer
-			WasmPlugin
+			ProfilerSupport
 		}
 		return struct{ prefilterFilter }{plugin}
 	case exportPreFilterPlugin | exportScorePlugin:
@@ -84,7 +84,7 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 			framework.PreFilterPlugin
 			framework.ScorePlugin
 			io.Closer
-			WasmPlugin
+			ProfilerSupport
 		}
 		return struct{ prefilterScore }{plugin}
 	case exportPreFilterPlugin | exportFilterPlugin | exportScorePlugin:
@@ -93,7 +93,7 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 			framework.FilterPlugin
 			framework.ScorePlugin
 			io.Closer
-			WasmPlugin
+			ProfilerSupport
 		}
 		return struct{ prefilterFilterScore }{plugin}
 	case exportFilterPlugin | exportScorePlugin:
@@ -101,7 +101,7 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 			framework.FilterPlugin
 			framework.ScorePlugin
 			io.Closer
-			WasmPlugin
+			ProfilerSupport
 		}
 		return struct{ filterScore }{plugin}
 	}
@@ -170,12 +170,17 @@ type wasmPlugin struct {
 }
 
 // ProfilerSupport exposes functions needed to profiling the guest with wzprof.
-type ProfileSupport interface {
+type ProfilerSupport interface {
 	Guest() wazero.CompiledModule
+	plugin() *wasmPlugin
 }
 
 func (pl *wasmPlugin) Guest() wazero.CompiledModule {
 	return pl.guestModule
+}
+
+func (pl *wasmPlugin) plugin() *wasmPlugin {
+	return pl
 }
 
 var _ framework.Plugin = (*wasmPlugin)(nil)

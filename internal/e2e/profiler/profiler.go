@@ -63,7 +63,7 @@ func main() {
 	}
 	defer plugin.(io.Closer).Close()
 
-	m := plugin.(wasm.WasmPlugin).Guest()
+	m := plugin.(wasm.ProfilerSupport).Guest()
 	err = p.Prepare(m)
 	if err != nil {
 		log.Panicln("failed to prepare profiler:", err)

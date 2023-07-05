@@ -18,6 +18,7 @@ package e2e_test
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -225,8 +226,8 @@ func newTestPlugins(b *testing.B, ctx context.Context, config wasm.PluginConfig)
 				plugin: plugin,
 			},
 		}, func() {
-			_ = noopWat.Close()
-			_ = noopTinyGo.Close()
-			_ = plugin.Close()
+			_ = noopWat.(io.Closer).Close()
+			_ = noopTinyGo.(io.Closer).Close()
+			_ = plugin.(io.Closer).Close()
 		}
 }

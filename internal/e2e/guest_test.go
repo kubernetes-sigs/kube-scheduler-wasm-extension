@@ -18,6 +18,7 @@ package e2e_test
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -36,7 +37,7 @@ func TestGuest_CycleStateCoherence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
-	defer plugin.Close()
+	defer plugin.(io.Closer).Close()
 
 	pod := test.PodReal
 	ni := framework.NewNodeInfo()
