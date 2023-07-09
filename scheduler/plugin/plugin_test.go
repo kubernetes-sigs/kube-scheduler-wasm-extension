@@ -293,7 +293,7 @@ func TestPreFilter(t *testing.T) {
 		{
 			name:               "success: pod has spec.NodeName",
 			pod:                test.PodSmall,
-			expectedResult:     &framework.PreFilterResult{NodeNames: sets.NewString("good-node")},
+			expectedResult:     &framework.PreFilterResult{NodeNames: sets.New("good-node")},
 			expectedStatusCode: framework.Success,
 		},
 		{

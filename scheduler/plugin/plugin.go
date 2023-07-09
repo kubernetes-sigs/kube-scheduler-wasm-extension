@@ -221,7 +221,7 @@ func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, po
 		var nodeNames []string
 		nodeNames, status = g.preFilter(ctx)
 		if nodeNames != nil {
-			result = &framework.PreFilterResult{NodeNames: sets.NewString(nodeNames...)}
+			result = &framework.PreFilterResult{NodeNames: sets.New(nodeNames...)}
 		}
 	}); err != nil {
 		status = framework.AsStatus(err)

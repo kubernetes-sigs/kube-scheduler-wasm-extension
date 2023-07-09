@@ -1,0 +1,38 @@
+# The following labels are used in this file:
+# - fast: short execution time, ideally less than 30 seconds
+# - integration-test: used to select workloads that
+#   run in pull-kubernetes-integration. Choosing those tests
+#   is a tradeoff between code coverage and overall runtime.
+# - performance: used to select workloads that run
+#   in ci-benchmark-scheduler-perf. Such workloads
+#   must run long enough (ideally, longer than 10 seconds)
+#   to provide meaningful samples for the pod scheduling
+#   rate.
+#
+# Combining "performance" and "fast" selects suitable workloads for a local
+# before/after comparisons with benchstat.
+
+- name: SchedulingBasic
+  defaultPodTemplatePath: config/pod-default.yaml
+  schedulerConfigPath: config/sched-config.yaml
+  workloadTemplate:
+  - opcode: createNodes
+    countParam: $initNodes
+  - opcode: createPods
+    countParam: $initPods
+  - opcode: createPods
+    countParam: $measurePods
+    collectMetrics: true
+  workloads:
+  - name: 500Nodes
+    labels: [integration-test, fast]
+    params:
+      initNodes: 500
+      initPods: 500
+      measurePods: 1000
+  - name: 5000Nodes
+    labels: [performance, fast]
+    params:
+      initNodes: 5000
+      initPods: 1000
+      measurePods: 1000

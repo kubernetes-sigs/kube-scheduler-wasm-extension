@@ -1,0 +1,12 @@
+kind: KubeSchedulerConfiguration
+apiVersion: kubescheduler.config.k8s.io/v1
+profiles:
+  - schedulerName: default-scheduler
+    plugins:
+      multiPoint:
+        enabled:
+          - name: wasm
+    pluginConfig:
+      - name: wasm
+        args:
+          guestPath: "../test/testdata/test/all_noop.wasm"
