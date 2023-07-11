@@ -5,7 +5,7 @@ go 1.20
 
 require (
 	github.com/stealthrocket/wzprof v0.1.5
-	github.com/tetratelabs/wazero v1.2.1
+	github.com/tetratelabs/wazero v1.3.0
 	k8s.io/api v0.27.3
 	k8s.io/kubernetes v1.27.3
 	sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto v0.0.0-00010101000000-000000000000
