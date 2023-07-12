@@ -26,11 +26,13 @@ import (
 )
 
 func main() {
-	filter.SetPlugin(api.FilterFunc(nameEqualsPodSpec))
+	filter.SetPlugin(nameEqualsPodSpec{})
 }
 
-// nameEqualsPodSpec schedules this node if its name equals its pod spec.
-func nameEqualsPodSpec(_ api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) *api.Status {
+// nameEqualsPodSpec schedules a node if its name equals its pod spec.
+type nameEqualsPodSpec struct{}
+
+func (nameEqualsPodSpec) Filter(_ api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) *api.Status {
 	// First, check if the pod spec node name is empty. If so, pass!
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if len(podSpecNodeName) == 0 {

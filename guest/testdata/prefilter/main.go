@@ -26,11 +26,14 @@ import (
 )
 
 func main() {
-	// This plugin doesn't do anything, except evaluate each parameter,
-	prefilter.SetPlugin(api.PreFilterFunc(prefilterNoop))
+	prefilter.SetPlugin(noop{})
 }
 
-func prefilterNoop(_ api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
+// noop doesn't do anything, except evaluate each parameter.
+type noop struct{}
+
+func (noop) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
+	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	return
 }

@@ -28,15 +28,21 @@ import (
 )
 
 func main() {
-	// These plugins don't do anything, and this style isn't recommended. This
-	// shows the impact two things:
-	//  * implementing multiple interfaces
-	//  * overhead of constructing function parameters
-	prefilter.SetPlugin(api.PreFilterFunc(prefilterNoop))
-	filter.SetPlugin(api.FilterFunc(filterNoop))
-	score.SetPlugin(api.ScoreFunc(scoreNoop))
+	plugin := noop{}
+	prefilter.SetPlugin(plugin)
+	filter.SetPlugin(plugin)
+	score.SetPlugin(plugin)
 }
 
-func prefilterNoop(api.CycleState, api.Pod) (nodeNames []string, status *api.Status) { return }
-func filterNoop(api.CycleState, api.Pod, api.NodeInfo) (status *api.Status)          { return }
-func scoreNoop(api.CycleState, api.Pod, string) (score int32, status *api.Status)    { return }
+// noop doesn't do anything, and this style isn't recommended. This shows the
+// impact two things:
+//
+//   - implementing multiple interfaces
+//   - overhead of constructing function parameters
+type noop struct{}
+
+func (noop) PreFilter(api.CycleState, api.Pod) (nodeNames []string, status *api.Status) { return }
+
+func (noop) Filter(api.CycleState, api.Pod, api.NodeInfo) (status *api.Status) { return }
+
+func (noop) Score(api.CycleState, api.Pod, string) (score int32, status *api.Status) { return }

@@ -24,30 +24,33 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 )
 
-// prevent unused lint errors (lint is run with normal go).
-var _ func() uint32 = prefilter
-
-var plugin api.PreFilterPlugin
+// prefilter is the current plugin assigned with SetPlugin.
+var prefilter api.PreFilterPlugin
 
 // SetPlugin is exposed to prevent package cycles.
 func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
 	if prefilterPlugin == nil {
 		panic("nil prefilterPlugin")
 	}
-	plugin = prefilterPlugin
+	prefilter = prefilterPlugin
+	plugin.MustSet(prefilterPlugin)
 }
 
-// prefilter is only exported to the host.
+// prevent unused lint errors (lint is run with normal go).
+var _ func() uint32 = _prefilter
+
+// _prefilter is only exported to the host.
 //
 //export prefilter
-func prefilter() uint32 { //nolint
+func _prefilter() uint32 { //nolint
 	// This function begins a new scheduling cycle: zero out any cycle state.
 	currentPod = nil
 	currentCycleState = map[string]any{}
 
-	if plugin == nil { // Then, the user didn't define one.
+	if prefilter == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export prefilter so that we can reset
 		// the cycle state: return success to avoid no-op overhead.
 		return 0
@@ -55,7 +58,7 @@ func prefilter() uint32 { //nolint
 
 	// The parameters passed are lazy with regard to host functions. This means
 	// a no-op plugin should not have any unmarshal penalty.
-	nodeNames, status := plugin.PreFilter(CycleState, Pod)
+	nodeNames, status := prefilter.PreFilter(CycleState, Pod)
 
 	// If plugin returned nodeNames, concatenate them into a C-string and call
 	// the host with the count and memory region.

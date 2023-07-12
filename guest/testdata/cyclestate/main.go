@@ -31,20 +31,27 @@ import (
 )
 
 func main() {
-	// These plugins make sure api.CycleState is consistent between callbacks.
-	prefilter.SetPlugin(api.PreFilterFunc(prefilterState))
-	filter.SetPlugin(api.FilterFunc(filterState))
-	score.SetPlugin(api.ScoreFunc(scoreState))
+	plugin := cyclestate{}
+	prefilter.SetPlugin(plugin)
+	filter.SetPlugin(plugin)
+	score.SetPlugin(plugin)
 }
+
+const (
+	// name is the name of the plugin used in the plugin registry and configurations.
+	name              = "CycleState"
+	prefilterStateKey = "PreFilter" + name
+)
+
+// cyclestate makes sure api.CycleState is consistent between callbacks.
+type cyclestate struct{}
 
 // podSpec is used to test cycle state coherency.
 var podSpec *protoapi.PodSpec
 
-const prefilterStateKey = "test"
-
 type prefilterStateVal map[string]any
 
-func prefilterState(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
+func (cyclestate) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
 	if nextPodSpec := pod.Spec(); unsafe.Pointer(nextPodSpec) == unsafe.Pointer(podSpec) {
 		panic("didn't reset pod on pre-filter")
 	} else {
@@ -58,7 +65,7 @@ func prefilterState(state api.CycleState, pod api.Pod) (nodeNames []string, stat
 	return
 }
 
-func filterState(state api.CycleState, pod api.Pod, _ api.NodeInfo) (status *api.Status) {
+func (cyclestate) Filter(state api.CycleState, pod api.Pod, _ api.NodeInfo) (status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from pre-filter")
 	}
@@ -70,7 +77,7 @@ func filterState(state api.CycleState, pod api.Pod, _ api.NodeInfo) (status *api
 	return
 }
 
-func scoreState(state api.CycleState, pod api.Pod, _ string) (score int32, status *api.Status) {
+func (cyclestate) Score(state api.CycleState, pod api.Pod, _ string) (score int32, status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from pre-filter")
 	}
