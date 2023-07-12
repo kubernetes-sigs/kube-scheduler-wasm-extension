@@ -26,11 +26,13 @@ import (
 )
 
 func main() {
-	prefilter.SetPlugin(api.PreFilterFunc(podSpecName))
+	prefilter.SetPlugin(podSpecName{})
 }
 
-// podSpecName returns the pod spec name, unless there is none.
-func podSpecName(_ api.CycleState, pod api.Pod) ([]string, *api.Status) {
+// podSpecName schedules a node if its name equals its pod spec.
+type podSpecName struct{}
+
+func (podSpecName) PreFilter(_ api.CycleState, pod api.Pod) ([]string, *api.Status) {
 	// First, check if the pod spec node name is empty. If so, pass!
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if len(podSpecNodeName) == 0 {

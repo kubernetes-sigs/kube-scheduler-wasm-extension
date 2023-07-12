@@ -14,27 +14,29 @@
    limitations under the License.
 */
 
-package main
+// Package plugin includes utilities needed for any api.Plugin.
+package plugin
 
-// Override the default GC with a more performant one.
-// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
-	_ "github.com/wasilibs/nottinygc"
+	"reflect"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
-func main() {
-	score.SetPlugin(noop{})
+var current api.Plugin
+
+// MustSet sets the plugin once
+func MustSet(plugin api.Plugin) {
+	if !set(plugin) {
+		panic("only one plugin instance is supported")
+	}
 }
 
-// noop doesn't do anything, except evaluate each parameter.
-type noop struct{}
-
-func (noop) Score(state api.CycleState, pod api.Pod, nodeName string) (score int32, status *api.Status) {
-	_, _ = state.Read("ok")
-	_ = pod.Spec()
-	_ = nodeName
-	return
+func set(plugin api.Plugin) bool {
+	if current == nil {
+		current = plugin
+		return true
+	}
+	// current == plugin with the same value works in Go, but not TinyGo.
+	return reflect.DeepEqual(current, plugin)
 }

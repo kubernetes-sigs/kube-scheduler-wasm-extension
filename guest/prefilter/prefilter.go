@@ -28,7 +28,13 @@ import (
 // For example:
 //
 //	func main() {
-//		prefilter.SetPlugin(podSpecName)
+//		prefilter.SetPlugin(podSpecName{})
+//	}
+//
+//	type podSpecName struct{}
+//
+//	func (podSpecName) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
+//		panic("implement me")
 //	}
 func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
 	internalprefilter.SetPlugin(prefilterPlugin)

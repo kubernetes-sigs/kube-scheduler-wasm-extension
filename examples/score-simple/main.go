@@ -26,11 +26,13 @@ import (
 )
 
 func main() {
-	score.SetPlugin(api.ScoreFunc(score100IfNameEqualsPodSpec))
+	score.SetPlugin(score100IfNameEqualsPodSpec{})
 }
 
-// score100IfNameEqualsPodSpec scores 100 if this node name equals its pod spec.
-func score100IfNameEqualsPodSpec(_ api.CycleState, pod api.Pod, nodeName string) (int32, *api.Status) {
+// score100IfNameEqualsPodSpec returns 100 if a node name equals its pod spec.
+type score100IfNameEqualsPodSpec struct{}
+
+func (score100IfNameEqualsPodSpec) Score(_ api.CycleState, pod api.Pod, nodeName string) (int32, *api.Status) {
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if nodeName == podSpecNodeName {
 		return 100, nil

@@ -32,6 +32,9 @@ import (
 	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
 )
 
+// PluginName is static as app.WithPlugin needs to set the name *prior* to
+// reading configuration from New. This means it cannot see any properties
+// there including the path to the wasm binary.
 const PluginName = "wasm"
 
 var _ frameworkruntime.PluginFactory = New
@@ -139,14 +142,8 @@ func newWasmPlugin(ctx context.Context, runtime wazero.Runtime, guestModule waze
 		return nil, fmt.Errorf("wasm: guest doesn't export plugin functions")
 	}
 
-	guestName := config.GuestName
-	if guestName == "" {
-		guestName = guestModule.Name()
-	}
-
 	pl := &wasmPlugin{
 		runtime:           runtime,
-		guestName:         guestName,
 		guestModule:       guestModule,
 		guestExports:      guestExports,
 		guestModuleConfig: wazero.NewModuleConfig(),
@@ -161,7 +158,6 @@ func newWasmPlugin(ctx context.Context, runtime wazero.Runtime, guestModule waze
 
 type wasmPlugin struct {
 	runtime           wazero.Runtime
-	guestName         string
 	guestModule       wazero.CompiledModule
 	guestExports      exports
 	guestModuleConfig wazero.ModuleConfig
@@ -186,6 +182,7 @@ func (pl *wasmPlugin) plugin() *wasmPlugin {
 var _ framework.Plugin = (*wasmPlugin)(nil)
 
 // Name implements the same method as documented on framework.Plugin.
+// See /RATIONALE.md for impact
 func (pl *wasmPlugin) Name() string {
 	return PluginName
 }

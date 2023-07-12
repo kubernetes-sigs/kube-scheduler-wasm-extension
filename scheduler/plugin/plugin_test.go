@@ -257,7 +257,7 @@ func TestNewFromConfig(t *testing.T) {
 			name:      "panic on _start",
 			guestPath: test.PathErrorPanicOnStart,
 			expectedError: `failed to create a guest pool: wasm: instantiate error: panic!
-module[panic_on_start-1] function[_start] failed: wasm error: unreachable
+module[1] function[_start] failed: wasm error: unreachable
 wasm stack trace:
 	panic_on_start.$2()`,
 		},

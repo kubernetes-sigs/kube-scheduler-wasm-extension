@@ -82,6 +82,21 @@ noted below, and also there are options for mitigation not yet implemented:
     * [polyglot][3] can generate code from protos and might automatically convert
       protos to its more efficient representation.
 
+## Why doesn't the ABI to set the plugin name?
+
+Framework plugins all share a base type `Plugin` with only one method: `Name`.
+This is conventionally set to the same constant used to register the plugin
+factory `app.WithPlugin`. Effectively, this is static configuration because
+there is no configuration you can read prior to invoking this.
+
+Until this changes, there's no reason to define an ABI for the name of a
+wasm plugin. Even if we could read it from the guest, the plugin name would
+have already been associated with the factory. This has some problems until
+something changes:
+
+* There can only be one wasm based plugin defined at a time.
+* Wasm plugins with significantly different behavior will use the same metrics.
+
 ## How is `framework.CycleState` implemented in WebAssembly?
 
 `framework.CycleState` is a primarily a key value storage. Plugins store values

@@ -36,7 +36,7 @@ func Test_guestPool_getForScheduling(t *testing.T) {
 	differentUID := uuid.NewUUID()
 
 	var counter int
-	pl, err := newGuestPool(ctx, func(ctx2 context.Context) (*testGuest, error) {
+	pl, err := newGuestPool(ctx, func(context.Context) (*testGuest, error) {
 		counter++
 		return &testGuest{val: counter}, nil
 	})
@@ -74,7 +74,7 @@ func Test_guestPool_getForBinding(t *testing.T) {
 	differentUID := uuid.NewUUID()
 
 	var counter int
-	pl, err := newGuestPool(ctx, func(ctx2 context.Context) (*testGuest, error) {
+	pl, err := newGuestPool(ctx, func(context.Context) (*testGuest, error) {
 		counter++
 		return &testGuest{val: counter}, nil
 	})

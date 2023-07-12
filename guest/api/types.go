@@ -39,6 +39,11 @@ type CycleState interface {
 	Delete(key string)
 }
 
+// Plugin is a WebAssembly implementation of framework.Plugin.
+type Plugin interface {
+	// This doesn't define `Name() string`. See /RATIONALE.md for impact
+}
+
 // PreFilterPlugin is a WebAssembly implementation of
 // framework.PreFilterPlugin. When non-nil, the `nodeNames` result contains a
 // unique set of node names to process.
@@ -49,49 +54,25 @@ type CycleState interface {
 //     global variables.
 //   - Duplicate nodeNames are a bug, but will not cause a failure.
 type PreFilterPlugin interface {
+	Plugin
+
 	PreFilter(state CycleState, pod Pod) (nodeNames []string, status *Status)
-}
-
-var _ PreFilterPlugin = PreFilterFunc(nil)
-
-// PreFilterFunc adapts an ordinary function to a PreFilterPlugin.
-type PreFilterFunc func(state CycleState, pod Pod) (nodeNames []string, status *Status)
-
-// PreFilter returns f(state, pod).
-func (f PreFilterFunc) PreFilter(state CycleState, pod Pod) (nodeNames []string, status *Status) {
-	return f(state, pod)
 }
 
 // FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
 type FilterPlugin interface {
+	Plugin
+
 	Filter(state CycleState, pod Pod, nodeInfo NodeInfo) *Status
-}
-
-var _ FilterPlugin = FilterFunc(nil)
-
-// FilterFunc adapts an ordinary function to a FilterPlugin.
-type FilterFunc func(state CycleState, pod Pod, nodeInfo NodeInfo) *Status
-
-// Filter returns f(state, pod, nodeInfo).
-func (f FilterFunc) Filter(state CycleState, pod Pod, nodeInfo NodeInfo) *Status {
-	return f(state, pod, nodeInfo)
 }
 
 // ScorePlugin is a WebAssembly implementation of framework.ScorePlugin.
 //
 // Note: This is int32, not int64. See /RATIONALE.md for why.
 type ScorePlugin interface {
+	Plugin
+
 	Score(state CycleState, pod Pod, nodeName string) (int32, *Status)
-}
-
-var _ ScorePlugin = ScoreFunc(nil)
-
-// ScoreFunc adapts an ordinary function to a ScorePlugin.
-type ScoreFunc func(state CycleState, pod Pod, nodeName string) (int32, *Status)
-
-// Score returns f(pod, nodeName).
-func (f ScoreFunc) Score(state CycleState, pod Pod, nodeName string) (int32, *Status) {
-	return f(state, pod, nodeName)
 }
 
 type NodeInfo interface {

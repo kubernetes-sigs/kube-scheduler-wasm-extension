@@ -51,17 +51,16 @@ func compileGuest(ctx context.Context, runtime wazero.Runtime, guestBin []byte) 
 }
 
 func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
-	// Concurrent modules can conflict on name. Make sure we have a unique one.
+	// The name isn't important, but it needs to be unique.
 	instanceNum := pl.instanceCounter.Add(1)
-	instanceName := pl.guestName + "-" + strconv.FormatUint(instanceNum, 10)
-	guestModuleConfig := pl.guestModuleConfig.WithName(instanceName)
+	moduleConfig := pl.guestModuleConfig.WithName(strconv.FormatUint(instanceNum, 10))
 
 	// A guest may have an instantiation error, which writes to stdout or stderr.
 	// Capture stdout and stderr during instantiation.
 	var out bytes.Buffer
-	guestModuleConfig = guestModuleConfig.WithStdout(&out).WithStderr(&out)
+	moduleConfig = moduleConfig.WithStdout(&out).WithStderr(&out)
 
-	g, err := pl.runtime.InstantiateModule(ctx, pl.guestModule, guestModuleConfig)
+	g, err := pl.runtime.InstantiateModule(ctx, pl.guestModule, moduleConfig)
 	if err != nil {
 		_ = pl.runtime.Close(ctx)
 		return nil, decorateError(&out, "instantiate", err)
@@ -149,17 +148,17 @@ func detectExports(exportedFns map[string]wazeroapi.FunctionDefinition) (exports
 		switch name {
 		case guestExportPreFilter:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
-				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", guestExportPreFilter)
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
 			}
 			e |= exportPreFilterPlugin
 		case guestExportFilter:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
-				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", guestExportFilter)
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
 			}
 			e |= exportFilterPlugin
 		case guestExportScore:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i64}) {
-				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i64)", guestExportScore)
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i64)", name)
 			}
 			e |= exportScorePlugin
 		}

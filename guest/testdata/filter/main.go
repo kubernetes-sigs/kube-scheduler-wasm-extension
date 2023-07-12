@@ -26,11 +26,14 @@ import (
 )
 
 func main() {
-	// This plugin doesn't do anything, except evaluate each parameter.
-	filter.SetPlugin(api.FilterFunc(filterNoop))
+	filter.SetPlugin(noop{})
 }
 
-func filterNoop(_ api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+// noop doesn't do anything, except evaluate each parameter.
+type noop struct{}
+
+func (noop) Filter(state api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeInfo.Node()
 	return

@@ -28,28 +28,31 @@ import (
 )
 
 func main() {
-	// These plugins don't do anything, except evaluate each parameter. This
-	// will show if protobuf unmarshal caching works (for the pod), and also
-	// show baseline performance of reading each parameter.
-	prefilter.SetPlugin(api.PreFilterFunc(prefilterNoop))
-	filter.SetPlugin(api.FilterFunc(filterNoop))
-	score.SetPlugin(api.ScoreFunc(scoreNoop))
+	plugin := noop{}
+	prefilter.SetPlugin(plugin)
+	filter.SetPlugin(plugin)
+	score.SetPlugin(plugin)
 }
 
-func prefilterNoop(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
+// noop doesn't do anything, except evaluate each parameter. This shows if
+// protobuf unmarshal caching works (for the pod), and also baseline
+// performance of reading each parameter.
+type noop struct{}
+
+func (noop) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	return
 }
 
-func filterNoop(state api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func (noop) Filter(state api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeInfo.Node()
 	return
 }
 
-func scoreNoop(state api.CycleState, pod api.Pod, nodeName string) (score int32, status *api.Status) {
+func (noop) Score(state api.CycleState, pod api.Pod, nodeName string) (score int32, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeName
