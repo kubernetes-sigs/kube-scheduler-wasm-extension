@@ -55,43 +55,60 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 	if plugin == nil {
 		return nil
 	}
-	switch plugin.guestExports {
-	case exportPreFilterPlugin:
-		return struct {
+	switch plugin.guestInterfaces & ^iEnqueueExtensions {
+	case 0: // iEnqueueExtensions
+		type enqueue interface {
+			framework.Plugin
+			framework.EnqueueExtensions
+			io.Closer
+			ProfilerSupport
+		}
+		return struct{ enqueue }{plugin}
+	case iPreFilterPlugin:
+		type prefilter interface {
+			framework.EnqueueExtensions
 			framework.PreFilterPlugin
 			io.Closer
 			ProfilerSupport
-		}{plugin, plugin, plugin}
-	case exportFilterPlugin:
-		return struct {
+		}
+		return struct{ prefilter }{plugin}
+	case iFilterPlugin:
+		type filter interface {
+			framework.EnqueueExtensions
 			framework.FilterPlugin
 			io.Closer
 			ProfilerSupport
-		}{plugin, plugin, plugin}
-	case exportScorePlugin:
-		return struct {
+		}
+		return struct{ filter }{plugin}
+	case iScorePlugin:
+		type score interface {
+			framework.EnqueueExtensions
 			framework.ScorePlugin
 			io.Closer
 			ProfilerSupport
-		}{plugin, plugin, plugin}
-	case exportPreFilterPlugin | exportFilterPlugin:
+		}
+		return struct{ score }{plugin}
+	case iPreFilterPlugin | iFilterPlugin:
 		type prefilterFilter interface {
+			framework.EnqueueExtensions
 			framework.PreFilterPlugin
 			framework.FilterPlugin
 			io.Closer
 			ProfilerSupport
 		}
 		return struct{ prefilterFilter }{plugin}
-	case exportPreFilterPlugin | exportScorePlugin:
+	case iPreFilterPlugin | iScorePlugin:
 		type prefilterScore interface {
+			framework.EnqueueExtensions
 			framework.PreFilterPlugin
 			framework.ScorePlugin
 			io.Closer
 			ProfilerSupport
 		}
 		return struct{ prefilterScore }{plugin}
-	case exportPreFilterPlugin | exportFilterPlugin | exportScorePlugin:
+	case iPreFilterPlugin | iFilterPlugin | iScorePlugin:
 		type prefilterFilterScore interface {
+			framework.EnqueueExtensions
 			framework.PreFilterPlugin
 			framework.FilterPlugin
 			framework.ScorePlugin
@@ -99,8 +116,9 @@ func maskInterfaces(plugin *wasmPlugin) framework.Plugin {
 			ProfilerSupport
 		}
 		return struct{ prefilterFilterScore }{plugin}
-	case exportFilterPlugin | exportScorePlugin:
+	case iFilterPlugin | iScorePlugin:
 		type filterScore interface {
+			framework.EnqueueExtensions
 			framework.FilterPlugin
 			framework.ScorePlugin
 			io.Closer
@@ -134,18 +152,19 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, 
 // newWasmPlugin is extracted to prevent small bugs: The caller must close the
 // wazero.Runtime to avoid leaking mmapped files.
 func newWasmPlugin(ctx context.Context, runtime wazero.Runtime, guestModule wazero.CompiledModule, config PluginConfig) (*wasmPlugin, error) {
-	var guestExports exports
+	var guestInterfaces interfaces
 	var err error
-	if guestExports, err = detectExports(guestModule.ExportedFunctions()); err != nil {
+	if guestInterfaces, err = detectInterfaces(guestModule.ExportedFunctions()); err != nil {
 		return nil, err
-	} else if guestExports == 0 {
+	} else if guestInterfaces == 0 {
 		return nil, fmt.Errorf("wasm: guest doesn't export plugin functions")
 	}
 
 	pl := &wasmPlugin{
 		runtime:           runtime,
 		guestModule:       guestModule,
-		guestExports:      guestExports,
+		guestArgs:         config.args,
+		guestInterfaces:   guestInterfaces,
 		guestModuleConfig: wazero.NewModuleConfig(),
 		instanceCounter:   atomic.Uint64{},
 	}
@@ -159,13 +178,14 @@ func newWasmPlugin(ctx context.Context, runtime wazero.Runtime, guestModule waze
 type wasmPlugin struct {
 	runtime           wazero.Runtime
 	guestModule       wazero.CompiledModule
-	guestExports      exports
+	guestInterfaces   interfaces
 	guestModuleConfig wazero.ModuleConfig
 	instanceCounter   atomic.Uint64
 	pool              *guestPool[*guest]
+	guestArgs         []string
 }
 
-// ProfilerSupport exposes functions needed to profiling the guest with wzprof.
+// ProfilerSupport exposes functions needed to profile the guest with wzprof.
 type ProfilerSupport interface {
 	Guest() wazero.CompiledModule
 	plugin() *wasmPlugin
@@ -185,6 +205,55 @@ var _ framework.Plugin = (*wasmPlugin)(nil)
 // See /RATIONALE.md for impact
 func (pl *wasmPlugin) Name() string {
 	return PluginName
+}
+
+var _ framework.EnqueueExtensions = (*wasmPlugin)(nil)
+
+// allClusterEvents is copied from framework.go, to avoid the complexity of
+// conditionally implementing framework.EnqueueExtensions.
+var allClusterEvents = []framework.ClusterEvent{
+	{Resource: framework.Pod, ActionType: framework.All},
+	{Resource: framework.Node, ActionType: framework.All},
+	{Resource: framework.CSINode, ActionType: framework.All},
+	{Resource: framework.PersistentVolume, ActionType: framework.All},
+	{Resource: framework.PersistentVolumeClaim, ActionType: framework.All},
+	{Resource: framework.StorageClass, ActionType: framework.All},
+}
+
+// EventsToRegister implements the same method as documented on framework.EnqueueExtensions.
+func (pl *wasmPlugin) EventsToRegister() (clusterEvents []framework.ClusterEvent) {
+	// TODO: Track https://github.com/kubernetes/kubernetes/pull/119155 for QueueingHintFn
+	// This will become []ClusterEventWithHint, but the hint will be difficult
+	// to implement. If we do, we may need to make a generic guest export
+	// QueueingHintFn which has another parameter of the an funcID which
+	// substitutes for event.QueueingHintFn and passed later to the generic
+	// guest export. There will be other concerns as the parameters to
+	// QueueingHintFn are `interface{}` so probably need to be narrowed to
+	// support at all.
+
+	// Note: EventsToRegister() doesn't pass a context or return an error
+	// See https://github.com/kubernetes/kubernetes/issues/119323/
+	ctx := context.Background()
+
+	// Add the stack to the go context so that the corresponding host function
+	// can look them up.
+	params := &stack{}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	clusterEvents = allClusterEvents // On any problem fallback to default
+
+	// Enqueue is not a part of the scheduling cycle.
+	// Note: there's no error return from EventsToRegister()
+	_ = pl.pool.doWithGuest(ctx, func(g *guest) {
+		// Only override the default cluster events if at least one was
+		// returned from the guest
+
+		if g.enqueueFn != nil { // We don't require this export
+			if ce := g.eventsToRegister(ctx); len(ce) != 0 {
+				clusterEvents = ce
+			}
+		}
+	})
+	return
 }
 
 var _ framework.PreFilterExtensions = (*wasmPlugin)(nil)

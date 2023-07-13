@@ -22,6 +22,7 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 )
 
@@ -32,7 +33,7 @@ func main() {
 // noop doesn't do anything, except evaluate each parameter.
 type noop struct{}
 
-func (noop) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
+func (noop) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	return

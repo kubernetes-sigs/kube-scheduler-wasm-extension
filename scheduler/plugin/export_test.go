@@ -23,6 +23,13 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
+var AllClusterEvents = allClusterEvents
+
+func SetArgs(config PluginConfig, args ...string) PluginConfig {
+	config.args = args
+	return config
+}
+
 type WasmPlugin struct{ *wasmPlugin }
 
 func NewTestWasmPlugin(p framework.Plugin) *WasmPlugin {

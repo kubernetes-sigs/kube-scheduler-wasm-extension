@@ -29,16 +29,20 @@ import (
 
 const (
 	guestExportMemory    = "memory"
+	guestExportEnqueue   = "enqueue"
 	guestExportPreFilter = "prefilter"
 	guestExportFilter    = "filter"
 	guestExportScore     = "score"
 )
 
 type guest struct {
-	guest                          wazeroapi.Module
-	out                            *bytes.Buffer
-	prefilterFn, filterFn, scoreFn wazeroapi.Function
-	callStack                      []uint64
+	guest       wazeroapi.Module
+	out         *bytes.Buffer
+	enqueueFn   wazeroapi.Function
+	prefilterFn wazeroapi.Function
+	filterFn    wazeroapi.Function
+	scoreFn     wazeroapi.Function
+	callStack   []uint64
 }
 
 func compileGuest(ctx context.Context, runtime wazero.Runtime, guestBin []byte) (guest wazero.CompiledModule, err error) {
@@ -60,6 +64,9 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 	var out bytes.Buffer
 	moduleConfig = moduleConfig.WithStdout(&out).WithStderr(&out)
 
+	// Set any args used for testing
+	moduleConfig = moduleConfig.WithArgs(pl.guestArgs...)
+
 	g, err := pl.runtime.InstantiateModule(ctx, pl.guestModule, moduleConfig)
 	if err != nil {
 		_ = pl.runtime.Close(ctx)
@@ -75,6 +82,7 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 	return &guest{
 		guest:       g,
 		out:         &out,
+		enqueueFn:   g.ExportedFunction(guestExportEnqueue),
 		prefilterFn: g.ExportedFunction(guestExportPreFilter),
 		filterFn:    g.ExportedFunction(guestExportFilter),
 		scoreFn:     g.ExportedFunction(guestExportScore),
@@ -82,7 +90,18 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 	}, nil
 }
 
-// PreFilter calls guestExportPreFilter.
+// eventsToRegister calls guestExportEnqueue.
+func (g *guest) eventsToRegister(ctx context.Context) []framework.ClusterEvent {
+	defer g.out.Reset()
+	callStack := g.callStack
+	if err := g.enqueueFn.CallWithStack(ctx, callStack); err != nil {
+		// framework.EnqueueExtensions.EventsToRegister() does not return an error
+		panic(err)
+	}
+	return paramsFromContext(ctx).resultClusterEvents
+}
+
+// preFilter calls guestExportPreFilter.
 func (g *guest) preFilter(ctx context.Context) ([]string, *framework.Status) {
 	defer g.out.Reset()
 	callStack := g.callStack
@@ -134,33 +153,39 @@ func decorateError(out fmt.Stringer, fn string, err error) error {
 	return err
 }
 
-type exports uint
+type interfaces uint
 
 const (
-	exportPreFilterPlugin exports = 1 << iota
-	exportFilterPlugin
-	exportScorePlugin
+	iEnqueueExtensions interfaces = 1 << iota
+	iPreFilterPlugin
+	iFilterPlugin
+	iScorePlugin
 )
 
-func detectExports(exportedFns map[string]wazeroapi.FunctionDefinition) (exports, error) {
-	var e exports
+func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (interfaces, error) {
+	var e interfaces
 	for name, f := range exportedFns {
 		switch name {
+		case guestExportEnqueue:
+			if len(f.ParamTypes()) != 0 || len(f.ResultTypes()) != 0 {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
+			}
+			e |= iEnqueueExtensions
 		case guestExportPreFilter:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
 			}
-			e |= exportPreFilterPlugin
+			e |= iPreFilterPlugin
 		case guestExportFilter:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
 			}
-			e |= exportFilterPlugin
+			e |= iFilterPlugin
 		case guestExportScore:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i64}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i64)", name)
 			}
-			e |= exportScorePlugin
+			e |= iScorePlugin
 		}
 	}
 	if e == 0 {

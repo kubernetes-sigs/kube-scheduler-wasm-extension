@@ -19,23 +19,38 @@ package main
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
+	"os"
+
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 )
 
 func main() {
-	filter.SetPlugin(noop{})
+	if len(os.Args) == 2 {
+		switch os.Args[1] {
+		case "0":
+		case "1":
+			clusterEvents = []api.ClusterEvent{
+				{Resource: api.PersistentVolume, ActionType: api.Delete},
+			}
+		case "2":
+			clusterEvents = []api.ClusterEvent{
+				{Resource: api.Node, ActionType: api.Add},
+				{Resource: api.PersistentVolume, ActionType: api.Delete},
+			}
+		default:
+			panic("unsupported count")
+		}
+
+	}
+	enqueue.SetPlugin(enqueueExtensions{})
+
 }
 
-// noop doesn't do anything, except evaluate each parameter.
-type noop struct{}
+var clusterEvents []api.ClusterEvent
 
-func (noop) Filter(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
-	_, _ = state.Read("ok")
-	_ = pod.Spec()
-	_ = nodeInfo.Node().Spec() // trigger lazy loading
-	return
-}
+type enqueueExtensions struct{}
+
+func (enqueueExtensions) EventsToRegister() []api.ClusterEvent { return clusterEvents }

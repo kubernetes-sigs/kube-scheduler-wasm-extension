@@ -22,6 +22,7 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
@@ -32,7 +33,7 @@ func main() {
 // noop doesn't do anything, except evaluate each parameter.
 type noop struct{}
 
-func (noop) Score(state api.CycleState, pod api.Pod, nodeName string) (score int32, status *api.Status) {
+func (noop) Score(state api.CycleState, pod proto.Pod, nodeName string) (score int32, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeName
