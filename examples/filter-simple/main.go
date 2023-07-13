@@ -22,6 +22,7 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 )
 
@@ -32,7 +33,7 @@ func main() {
 // nameEqualsPodSpec schedules a node if its name equals its pod spec.
 type nameEqualsPodSpec struct{}
 
-func (nameEqualsPodSpec) Filter(_ api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) *api.Status {
+func (nameEqualsPodSpec) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) *api.Status {
 	// First, check if the pod spec node name is empty. If so, pass!
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if len(podSpecNodeName) == 0 {
@@ -40,7 +41,7 @@ func (nameEqualsPodSpec) Filter(_ api.CycleState, pod api.Pod, nodeInfo api.Node
 	}
 
 	// Next, check if the node name matches the spec node. If so, pass!
-	nodeName := nilToEmpty(nodeInfo.Node().Metadata.Name)
+	nodeName := nilToEmpty(nodeInfo.Node().Metadata().Name)
 	if podSpecNodeName == nodeName {
 		return nil
 	}

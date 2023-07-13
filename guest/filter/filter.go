@@ -20,10 +20,12 @@ package filter
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
 // filter is the current plugin assigned with SetPlugin.
@@ -72,23 +74,38 @@ var _ api.NodeInfo = (*nodeInfo)(nil)
 
 // nodeInfo is lazy so that a plugin which doesn't read fields avoids a
 // relatively expensive unmarshal penalty.
+//
+// Note: Unlike proto.Pod, this is not special cased for the scheduling cycle.
 type nodeInfo struct {
-	n *protoapi.Node
+	node *protoapi.Node
 }
 
-func (n *nodeInfo) Node() *protoapi.Node {
-	return n.node()
+func (n *nodeInfo) Node() proto.Node {
+	return n
 }
 
-func (n *nodeInfo) node() *protoapi.Node {
-	if node := n.n; node != nil {
+func (n *nodeInfo) Metadata() *meta.ObjectMeta {
+	return n.lazyNode().Metadata
+}
+
+func (n *nodeInfo) Spec() *protoapi.NodeSpec {
+	return n.lazyNode().Spec
+}
+
+func (n *nodeInfo) Status() *protoapi.NodeStatus {
+	return n.lazyNode().Status
+}
+
+// lazyNode lazy initializes node from imports.NodeInfoNode.
+func (n *nodeInfo) lazyNode() *protoapi.Node {
+	if node := n.node; node != nil {
 		return node
 	}
 
 	var msg protoapi.Node
 	if err := imports.NodeInfoNode(msg.UnmarshalVT); err != nil {
-		panic(err)
+		panic(err.Error())
 	}
-	n.n = &msg
-	return n.n
+	n.node = &msg
+	return n.node
 }

@@ -22,6 +22,8 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
@@ -29,6 +31,7 @@ import (
 
 func main() {
 	plugin := noop{}
+	enqueue.SetPlugin(plugin)
 	prefilter.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
 	score.SetPlugin(plugin)
@@ -41,8 +44,10 @@ func main() {
 //   - overhead of constructing function parameters
 type noop struct{}
 
-func (noop) PreFilter(api.CycleState, api.Pod) (nodeNames []string, status *api.Status) { return }
+func (noop) EventsToRegister() (clusterEvents []api.ClusterEvent) { return }
 
-func (noop) Filter(api.CycleState, api.Pod, api.NodeInfo) (status *api.Status) { return }
+func (noop) PreFilter(api.CycleState, proto.Pod) (nodeNames []string, status *api.Status) { return }
 
-func (noop) Score(api.CycleState, api.Pod, string) (score int32, status *api.Status) { return }
+func (noop) Filter(api.CycleState, proto.Pod, api.NodeInfo) (status *api.Status) { return }
+
+func (noop) Score(api.CycleState, proto.Pod, string) (score int32, status *api.Status) { return }

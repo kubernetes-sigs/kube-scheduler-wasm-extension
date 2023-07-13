@@ -280,6 +280,60 @@ wasm stack trace:
 	}
 }
 
+func TestEnqueue(t *testing.T) {
+	tests := []struct {
+		name      string
+		guestPath string
+		args      []string
+		expected  []framework.ClusterEvent
+	}{
+		{
+			name:     "success: 0",
+			expected: wasm.AllClusterEvents,
+		},
+		{
+			name: "success: 1",
+			args: []string{"test", "1"},
+			expected: []framework.ClusterEvent{
+				{Resource: framework.PersistentVolume, ActionType: framework.Delete, Label: "PvDelete"},
+			},
+		},
+		{
+			name: "success: 2",
+			args: []string{"test", "2"},
+			expected: []framework.ClusterEvent{
+				{Resource: framework.Node, ActionType: framework.Add, Label: "NodeAdd"},
+				{Resource: framework.PersistentVolume, ActionType: framework.Delete, Label: "PvDelete"},
+			},
+		},
+		{
+			name:      "panic",
+			guestPath: test.PathErrorPanicOnEnqueue,
+			expected:  wasm.AllClusterEvents,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestPath := tc.guestPath
+			if guestPath == "" {
+				guestPath = test.PathTestEnqueue
+			}
+
+			p, err := wasm.NewFromConfig(ctx, wasm.SetArgs(wasm.PluginConfig{GuestPath: guestPath}, tc.args...))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			clusterEvents := p.(framework.EnqueueExtensions).EventsToRegister()
+			if want, have := tc.expected, clusterEvents; !reflect.DeepEqual(want, have) {
+				t.Fatalf("unexpected node names: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
 func TestPreFilter(t *testing.T) {
 	tests := []struct {
 		name                  string
