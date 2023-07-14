@@ -113,10 +113,9 @@ the perspective of the host.
 
 `Clone` is a special case for preemption. When all Nodes are filtered out, the
 scheduler attempts to make space via `PostFilter`. Preemption results in a
-[parallel][4] call to `SelectVictimsOnNode` which runs in [parallel][5], and
-removes victims (pods) from `PreFilter` state and `NodeInfo` before calling
-[`RunFilterPluginsWithNominatedPods`][6]. If `StateData` wasn't cloneable, the
-original `StateData` values would be lost.
+[parallel][4] call to [`SelectVictimsOnNode`][5] that removes victims (pods)
+from `PreFilter` state and `NodeInfo` before [running filter plugins][6] again.
+If `StateData` wasn't cloneable, the original `StateData` values would be lost.
 
 The current WebAssembly implementation skips `Clone`, for now. Since the
 guest holds the cycle state, the most likely path forward would be to export
@@ -125,7 +124,7 @@ with. This function could be called when the host side knows it is in the
 process of preemption. This would be the case on any of the following:
 
 * `Filter` is called a second time (before `PreFilter`)
-* `AddNode` or `DeleteNode` are called
+* `AddPod` or `RemovePod` are called (via `PreFilterExtensions`)
 
 ## Why are some return values different between Go and Wasm?
 
@@ -285,6 +284,6 @@ space instead.
 [1]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/interface.go#L79-L99
 [2]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/interface.go#L110-L114
 [3]: https://github.com/loopholelabs/polyglot-go
-[4]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/preemption/preemption.go#L606
-[5]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/plugins/defaultpreemption/default_preemption.go#L139
+[4]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/preemption/preemption.go#L602
+[5]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/plugins/defaultpreemption/default_preemption.go#L139
 [6]: https://github.com/kubernetes/kubernetes/blob/v1.27.3/pkg/scheduler/framework/runtime/framework.go#L826-L827
