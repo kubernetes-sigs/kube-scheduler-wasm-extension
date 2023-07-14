@@ -18,6 +18,8 @@ import (
 
 var PathErrorNotPlugin = pathWatError("not_plugin")
 
+var PathErrorPanicOnEnqueue = pathWatError("panic_on_enqueue")
+
 var PathErrorPanicOnPrefilter = pathWatError("panic_on_prefilter")
 
 var PathErrorPanicOnFilter = pathWatError("panic_on_filter")
@@ -40,7 +42,9 @@ var PathTestAllNoopWat = pathWatTest("all_noop")
 
 var PathTestCycleState = pathTinyGoTest("cyclestate")
 
-var PathTestPrefilter = pathTinyGoTest("PreFilter")
+var PathTestEnqueue = pathTinyGoTest("enqueue")
+
+var PathTestPrefilter = pathTinyGoTest("prefilter")
 
 var PathTestPrefilterFromGlobal = pathWatTest("prefilter_from_global")
 

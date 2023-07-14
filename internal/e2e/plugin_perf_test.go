@@ -28,6 +28,22 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
+func BenchmarkPluginEnqueue(b *testing.B) {
+	ctx := context.Background()
+
+	plugins, close := newTestPlugins(b, ctx, wasm.PluginConfig{GuestPath: test.PathTestEnqueue})
+	defer close()
+
+	for _, tp := range plugins {
+		pl := tp
+		b.Run(pl.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = pl.plugin.(framework.EnqueueExtensions).EventsToRegister()
+			}
+		})
+	}
+}
+
 func BenchmarkPluginPreFilter(b *testing.B) {
 	ctx := context.Background()
 

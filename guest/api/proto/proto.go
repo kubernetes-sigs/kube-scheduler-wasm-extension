@@ -14,12 +14,22 @@
    limitations under the License.
 */
 
-package wasm
+// Package proto includes any types derived from Kubernetes protobuf messages.
+package proto
 
-type PluginConfig struct {
-	// GuestPath is the path to the guest wasm.
-	GuestPath string `json:"guestPath"`
+import (
+	api "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
+	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
+)
 
-	// args are the os.Args the guest will receive, exposed for tests.
-	args []string
+type Node interface {
+	Metadata() *meta.ObjectMeta
+	Spec() *api.NodeSpec
+	Status() *api.NodeStatus
+}
+
+type Pod interface {
+	Metadata() *meta.ObjectMeta
+	Spec() *api.PodSpec
+	Status() *api.PodStatus
 }

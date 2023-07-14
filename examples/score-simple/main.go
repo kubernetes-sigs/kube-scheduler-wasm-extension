@@ -22,6 +22,7 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
@@ -32,7 +33,7 @@ func main() {
 // score100IfNameEqualsPodSpec returns 100 if a node name equals its pod spec.
 type score100IfNameEqualsPodSpec struct{}
 
-func (score100IfNameEqualsPodSpec) Score(_ api.CycleState, pod api.Pod, nodeName string) (int32, *api.Status) {
+func (score100IfNameEqualsPodSpec) Score(_ api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if nodeName == podSpecNodeName {
 		return 100, nil
