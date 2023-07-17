@@ -22,6 +22,8 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
@@ -29,6 +31,7 @@ import (
 
 func main() {
 	plugin := noop{}
+	enqueue.SetPlugin(plugin)
 	prefilter.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
 	score.SetPlugin(plugin)
@@ -39,20 +42,24 @@ func main() {
 // performance of reading each parameter.
 type noop struct{}
 
-func (noop) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
+func (noop) EventsToRegister() (clusterEvents []api.ClusterEvent) {
+	return
+}
+
+func (noop) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	return
 }
 
-func (noop) Filter(state api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func (noop) Filter(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
-	_ = nodeInfo.Node()
+	_ = nodeInfo.Node().Spec() // trigger lazy loading
 	return
 }
 
-func (noop) Score(state api.CycleState, pod api.Pod, nodeName string) (score int32, status *api.Status) {
+func (noop) Score(state api.CycleState, pod proto.Pod, nodeName string) (score int32, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeName

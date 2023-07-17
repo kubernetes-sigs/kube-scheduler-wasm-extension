@@ -59,6 +59,29 @@ func newGuestPool[guest comparable](ctx context.Context, newGuest func(context.C
 	}, nil
 }
 
+// doWithGuest runs initialization functions that precede the scheduling cycle.
+// Notably, only framework.EnqueueExtensions is known to occur at this state.
+func (p *guestPool[guest]) doWithGuest(ctx context.Context, fn func(guest)) (err error) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	p.scheduledPodUID = ""
+	var g, zero guest
+
+	if g = p.scheduled; g != zero { // Prefer last scheduled
+		p.scheduled = zero
+	} else if len(p.free) > 0 { // Then, the free pool
+		g = p.free[0]
+		p.free = p.free[1:]
+	} else if g, err = p.newGuest(ctx); err != nil { // Finally, a new guest
+		return
+	}
+
+	fn(g)
+	p.put(g)
+	return
+}
+
 // doWithSchedulingGuest runs the function with a guest used for scheduling
 // cycles.
 //

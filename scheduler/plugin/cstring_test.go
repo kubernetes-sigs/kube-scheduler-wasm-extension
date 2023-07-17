@@ -34,6 +34,11 @@ func TestFromNULTerminated(t *testing.T) {
 			expected: []string{"a", "two"},
 		},
 		{
+			name:     "skip truncated",
+			input:    []byte{'a', 0, 't', 'w', 'o'},
+			expected: []string{"a"},
+		},
+		{
 			name:     "unicode",
 			input:    []byte{'a', 0, 'f', 0xc3, 0xb3, 'o', 0, 'c', 0},
 			expected: []string{"a", "fóo", "c"},

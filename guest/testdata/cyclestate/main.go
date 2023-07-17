@@ -24,6 +24,7 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
@@ -51,7 +52,7 @@ var podSpec *protoapi.PodSpec
 
 type prefilterStateVal map[string]any
 
-func (cyclestate) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
+func (cyclestate) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
 	if nextPodSpec := pod.Spec(); unsafe.Pointer(nextPodSpec) == unsafe.Pointer(podSpec) {
 		panic("didn't reset pod on pre-filter")
 	} else {
@@ -65,7 +66,7 @@ func (cyclestate) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []stri
 	return
 }
 
-func (cyclestate) Filter(state api.CycleState, pod api.Pod, _ api.NodeInfo) (status *api.Status) {
+func (cyclestate) Filter(state api.CycleState, pod proto.Pod, _ api.NodeInfo) (status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from pre-filter")
 	}
@@ -77,7 +78,7 @@ func (cyclestate) Filter(state api.CycleState, pod api.Pod, _ api.NodeInfo) (sta
 	return
 }
 
-func (cyclestate) Score(state api.CycleState, pod api.Pod, _ string) (score int32, status *api.Status) {
+func (cyclestate) Score(state api.CycleState, pod proto.Pod, _ string) (score int32, status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from pre-filter")
 	}

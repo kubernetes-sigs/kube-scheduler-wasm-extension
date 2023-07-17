@@ -2,13 +2,14 @@ package prefilter
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
 // Pod is exposed for the cyclestate package.
-var Pod api.Pod = pod{}
+var Pod proto.Pod = pod{}
 
 // CycleState is exposed for the cyclestate package.
 var CycleState api.CycleState = cycleState{}
@@ -46,7 +47,7 @@ func (pod) Status() *protoapi.PodStatus {
 
 var currentPod *protoapi.Pod
 
-// Pod lazy initializes p from the imported host function imports.Pod.
+// lazyPod lazy initializes currentPod from imports.Pod.
 func lazyPod() *protoapi.Pod {
 	if pod := currentPod; pod != nil {
 		return pod

@@ -1,3 +1,5 @@
+//go:build tinygo.wasm
+
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -14,12 +16,7 @@
    limitations under the License.
 */
 
-package wasm
+package enqueue
 
-type PluginConfig struct {
-	// GuestPath is the path to the guest wasm.
-	GuestPath string `json:"guestPath"`
-
-	// args are the os.Args the guest will receive, exposed for tests.
-	args []string
-}
+//go:wasmimport k8s.io/scheduler result.cluster_events
+func setClusterEventsResult(ptr, size uint32)

@@ -26,14 +26,16 @@ import (
 )
 
 const (
-	i32, i64                       = wazeroapi.ValueTypeI32, wazeroapi.ValueTypeI64
-	k8sApi                         = "k8s.io/api"
-	k8sApiNodeInfoNode             = "nodeInfo/node"
-	k8sApiNodeName                 = "nodeName"
-	k8sApiPod                      = "pod"
-	k8sScheduler                   = "k8s.io/scheduler"
-	k8sSchedulerResultStatusReason = "result.status_reason"
-	k8sSchedulerResultNodeNames    = "result.node_names"
+	i32                             = wazeroapi.ValueTypeI32
+	i64                             = wazeroapi.ValueTypeI64
+	k8sApi                          = "k8s.io/api"
+	k8sApiNodeInfoNode              = "nodeInfo/node"
+	k8sApiNodeName                  = "nodeName"
+	k8sApiPod                       = "pod"
+	k8sScheduler                    = "k8s.io/scheduler"
+	k8sSchedulerResultClusterEvents = "result.cluster_events"
+	k8sSchedulerResultNodeNames     = "result.node_names"
+	k8sSchedulerResultStatusReason  = "result.status_reason"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
@@ -52,6 +54,9 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 
 func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
 	return runtime.NewHostModuleBuilder(k8sScheduler).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultClusterEventsFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultClusterEvents).
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultNodeNamesFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultNodeNames).
@@ -85,10 +90,13 @@ type stack struct {
 	// nodeName is used by guest.scoreFn
 	nodeName string
 
+	// resultClusterEvents is returned by guest.enqueueFn
+	resultClusterEvents []framework.ClusterEvent
+
 	// resultNodeNames is returned by guest.prefilterFn
 	resultNodeNames []string
 
-	// reason returned by all guest exports.
+	// reason returned by all guest exports except guest.enqueueFn
 	//
 	// It is a field to avoid compiler-specific malloc/free functions, and to
 	// avoid having to deal with out-params because TinyGo only supports a
@@ -124,6 +132,21 @@ func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 
 	pod := paramsFromContext(ctx).pod
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
+}
+
+// k8sSchedulerResultClusterEventsFn is a function used by the wasm guest to set the
+// cluster events result from guestExportEnqueue.
+func k8sSchedulerResultClusterEventsFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	ptr := uint32(stack[0])
+	size := uint32(stack[1])
+
+	var clusterEvents []framework.ClusterEvent
+	if b, ok := mod.Memory().Read(ptr, size); !ok {
+		panic("out of memory reading clusterEvents")
+	} else {
+		clusterEvents = decodeClusterEvents(b)
+	}
+	paramsFromContext(ctx).resultClusterEvents = clusterEvents
 }
 
 // k8sSchedulerResultNodeNamesFn is a function used by the wasm guest to set the

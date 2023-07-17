@@ -10,11 +10,12 @@ package cyclestate
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 )
 
 // Pod is the current pod being scheduled. It is lazy and the same values are
 // returned for any plugins in a scheduling cycle.
-var Pod api.Pod = prefilter.Pod
+var Pod proto.Pod = prefilter.Pod
 
 var Values api.CycleState = prefilter.CycleState

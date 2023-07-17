@@ -145,6 +145,18 @@ because the largest return value permitted by WebAssembly Core Specification
 1.0 (REC) is `i64`. Further rationale about alternate choices are discussed in
 separate sections. This focuses on result value mapping.
 
+### ClusterEvent
+
+The `framework.GVK` type is a string, but we map it to uint32 constants
+instead. The GVK is not defined for external use. When new values are added in
+Kubernetes, we can map later integer values to them.
+
+The uint32 value simplifies Wasm encoding of the `ClusterEvent`, with a fixed
+width 8 byte header (for ActionType and GVK as uint32 little-endian encoding).
+
+If we also kept GVK as a string, it would make two variable length fields,
+instead of one, while inviting invalid GVK values.
+
 ### Status
 
 The `framework.Status` type is used as a nilable result with a status code and

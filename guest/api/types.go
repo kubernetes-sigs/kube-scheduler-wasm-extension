@@ -16,10 +16,7 @@
 
 package api
 
-import (
-	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
-)
+import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 
 // CycleState is a WebAssembly implementation of framework.CycleState.
 //
@@ -56,14 +53,19 @@ type Plugin interface {
 type PreFilterPlugin interface {
 	Plugin
 
-	PreFilter(state CycleState, pod Pod) (nodeNames []string, status *Status)
+	PreFilter(state CycleState, pod proto.Pod) (nodeNames []string, status *Status)
 }
 
 // FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
 type FilterPlugin interface {
 	Plugin
 
-	Filter(state CycleState, pod Pod, nodeInfo NodeInfo) *Status
+	Filter(state CycleState, pod proto.Pod, nodeInfo NodeInfo) *Status
+}
+
+// EnqueueExtensions is a WebAssembly implementation of framework.EnqueueExtensions.
+type EnqueueExtensions interface {
+	EventsToRegister() []ClusterEvent
 }
 
 // ScorePlugin is a WebAssembly implementation of framework.ScorePlugin.
@@ -72,15 +74,9 @@ type FilterPlugin interface {
 type ScorePlugin interface {
 	Plugin
 
-	Score(state CycleState, pod Pod, nodeName string) (int32, *Status)
+	Score(state CycleState, pod proto.Pod, nodeName string) (int32, *Status)
 }
 
 type NodeInfo interface {
-	Node() *protoapi.Node
-}
-
-type Pod interface {
-	Metadata() *meta.ObjectMeta
-	Spec() *protoapi.PodSpec
-	Status() *protoapi.PodStatus
+	Node() proto.Node
 }

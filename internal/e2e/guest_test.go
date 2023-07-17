@@ -52,6 +52,9 @@ func TestGuest_CycleStateCoherence(t *testing.T) {
 // maybeRunPreFilter calls framework.PreFilterPlugin, if defined, as that
 // resets the cycle state.
 func maybeRunPreFilter[c common](ctx context.Context, t c, plugin framework.Plugin, pod *v1.Pod) {
+	// We always implement EnqueueExtensions for simplicity
+	_ = plugin.(framework.EnqueueExtensions).EventsToRegister()
+
 	if p, ok := plugin.(framework.PreFilterPlugin); ok {
 		_, s := p.PreFilter(ctx, nil, pod)
 		requireSuccess(t, s)
