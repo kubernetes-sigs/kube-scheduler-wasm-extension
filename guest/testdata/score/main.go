@@ -25,33 +25,59 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
+
+type extensionPoints interface {
+	api.PreScorePlugin
+	api.ScorePlugin
+}
 
 func main() {
 	// Multiple tests are here to reduce re-compilation time and size checked
 	// into git.
-	if len(os.Args) == 2 && os.Args[1] == "score100IfNameEqualsPodSpec" {
-		score.SetPlugin(score100IfNameEqualsPodSpec{})
-	} else {
-		score.SetPlugin(noop{})
+	var plugin extensionPoints = noopPlugin{}
+	if len(os.Args) == 2 {
+		switch os.Args[1] {
+		case "score":
+			plugin = scorePlugin{}
+		case "preScore":
+			plugin = preScorePlugin{}
+		}
 	}
+	prescore.SetPlugin(plugin)
+	score.SetPlugin(plugin)
 }
 
-// noop doesn't do anything, except evaluate each parameter.
-type noop struct{}
+// noopPlugin doesn't do anything, except evaluate each parameter.
+type noopPlugin struct{}
 
-func (noop) Score(state api.CycleState, pod proto.Pod, nodeName string) (score int32, status *api.Status) {
+func (noopPlugin) PreScore(state api.CycleState, pod proto.Pod, nodeList proto.NodeList) *api.Status {
+	_, _ = state.Read("ok")
+	_ = pod.Spec()
+	_ = nodeList.Items()
+	return nil
+}
+
+func (noopPlugin) Score(state api.CycleState, pod proto.Pod, nodeName string) (score int32, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeName
 	return
 }
 
-// score100IfNameEqualsPodSpec returns 100 if a node name equals its pod spec.
-type score100IfNameEqualsPodSpec struct{}
+// preScorePlugin returns the count of the node list as the status
+type preScorePlugin struct{ noopPlugin }
 
-func (score100IfNameEqualsPodSpec) Score(_ api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
+func (preScorePlugin) PreScore(_ api.CycleState, _ proto.Pod, nodeList proto.NodeList) *api.Status {
+	return &api.Status{Code: api.StatusCode(len(nodeList.Items()))}
+}
+
+// scorePlugin returns 100 if a node name equals its pod spec.
+type scorePlugin struct{ noopPlugin }
+
+func (scorePlugin) Score(_ api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if nodeName == podSpecNodeName {
 		return 100, nil

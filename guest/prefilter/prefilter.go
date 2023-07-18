@@ -28,14 +28,25 @@ import (
 // For example:
 //
 //	func main() {
-//		prefilter.SetPlugin(podSpecName{})
+//		plugin := filterPlugin{}
+//		prefilter.SetPlugin(plugin)
+//		filter.SetPlugin(plugin)
 //	}
 //
-//	type podSpecName struct{}
+//	type filterPlugin struct{}
 //
-//	func (podSpecName) PreFilter(state api.CycleState, pod api.Pod) (nodeNames []string, status *api.Status) {
-//		panic("implement me")
+//	func (filterPlugin) PreFilter(state api.CycleState, pod proto.Pod, nodeList proto.NodeList) {
+//		// Write state you need on Filter
 //	}
+//
+//	func (filterPlugin) Filter(state api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+//		var Filter int32
+//		// Derive Filter for the node name using state set on PreFilter!
+//		return Filter, nil
+//	}
+//
+// Note: This may be set without filter.SetPlugin, if the pre-filter plugin has
+// the only filtering logic, or only used to configure api.CycleState.
 func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
 	internalprefilter.SetPlugin(prefilterPlugin)
 }

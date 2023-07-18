@@ -36,14 +36,16 @@ var filter api.FilterPlugin
 // For example:
 //
 //	func main() {
-//		filter.SetPlugin(nameEqualsPodSpec{})
+//		filter.SetPlugin(filterPlugin{})
 //	}
 //
-//	type nameEqualsPodSpec struct{}
+//	type filterPlugin struct{}
 //
-//	func (nameEqualsPodSpec) Filter(state api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+//	func (filterPlugin) Filter(state api.CycleState, pod api.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
 //		panic("implement me")
 //	}
+//
+// Note: If you need state, you can assign it with prefilter.SetPlugin.
 func SetPlugin(filterPlugin api.FilterPlugin) {
 	if filterPlugin == nil {
 		panic("nil filterPlugin")

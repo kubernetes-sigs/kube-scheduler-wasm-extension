@@ -226,7 +226,7 @@ func maskInterfaces(plugin *wasmPlugin) (framework.Plugin, error) {
 	case iPreFilterPlugin: // Special-cased form of filter.
 		return struct{ basePlugin }{plugin}, nil
 	default:
-		return nil, errors.New("filter, score, reserve, permit or bind must be exported")
+		return nil, errors.New("wasm: filter, score, reserve, permit or bind must be exported")
 	}
 }
 

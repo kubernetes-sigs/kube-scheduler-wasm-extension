@@ -55,7 +55,7 @@ func Test_NodeNumber(t *testing.T) {
 				plugin := &NodeNumber{reverse: reverse}
 				state := testCycleState{}
 
-				_, status := plugin.PreFilter(state, tc.pod)
+				status := plugin.PreScore(state, tc.pod, nil)
 				if status != nil {
 					t.Fatalf("unexpected status: %v", status)
 				}

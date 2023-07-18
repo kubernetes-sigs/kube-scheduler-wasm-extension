@@ -31,6 +31,16 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
+var _ e2e.Testing = testing{}
+
+type testing struct{}
+
+func (testing) Fatalf(format string, args ...any) {
+	log.Fatalf(format, args...)
+}
+
+func (testing) Helper() {}
+
 func main() {
 	guestPath := os.Args[1] // must be a debug build
 	guestBin, err := os.ReadFile(guestPath)
@@ -71,7 +81,7 @@ func main() {
 
 	// Profile around the functions used in the example
 	cpu.StartProfile()
-	e2e.RunAll(ctx, log.Fatalf, plugin, pod, ni)
+	e2e.RunAll(ctx, testing{}, plugin, pod, ni)
 	cpuProfile := cpu.StopProfile(sampleRate)
 	memProfile := mem.NewProfile(sampleRate)
 

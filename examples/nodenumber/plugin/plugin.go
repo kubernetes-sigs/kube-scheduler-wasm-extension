@@ -21,7 +21,6 @@
 //   - Logic was refactored to be cleaner and more testable.
 //   - Doesn't return an error if state has the wrong type, as it is
 //     impossible: this panics instead with the default message.
-//   - TODO: uses PreFilter instead of PreScore
 //   - TODO: logging
 //   - TODO: config
 //
@@ -69,15 +68,15 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 	}
 }
 
-// PreFilter implements api.PreFilterPlugin
-func (pl *NodeNumber) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
+// PreScore implements api.PreScorePlugin
+func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
 	podnum, ok := lastNumber(pod.Spec().NodeName)
 	if !ok {
-		return // return success even if its suffix is non-number.
+		return nil // return success even if its suffix is non-number.
 	}
 
 	state.Write(preScoreStateKey, &preScoreState{podSuffixNumber: podnum})
-	return
+	return nil
 }
 
 // Score implements api.ScorePlugin

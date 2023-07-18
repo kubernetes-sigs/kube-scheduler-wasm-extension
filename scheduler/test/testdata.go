@@ -20,9 +20,13 @@ var PathErrorNotPlugin = pathWatError("not_plugin")
 
 var PathErrorPanicOnEnqueue = pathWatError("panic_on_enqueue")
 
-var PathErrorPanicOnPrefilter = pathWatError("panic_on_prefilter")
+var PathErrorPanicOnPreFilter = pathWatError("panic_on_prefilter")
 
 var PathErrorPanicOnFilter = pathWatError("panic_on_filter")
+
+var PathErrorPanicOnPreScore = pathWatError("panic_on_prescore")
+
+var PathErrorPreScoreWithoutScore = pathWatError("prescore_without_score")
 
 var PathErrorPanicOnScore = pathWatError("panic_on_score")
 
@@ -36,11 +40,13 @@ var PathTestAllNoopWat = pathWatTest("all_noop")
 
 var PathTestCycleState = pathTinyGoTest("cyclestate")
 
-var PathTestPrefilterFromGlobal = pathWatTest("prefilter_from_global")
+var PathTestPreFilterFromGlobal = pathWatTest("prefilter_from_global")
 
 var PathTestFilter = pathTinyGoTest("filter")
 
 var PathTestFilterFromGlobal = pathWatTest("filter_from_global")
+
+var PathTestPreScoreFromGlobal = pathWatTest("prescore_from_global")
 
 var PathTestScore = pathTinyGoTest("score")
 

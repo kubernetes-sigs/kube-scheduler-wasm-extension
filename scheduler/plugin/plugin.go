@@ -275,13 +275,22 @@ func (pl *wasmPlugin) PostFilter(ctx context.Context, state *framework.CycleStat
 var _ framework.PreScorePlugin = (*wasmPlugin)(nil)
 
 // PreScore implements the same method as documented on framework.PreScorePlugin.
-func (pl *wasmPlugin) PreScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodes []*v1.Node) *framework.Status {
+func (pl *wasmPlugin) PreScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodes []*v1.Node) (status *framework.Status) {
 	// We implement PreScorePlugin with ScorePlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPreScorePlugin == 0 {
 		return nil // unimplemented
 	}
 
-	panic("TODO: scheduling: PreScore")
+	// Add the stack to the go context so that the corresponding host function
+	// can look them up.
+	params := &stack{pod: pod, nodes: nodes}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
+		status = g.preScore(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	return
 }
 
 var _ framework.ScoreExtensions = (*wasmPlugin)(nil)
