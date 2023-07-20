@@ -3,19 +3,20 @@ gosimports    := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
 golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
 
 %/main.wasm: %/main.go
-	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi main.go)
+	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi .)
 
 .PHONY: build-tinygo
-build-tinygo: examples/prefilter-simple/main.wasm examples/filter-simple/main.wasm examples/score-simple/main.wasm guest/testdata/all/main.wasm guest/testdata/all-noop/main.wasm guest/testdata/enqueue/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/prefilter/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
+build-tinygo: examples/nodenumber/main.wasm guest/testdata/all/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
 
 %/main-debug.wasm: %/main.go
-	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi main.go)
+	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi .)
 
 # Testing the guest code means running it with TinyGo, which internally
 # compiles the unit tests to a wasm binary, then runs it in a WASI runtime.
 .PHONY: test-guest
 test-guest: guest/.tinygo-target.json
 	@(cd guest; tinygo test -v -target .tinygo-target.json ./...)
+	@(cd examples; tinygo test -v -target ../guest/.tinygo-target.json ./nodenumber/plugin/...)
 
 # By default, TinyGo's wasi target uses wasmtime. but our plugin uses wazero.
 # This makes a wasi target that uses the same wazero version as the scheduler.
@@ -36,16 +37,16 @@ testdata:
 	@$(MAKE) build-wat
 
 .PHONY: profile
-profile: examples/filter-simple/main-debug.wasm
+profile: examples/nodenumber/main-debug.wasm
 	@cd ./internal/e2e; \
 	go run ./profiler/profiler.go ../../$^; \
 	go tool pprof -text cpu.pprof; \
 	go tool pprof -text mem.pprof; \
 	rm cpu.pprof mem.pprof
 
-.PHONY: bench-plugin
-bench-plugin:
-	@(cd internal/e2e; go test -run='^$$' -bench '^BenchmarkPlugin.*$$' . -count=6)
+.PHONY: bench-example
+bench-example:
+	@(cd internal/e2e; go test -run='^$$' -bench '^BenchmarkExample.*$$' . -count=6)
 
 .PHONY: proto-tools
 proto-tools:
@@ -128,6 +129,7 @@ build:
 test:
 	@(cd scheduler; go test -v ./...)
 	@(cd guest; go test -v ./...)
+	@(cd examples; go test -v ./nodenumber/plugin/...)
 	@(cd internal/e2e; go test -v ./...)
 
 .PHONY: check  # Pre-flight check for pull requests

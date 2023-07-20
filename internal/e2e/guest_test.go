@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 
+	"sigs.k8s.io/kube-scheduler-wasm-extension/internal/e2e"
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
@@ -44,42 +45,75 @@ func TestGuest_CycleStateCoherence(t *testing.T) {
 	ni.SetNode(test.NodeReal)
 
 	// run: the guest will crash if any of the callbacks see a different pod.
-	runAll(ctx, t, plugin, pod, ni)
+	e2e.RunAll(ctx, t.Fatalf, plugin, pod, ni)
 	// run again: the guest will crash if it sees the same pointer.
-	runAll(ctx, t, plugin, pod, ni)
+	e2e.RunAll(ctx, t.Fatalf, plugin, pod, ni)
 }
 
-// maybeRunPreFilter calls framework.PreFilterPlugin, if defined, as that
-// resets the cycle state.
-func maybeRunPreFilter[c common](ctx context.Context, t c, plugin framework.Plugin, pod *v1.Pod) {
-	// We always implement EnqueueExtensions for simplicity
-	_ = plugin.(framework.EnqueueExtensions).EventsToRegister()
+func TestExample_NodeNumber(t *testing.T) {
+	ctx := context.Background()
+	plugin := newPlugin(ctx, t.Fatalf)
+	defer plugin.(io.Closer).Close()
 
-	if p, ok := plugin.(framework.PreFilterPlugin); ok {
-		_, s := p.PreFilter(ctx, nil, pod)
-		requireSuccess(t, s)
-	}
+	pod := &v1.Pod{Spec: v1.PodSpec{NodeName: "happy8"}}
+
+	t.Run("Score zero on unmatch", func(t *testing.T) {
+		// The pod spec node name doesn't end with the same number as the node, so
+		// we expect to score zero.
+		score := e2e.RunAll(ctx, t.Fatalf, plugin, pod, nodeInfoWithName("glad9"))
+		if want, have := int64(0), score; want != have {
+			t.Fatalf("unexpected score: want %v, have %v", want, have)
+		}
+	})
+
+	t.Run("Score ten on match", func(t *testing.T) {
+		// The pod spec node name isn't the same as the node name. However,
+		// they both end in the same number, so we expect to score ten.
+		score := e2e.RunAll(ctx, t.Fatalf, plugin, pod, nodeInfoWithName("glad8"))
+		if want, have := int64(10), score; want != have {
+			t.Fatalf("unexpected score: want %v, have %v", want, have)
+		}
+	})
 }
 
-func runAll[c common](ctx context.Context, t c, plugin framework.Plugin, pod *v1.Pod, ni *framework.NodeInfo) {
-	maybeRunPreFilter(ctx, t, plugin, pod)
+func BenchmarkExample_NodeNumber(b *testing.B) {
+	ctx := context.Background()
+	b.Run("New", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			newPlugin(ctx, b.Fatalf).(io.Closer).Close()
+		}
+	})
 
-	if f, ok := plugin.(framework.FilterPlugin); ok {
-		s := f.Filter(ctx, nil, pod, ni)
-		requireSuccess(t, s)
-	}
-	if s, ok := plugin.(framework.ScorePlugin); ok {
-		_, s := s.Score(ctx, nil, pod, ni.Node().Name)
-		requireSuccess(t, s)
-	}
+	plugin := newPlugin(ctx, b.Fatalf)
+	defer plugin.(io.Closer).Close()
+
+	pod := *test.PodReal // copy
+	pod.Spec.NodeName = "happy8"
+
+	b.Run("Run", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			score := e2e.RunAll(ctx, b.Fatalf, plugin, &pod, nodeInfoWithName("glad8"))
+			if want, have := int64(10), score; want != have {
+				b.Fatalf("unexpected score: want %v, have %v", want, have)
+			}
+		}
+	})
 }
 
-func requireSuccess[c common](t c, s *framework.Status) {
-	if want, have := framework.Success, s.Code(); want != have {
-		t.Fatalf("unexpected status code: want %v, have %v, reason: %v", want, have, s.Message())
+func newPlugin(ctx context.Context, fatalf e2e.Fatalf) framework.Plugin {
+	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleNodeNumber})
+	if err != nil {
+		fatalf("failed to create plugin: %v", err)
 	}
+	return plugin
 }
 
-type common interface {
-	Fatalf(format string, args ...any)
+func nodeInfoWithName(name string) *framework.NodeInfo {
+	ni := framework.NewNodeInfo()
+	node := *test.NodeReal // copy
+	node.ObjectMeta.Name = name
+	ni.SetNode(&node)
+	return ni
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/tetratelabs/wazero/experimental"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 
+	"sigs.k8s.io/kube-scheduler-wasm-extension/internal/e2e"
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
@@ -56,9 +57,7 @@ func main() {
 	)
 
 	// Pass the profiling context to the plugin.
-	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
-		GuestPath: guestPath,
-	})
+	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
 	if err != nil {
 		log.Panicln("failed to create plugin:", err)
 	}
@@ -70,19 +69,16 @@ func main() {
 		log.Panicln("failed to prepare profiler:", err)
 	}
 
-	// Profile around the Filter function
+	// Profile around the functions used in the example
 	cpu.StartProfile()
-	s := plugin.(framework.FilterPlugin).Filter(ctx, nil, pod, ni)
-	if want, have := framework.Success, s.Code(); want != have {
-		log.Panicln("filter failed:", want, "!=", have, ":", s.Message())
-	}
+	e2e.RunAll(ctx, log.Fatalf, plugin, pod, ni)
 	cpuProfile := cpu.StopProfile(sampleRate)
 	memProfile := mem.NewProfile(sampleRate)
 
-	if err := wzprof.WriteProfile("cpu.pprof", cpuProfile); err != nil {
+	if err = wzprof.WriteProfile("cpu.pprof", cpuProfile); err != nil {
 		log.Panicln("error writing CPU profile:", err)
 	}
-	if err := wzprof.WriteProfile("mem.pprof", memProfile); err != nil {
+	if err = wzprof.WriteProfile("mem.pprof", memProfile); err != nil {
 		log.Panicln("error writing memory profile:", err)
 	}
 }

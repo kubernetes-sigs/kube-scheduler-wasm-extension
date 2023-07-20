@@ -29,7 +29,8 @@ const (
 	i32                             = wazeroapi.ValueTypeI32
 	i64                             = wazeroapi.ValueTypeI64
 	k8sApi                          = "k8s.io/api"
-	k8sApiNodeInfoNode              = "nodeInfo/node"
+	k8sApiNode                      = "node"
+	k8sApiNodeList                  = "nodeList"
 	k8sApiNodeName                  = "nodeName"
 	k8sApiPod                       = "pod"
 	k8sScheduler                    = "k8s.io/scheduler"
@@ -41,8 +42,8 @@ const (
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
 	return runtime.NewHostModuleBuilder(k8sApi).
 		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeInfoNodeFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
-		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeInfoNode).
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sApiNode).
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeNameFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeName).
@@ -81,14 +82,14 @@ type stackKey struct{}
 //   - Declaring one type is less complicated than one+context key per
 //     function. Functions should ignore fields they don't use.
 type stack struct {
-	// pod is used by guest.filterFn and guest.scoreFn
-	pod *v1.Pod
-
-	// nodeInfo is used by guest.filterFn
-	nodeInfo *framework.NodeInfo
+	// node is used by guest.filterFn
+	node *v1.Node
 
 	// nodeName is used by guest.scoreFn
 	nodeName string
+
+	// pod is used by guest.filterFn and guest.scoreFn
+	pod *v1.Pod
 
 	// resultClusterEvents is returned by guest.enqueueFn
 	resultClusterEvents []framework.ClusterEvent
@@ -108,11 +109,11 @@ func paramsFromContext(ctx context.Context) *stack {
 	return ctx.Value(stackKey{}).(*stack)
 }
 
-func k8sApiNodeInfoNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+func k8sApiNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	node := paramsFromContext(ctx).nodeInfo.Node()
+	node := paramsFromContext(ctx).node
 
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), node, buf, bufLimit))
 }

@@ -20,6 +20,6 @@ type PluginConfig struct {
 	// GuestPath is the path to the guest wasm.
 	GuestPath string `json:"guestPath"`
 
-	// args are the os.Args the guest will receive, exposed for tests.
-	args []string
+	// Args are the os.Args the guest will receive, exposed for tests.
+	Args []string
 }

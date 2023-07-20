@@ -19,12 +19,14 @@ package main
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
+	"os"
 	"unsafe"
 
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
@@ -32,7 +34,27 @@ import (
 )
 
 func main() {
+	// Multiple tests are here to reduce re-compilation time and size checked
+	// into git.
+	if len(os.Args) == 2 {
+		switch os.Args[1] {
+		case "0":
+		case "1":
+			clusterEvents = []api.ClusterEvent{
+				{Resource: api.PersistentVolume, ActionType: api.Delete},
+			}
+		case "2":
+			clusterEvents = []api.ClusterEvent{
+				{Resource: api.Node, ActionType: api.Add},
+				{Resource: api.PersistentVolume, ActionType: api.Delete},
+			}
+		default:
+			panic("unsupported count")
+		}
+	}
+
 	plugin := cyclestate{}
+	enqueue.SetPlugin(plugin)
 	prefilter.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
 	score.SetPlugin(plugin)
@@ -46,6 +68,10 @@ const (
 
 // cyclestate makes sure api.CycleState is consistent between callbacks.
 type cyclestate struct{}
+
+var clusterEvents []api.ClusterEvent
+
+func (cyclestate) EventsToRegister() []api.ClusterEvent { return clusterEvents }
 
 // podSpec is used to test cycle state coherency.
 var podSpec *protoapi.PodSpec

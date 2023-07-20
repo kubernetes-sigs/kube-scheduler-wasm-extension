@@ -1,3 +1,5 @@
+//go:build tinygo.wasm
+
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -14,43 +16,28 @@
    limitations under the License.
 */
 
+// Package main is the entrypoint of the %.wasm file, compiled with
+// '-target=wasi'. See /guest/RATIONALE.md for details.
 package main
 
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
-	"os"
-
 	_ "github.com/wasilibs/nottinygc"
 
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/nodenumber/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
+// main is compiled to a WebAssembly function named "_start", called by the
+// wasm scheduler plugin during initialization.
 func main() {
-	if len(os.Args) == 2 {
-		switch os.Args[1] {
-		case "0":
-		case "1":
-			clusterEvents = []api.ClusterEvent{
-				{Resource: api.PersistentVolume, ActionType: api.Delete},
-			}
-		case "2":
-			clusterEvents = []api.ClusterEvent{
-				{Resource: api.Node, ActionType: api.Add},
-				{Resource: api.PersistentVolume, ActionType: api.Delete},
-			}
-		default:
-			panic("unsupported count")
-		}
-
-	}
-	enqueue.SetPlugin(enqueueExtensions{})
-
+	plugin := &plugin.NodeNumber{}
+	// Below is like `var _ api.EnqueueExtensions = plugin`, except it also
+	// wires up functions the host should provide (go:wasmimport).
+	enqueue.SetPlugin(plugin)
+	prefilter.SetPlugin(plugin)
+	score.SetPlugin(plugin)
 }
-
-var clusterEvents []api.ClusterEvent
-
-type enqueueExtensions struct{}
-
-func (enqueueExtensions) EventsToRegister() []api.ClusterEvent { return clusterEvents }

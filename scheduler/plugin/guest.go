@@ -153,15 +153,6 @@ func decorateError(out fmt.Stringer, fn string, err error) error {
 	return err
 }
 
-type interfaces uint
-
-const (
-	iEnqueueExtensions interfaces = 1 << iota
-	iPreFilterPlugin
-	iFilterPlugin
-	iScorePlugin
-)
-
 func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (interfaces, error) {
 	var e interfaces
 	for name, f := range exportedFns {

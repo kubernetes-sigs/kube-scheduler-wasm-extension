@@ -20,8 +20,8 @@ package imports
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
-//go:wasmimport k8s.io/api nodeInfo/node
-func k8sApiNodeInfoNode(ptr uint32, limit mem.BufLimit) (len uint32)
+//go:wasmimport k8s.io/api node
+func k8sApiNode(ptr uint32, limit mem.BufLimit) (len uint32)
 
 //go:wasmimport k8s.io/api nodeName
 func k8sApiNodeName(ptr uint32, limit mem.BufLimit) (len uint32)
