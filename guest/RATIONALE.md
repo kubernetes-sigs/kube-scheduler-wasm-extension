@@ -47,6 +47,18 @@ mean amplifying that overhead to a point where second or longer latency would
 be possible. For reasons like this, we dismissed Go 1.21 for TinyGo, and will
 revisit when Go 1.22 introduces [`//go:wasmexport`][3].
 
+## Why do we compile with the `target=wasi`?
+
+TinyGo only has JavaScript and WASI targets. It has no [freestanding one][6].
+Kubernetes can't in a browser, so the only choice is '-target=wasi'. So, we use
+this despite the ABI (application binary interface) of the scheduler not
+requiring it at all.
+
+TinyGo imports the "wasi_snapshot_preview1" module for [runtime][7] concerns
+like args, stdio and random number generation. The technical implementation is
+defined in wazero's built-in [wasi_snapshot_preview1][8] package, which the
+host side of the scheduler plugin conditionally configures.
+
 ## Why are plugins assigned with functions instead of global variables?
 
 At first, we designed the guest SDK to assign plugins with global variables.
@@ -107,3 +119,6 @@ However, we can't make this default until it no longer crashes our unit tests.
 [3]: https://github.com/golang/go/issues/42372
 [4]: https://github.com/wasilibs/nottinygc
 [5]: https://wazero.io/languages/tinygo/#concurrency
+[6]: https://github.com/tinygo-org/tinygo/pull/3072
+[7]: https://github.com/tinygo-org/tinygo/blob/v0.28.1/src/runtime/runtime_wasm_wasi.go
+[8]: https://pkg.go.dev/github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1

@@ -28,23 +28,13 @@ var PathErrorPanicOnScore = pathWatError("panic_on_score")
 
 var PathErrorPanicOnStart = pathWatError("panic_on_start")
 
-var PathExamplePrefilterSimple = pathTinyGoExample("prefilter-simple")
-
-var PathExampleFilterSimple = pathTinyGoExample("filter-simple")
-
-var PathExampleScoreSimple = pathTinyGoExample("score-simple")
+var PathExampleNodeNumber = pathTinyGoExample("nodenumber")
 
 var PathTestAll = pathTinyGoTest("all")
-
-var PathTestAllNoopTinyGo = pathTinyGoTest("all-noop")
 
 var PathTestAllNoopWat = pathWatTest("all_noop")
 
 var PathTestCycleState = pathTinyGoTest("cyclestate")
-
-var PathTestEnqueue = pathTinyGoTest("enqueue")
-
-var PathTestPrefilter = pathTinyGoTest("prefilter")
 
 var PathTestPrefilterFromGlobal = pathWatTest("prefilter_from_global")
 

@@ -19,6 +19,8 @@ package main
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
+	"os"
+
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
@@ -27,7 +29,13 @@ import (
 )
 
 func main() {
-	score.SetPlugin(noop{})
+	// Multiple tests are here to reduce re-compilation time and size checked
+	// into git.
+	if len(os.Args) == 2 && os.Args[1] == "score100IfNameEqualsPodSpec" {
+		score.SetPlugin(score100IfNameEqualsPodSpec{})
+	} else {
+		score.SetPlugin(noop{})
+	}
 }
 
 // noop doesn't do anything, except evaluate each parameter.
@@ -38,4 +46,22 @@ func (noop) Score(state api.CycleState, pod proto.Pod, nodeName string) (score i
 	_ = pod.Spec()
 	_ = nodeName
 	return
+}
+
+// score100IfNameEqualsPodSpec returns 100 if a node name equals its pod spec.
+type score100IfNameEqualsPodSpec struct{}
+
+func (score100IfNameEqualsPodSpec) Score(_ api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
+	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
+	if nodeName == podSpecNodeName {
+		return 100, nil
+	}
+	return 0, nil
+}
+
+func nilToEmpty(ptr *string) string {
+	if ptr != nil {
+		return *ptr
+	}
+	return ""
 }

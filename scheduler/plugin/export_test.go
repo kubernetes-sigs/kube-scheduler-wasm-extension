@@ -25,15 +25,22 @@ import (
 
 var AllClusterEvents = allClusterEvents
 
-func SetArgs(config PluginConfig, args ...string) PluginConfig {
-	config.args = args
-	return config
-}
+type (
+	BasePlugin    = basePlugin
+	FilterPlugin  = filterPlugin
+	ScorePlugin   = scorePlugin
+	ReservePlugin = reservePlugin
+	PermitPlugin  = permitPlugin
+	BindPlugin    = bindPlugin
+)
 
 type WasmPlugin struct{ *wasmPlugin }
 
 func NewTestWasmPlugin(p framework.Plugin) *WasmPlugin {
-	return &WasmPlugin{wasmPlugin: p.(ProfilerSupport).plugin()} // panic on test bug
+	plugin := p.(ProfilerSupport).plugin()
+	// TODO: support PostBind and remove this
+	plugin.guestInterfaces |= iPostBindPlugin
+	return &WasmPlugin{wasmPlugin: plugin} // panic on test bug
 }
 
 func (w *WasmPlugin) SetGlobals(globals map[string]int32) {

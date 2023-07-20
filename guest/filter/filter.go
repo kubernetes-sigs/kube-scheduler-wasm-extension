@@ -96,14 +96,14 @@ func (n *nodeInfo) Status() *protoapi.NodeStatus {
 	return n.lazyNode().Status
 }
 
-// lazyNode lazy initializes node from imports.NodeInfoNode.
+// lazyNode lazy initializes node from imports.Node.
 func (n *nodeInfo) lazyNode() *protoapi.Node {
 	if node := n.node; node != nil {
 		return node
 	}
 
 	var msg protoapi.Node
-	if err := imports.NodeInfoNode(msg.UnmarshalVT); err != nil {
+	if err := imports.Node(msg.UnmarshalVT); err != nil {
 		panic(err.Error())
 	}
 	n.node = &msg

@@ -26,4 +26,7 @@
 
     ;; Issue the unreachable instruction instead of returning
     (unreachable))
+
+  ;; export filter even though it won't be called by this test.
+  (func (export "filter") (result i32) (unreachable))
 )

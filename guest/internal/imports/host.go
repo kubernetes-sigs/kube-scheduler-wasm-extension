@@ -53,10 +53,10 @@ func NodeName() string {
 	})
 }
 
-func NodeInfoNode(updater func([]byte) error) error {
+func Node(updater func([]byte) error) error {
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
 	return mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
-		return k8sApiNodeInfoNode(ptr, limit)
+		return k8sApiNode(ptr, limit)
 	}, updater)
 }
 

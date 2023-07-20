@@ -19,6 +19,8 @@ package main
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
+	"os"
+
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
@@ -29,37 +31,67 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
+type all interface {
+	api.EnqueueExtensions
+	api.PreFilterPlugin
+	api.FilterPlugin
+	api.ScorePlugin
+}
+
 func main() {
-	plugin := noop{}
+	// Multiple tests are here to reduce re-compilation time and size checked
+	// into git.
+	var plugin all
+	if len(os.Args) == 2 && os.Args[1] == "params" {
+		plugin = params{}
+	} else {
+		plugin = noop{}
+	}
+
 	enqueue.SetPlugin(plugin)
 	prefilter.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
 	score.SetPlugin(plugin)
 }
 
-// noop doesn't do anything, except evaluate each parameter. This shows if
-// protobuf unmarshal caching works (for the pod), and also baseline
-// performance of reading each parameter.
+// noop doesn't do anything, and this style isn't recommended. This shows the
+// impact two things:
+//
+//   - implementing multiple interfaces
+//   - overhead of constructing function parameters
 type noop struct{}
 
-func (noop) EventsToRegister() (clusterEvents []api.ClusterEvent) {
+func (noop) EventsToRegister() (clusterEvents []api.ClusterEvent) { return }
+
+func (noop) PreFilter(api.CycleState, proto.Pod) (nodeNames []string, status *api.Status) { return }
+
+func (noop) Filter(api.CycleState, proto.Pod, api.NodeInfo) (status *api.Status) { return }
+
+func (noop) Score(api.CycleState, proto.Pod, string) (score int32, status *api.Status) { return }
+
+// params doesn't do anything, except evaluate each parameter. This shows if
+// protobuf unmarshal caching works (for the pod), and also baseline
+// performance of reading each parameter.
+type params struct{}
+
+func (params) EventsToRegister() (clusterEvents []api.ClusterEvent) {
 	return
 }
 
-func (noop) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
+func (params) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	return
 }
 
-func (noop) Filter(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func (params) Filter(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeInfo.Node().Spec() // trigger lazy loading
 	return
 }
 
-func (noop) Score(state api.CycleState, pod proto.Pod, nodeName string) (score int32, status *api.Status) {
+func (params) Score(state api.CycleState, pod proto.Pod, nodeName string) (score int32, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeName

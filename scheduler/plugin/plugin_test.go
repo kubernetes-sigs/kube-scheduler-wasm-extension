@@ -159,27 +159,22 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 }
 
 // TestNew_maskInterfaces ensures the type returned by New can be asserted
-// against, based on the statusCode in the guest.
+// against, based on exports in the guest.
 func TestNew_maskInterfaces(t *testing.T) {
 	tests := []struct {
-		name            string
-		guestPath       string
-		expectPrefilter bool
-		expectFilter    bool
-		expectScore     bool
-		expectBind      bool // currently a mask test until we implement bind
+		name          string
+		guestPath     string
+		expectError   bool
+		expectFilter  bool
+		expectScore   bool
+		expectReserve bool
+		expectPermit  bool
+		expectBind    bool
 	}{
 		{
-			name:            "prefilter",
-			guestPath:       test.PathExamplePrefilterSimple,
-			expectPrefilter: true,
-		},
-		{
-			name:      "prefilter|filter",
-			guestPath: test.PathExampleFilterSimple,
-			// Our guest SDK implements cached state reset on pre-filter.
-			expectPrefilter: true,
-			expectFilter:    true,
+			name:        "not plugin",
+			guestPath:   test.PathErrorNotPlugin,
+			expectError: true, // not supported to be only enqueue
 		},
 		{
 			name:         "filter",
@@ -187,11 +182,9 @@ func TestNew_maskInterfaces(t *testing.T) {
 			expectFilter: true,
 		},
 		{
-			name:      "prefilter|score",
-			guestPath: test.PathExampleScoreSimple,
-			// Our guest SDK implements cached state reset on pre-filter.
-			expectPrefilter: true,
-			expectScore:     true,
+			name:        "prefilter|score",
+			guestPath:   test.PathExampleNodeNumber,
+			expectScore: true,
 		},
 		{
 			name:        "score",
@@ -199,11 +192,10 @@ func TestNew_maskInterfaces(t *testing.T) {
 			expectScore: true,
 		},
 		{
-			name:            "prefilter|filter|score",
-			guestPath:       test.PathTestAllNoopWat,
-			expectPrefilter: true,
-			expectFilter:    true,
-			expectScore:     true,
+			name:         "prefilter|filter|score",
+			guestPath:    test.PathTestAllNoopWat,
+			expectFilter: true,
+			expectScore:  true,
 		},
 	}
 
@@ -213,25 +205,33 @@ func TestNew_maskInterfaces(t *testing.T) {
 				ContentType: runtime.ContentTypeJSON,
 				Raw:         []byte(fmt.Sprintf(`{"guestPath": "%s"}`, tc.guestPath)),
 			}, nil)
+			if tc.expectError {
+				if err == nil {
+					t.Fatal("expected to error")
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer p.(io.Closer).Close()
 
-			// All plugins should be a closer
-			if _, ok := p.(io.Closer); !ok {
-				t.Fatalf("expected Closer %v", p)
+			if _, ok := p.(wasm.BasePlugin); !ok {
+				t.Fatalf("expected BasePlugin %v", p)
 			}
-			if _, ok := p.(framework.PreFilterPlugin); tc.expectPrefilter != ok {
-				t.Fatalf("didn't expect PreFilterPlugin %v", p)
-			}
-			if _, ok := p.(framework.FilterPlugin); tc.expectFilter != ok {
+			if _, ok := p.(wasm.FilterPlugin); tc.expectFilter != ok {
 				t.Fatalf("didn't expect FilterPlugin %v", p)
 			}
-			if _, ok := p.(framework.ScorePlugin); tc.expectScore != ok {
+			if _, ok := p.(wasm.ScorePlugin); tc.expectScore != ok {
 				t.Fatalf("didn't expect ScorePlugin %v", p)
 			}
-			if _, ok := p.(framework.BindPlugin); tc.expectBind != ok {
+			if _, ok := p.(wasm.ReservePlugin); tc.expectReserve != ok {
+				t.Fatalf("didn't expect ReservePlugin %v", p)
+			}
+			if _, ok := p.(wasm.PermitPlugin); tc.expectPermit != ok {
+				t.Fatalf("didn't expect PermitPlugin %v", p)
+			}
+			if _, ok := p.(wasm.BindPlugin); tc.expectBind != ok {
 				t.Fatalf("didn't expect BindPlugin %v", p)
 			}
 		})
@@ -246,7 +246,7 @@ func TestNewFromConfig(t *testing.T) {
 	}{
 		{
 			name:      "valid wasm",
-			guestPath: test.PathExampleFilterSimple,
+			guestPath: test.PathTestFilter,
 		},
 		{
 			name:          "not plugin",
@@ -312,10 +312,10 @@ func TestEnqueue(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			guestPath := tc.guestPath
 			if guestPath == "" {
-				guestPath = test.PathTestEnqueue
+				guestPath = test.PathTestCycleState
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.SetArgs(wasm.PluginConfig{GuestPath: guestPath}, tc.args...))
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -331,7 +331,7 @@ func TestEnqueue(t *testing.T) {
 	t.Run("panic", func(t *testing.T) {
 		guestPath := test.PathErrorPanicOnEnqueue
 
-		p, err := wasm.NewFromConfig(ctx, wasm.SetArgs(wasm.PluginConfig{GuestPath: guestPath}))
+		p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -349,6 +349,7 @@ func TestPreFilter(t *testing.T) {
 	tests := []struct {
 		name                  string
 		guestPath             string
+		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
 		expectedResult        *framework.PreFilterResult
@@ -358,11 +359,13 @@ func TestPreFilter(t *testing.T) {
 		{
 			name:               "success: pod has spec.NodeName",
 			pod:                test.PodSmall,
+			args:               []string{"prefilter", "podSpecName"},
 			expectedResult:     &framework.PreFilterResult{NodeNames: sets.NewString("good-node")},
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:               "success: pod has no spec.NodeName",
+			args:               []string{"prefilter", "podSpecName"},
 			pod:                &v1.Pod{ObjectMeta: test.PodSmall.ObjectMeta},
 			expectedStatusCode: framework.Success,
 		},
@@ -396,10 +399,10 @@ wasm stack trace:
 		t.Run(tc.name, func(t *testing.T) {
 			guestPath := tc.guestPath
 			if guestPath == "" {
-				guestPath = test.PathExamplePrefilterSimple
+				guestPath = test.PathTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -428,6 +431,7 @@ func TestFilter(t *testing.T) {
 	tests := []struct {
 		name                  string
 		guestPath             string
+		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
 		node                  *v1.Node
@@ -436,12 +440,14 @@ func TestFilter(t *testing.T) {
 	}{
 		{
 			name:               "success: node matches spec.NodeName",
+			args:               []string{"filter", "nameEqualsPodSpec"},
 			pod:                test.PodSmall,
 			node:               test.NodeSmall,
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:                  "unscheduled: bad-node",
+			args:                  []string{"filter", "nameEqualsPodSpec"},
 			pod:                   test.PodSmall,
 			node:                  st.MakeNode().Name("bad-node").Obj(),
 			expectedStatusCode:    framework.Unschedulable,
@@ -480,10 +486,10 @@ wasm stack trace:
 		t.Run(tc.name, func(t *testing.T) {
 			guestPath := tc.guestPath
 			if guestPath == "" {
-				guestPath = test.PathExampleFilterSimple
+				guestPath = test.PathTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -511,6 +517,7 @@ func TestScore(t *testing.T) {
 	tests := []struct {
 		name                  string
 		guestPath             string
+		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
 		nodeName              string
@@ -520,6 +527,7 @@ func TestScore(t *testing.T) {
 	}{
 		{
 			name:               "scored: nodeName equals spec.NodeName",
+			args:               []string{"score", "score100IfNameEqualsPodSpec"},
 			pod:                test.PodSmall,
 			nodeName:           test.PodSmall.Spec.NodeName,
 			expectedScore:      100,
@@ -527,6 +535,7 @@ func TestScore(t *testing.T) {
 		},
 		{
 			name:               "skipped: bad-node",
+			args:               []string{"score", "score100IfNameEqualsPodSpec"},
 			pod:                test.PodSmall,
 			nodeName:           "bad-node",
 			expectedScore:      0,
@@ -594,10 +603,10 @@ wasm stack trace:
 		t.Run(tc.name, func(t *testing.T) {
 			guestPath := tc.guestPath
 			if guestPath == "" {
-				guestPath = test.PathExampleScoreSimple
+				guestPath = test.PathTestScore
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}
