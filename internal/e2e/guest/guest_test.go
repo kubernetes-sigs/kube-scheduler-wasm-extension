@@ -14,17 +14,30 @@
    limitations under the License.
 */
 
-package e2e_test
+package guest_test
 
+// Override the default GC with a more performant one.
+// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
 	"testing"
 
+	_ "github.com/wasilibs/nottinygc"
+
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
+	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
-// BenchmarkUnmarshalVT helps explain protobuf unmarshalling performance. Even
-// though this doesn't run in Wasm, improvements here likely help TinyGo.
+var nodeSmall = &protoapi.Node{Metadata: &meta.ObjectMeta{Name: stringToPointer("good-node")}}
+
+var podSmall = &protoapi.Pod{
+	Metadata: &meta.ObjectMeta{
+		Name:      stringToPointer("good-pod"),
+		Namespace: stringToPointer("test"),
+		Uid:       stringToPointer("384900cd-dc7b-41ec-837e-9c4c1762363e"),
+	},
+	Spec: &protoapi.PodSpec{NodeName: nodeSmall.Metadata.Name},
+}
+
 func BenchmarkUnmarshalVT(b *testing.B) {
 	unmarshalNode := func(data []byte) error {
 		var msg protoapi.Node
@@ -36,6 +49,8 @@ func BenchmarkUnmarshalVT(b *testing.B) {
 		return msg.UnmarshalVT(data)
 	}
 
+	// TODO: Find a way to convert yaml to proto in a way that compiles in
+	// TinyGo, so that we can use real data. Or check in the serialized protos.
 	tests := []struct {
 		name      string
 		input     []byte
@@ -43,22 +58,12 @@ func BenchmarkUnmarshalVT(b *testing.B) {
 	}{
 		{
 			name:      "node: small",
-			input:     mustMarshal(b, test.NodeSmall.Marshal),
-			unmarshal: unmarshalNode,
-		},
-		{
-			name:      "node: real",
-			input:     mustMarshal(b, test.NodeReal.Marshal),
+			input:     mustMarshal(b, nodeSmall.MarshalVT),
 			unmarshal: unmarshalNode,
 		},
 		{
 			name:      "pod: small",
-			input:     mustMarshal(b, test.PodSmall.Marshal),
-			unmarshal: unmarshalPod,
-		},
-		{
-			name:      "pod: real",
-			input:     mustMarshal(b, test.PodReal.Marshal),
+			input:     mustMarshal(b, podSmall.MarshalVT),
 			unmarshal: unmarshalPod,
 		},
 	}
@@ -74,6 +79,10 @@ func BenchmarkUnmarshalVT(b *testing.B) {
 			}
 		})
 	}
+}
+
+func stringToPointer(s string) *string {
+	return &s
 }
 
 func mustMarshal(b *testing.B, marshal func() (data []byte, err error)) []byte {
