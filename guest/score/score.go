@@ -33,14 +33,16 @@ var score api.ScorePlugin
 // For example:
 //
 //	func main() {
-//		score.SetPlugin(score100IfNameEqualsPodSpec{})
+//		score.SetPlugin(scorePlugin{})
 //	}
 //
-//	type score100IfNameEqualsPodSpec struct{}
+//	type scorePlugin struct{}
 //
-//	func (score100IfNameEqualsPodSpec) Score(state api.CycleState, pod api.Pod, nodeName string) (score int32, status *api.Status) {
+//	func (scorePlugin) Score(state api.CycleState, pod api.Pod, nodeName string) (score int32, status *api.Status) {
 //		panic("implement me")
 //	}
+//
+// Note: If you need state, you can assign it with prescore.SetPlugin.
 func SetPlugin(scorePlugin api.ScorePlugin) {
 	if scorePlugin == nil {
 		panic("nil scorePlugin")

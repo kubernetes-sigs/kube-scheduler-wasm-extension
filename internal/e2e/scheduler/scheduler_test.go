@@ -45,14 +45,14 @@ func TestCycleStateCoherence(t *testing.T) {
 	ni.SetNode(test.NodeReal)
 
 	// run: the guest will crash if any of the callbacks see a different pod.
-	e2e.RunAll(ctx, t.Fatalf, plugin, pod, ni)
+	e2e.RunAll(ctx, t, plugin, pod, ni)
 	// run again: the guest will crash if it sees the same pointer.
-	e2e.RunAll(ctx, t.Fatalf, plugin, pod, ni)
+	e2e.RunAll(ctx, t, plugin, pod, ni)
 }
 
 func TestExample_NodeNumber(t *testing.T) {
 	ctx := context.Background()
-	plugin := newPlugin(ctx, t.Fatalf)
+	plugin := newPlugin(ctx, t)
 	defer plugin.(io.Closer).Close()
 
 	pod := &v1.Pod{Spec: v1.PodSpec{NodeName: "happy8"}}
@@ -60,7 +60,7 @@ func TestExample_NodeNumber(t *testing.T) {
 	t.Run("Score zero on unmatch", func(t *testing.T) {
 		// The pod spec node name doesn't end with the same number as the node, so
 		// we expect to score zero.
-		score := e2e.RunAll(ctx, t.Fatalf, plugin, pod, nodeInfoWithName("glad9"))
+		score := e2e.RunAll(ctx, t, plugin, pod, nodeInfoWithName("glad9"))
 		if want, have := int64(0), score; want != have {
 			t.Fatalf("unexpected score: want %v, have %v", want, have)
 		}
@@ -69,7 +69,7 @@ func TestExample_NodeNumber(t *testing.T) {
 	t.Run("Score ten on match", func(t *testing.T) {
 		// The pod spec node name isn't the same as the node name. However,
 		// they both end in the same number, so we expect to score ten.
-		score := e2e.RunAll(ctx, t.Fatalf, plugin, pod, nodeInfoWithName("glad8"))
+		score := e2e.RunAll(ctx, t, plugin, pod, nodeInfoWithName("glad8"))
 		if want, have := int64(10), score; want != have {
 			t.Fatalf("unexpected score: want %v, have %v", want, have)
 		}
@@ -81,11 +81,11 @@ func BenchmarkExample_NodeNumber(b *testing.B) {
 	b.Run("New", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			newPlugin(ctx, b.Fatalf).(io.Closer).Close()
+			newPlugin(ctx, b).(io.Closer).Close()
 		}
 	})
 
-	plugin := newPlugin(ctx, b.Fatalf)
+	plugin := newPlugin(ctx, b)
 	defer plugin.(io.Closer).Close()
 
 	pod := *test.PodReal // copy
@@ -94,7 +94,7 @@ func BenchmarkExample_NodeNumber(b *testing.B) {
 	b.Run("Run", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			score := e2e.RunAll(ctx, b.Fatalf, plugin, &pod, nodeInfoWithName("glad8"))
+			score := e2e.RunAll(ctx, b, plugin, &pod, nodeInfoWithName("glad8"))
 			if want, have := int64(10), score; want != have {
 				b.Fatalf("unexpected score: want %v, have %v", want, have)
 			}
@@ -102,10 +102,10 @@ func BenchmarkExample_NodeNumber(b *testing.B) {
 	})
 }
 
-func newPlugin(ctx context.Context, fatalf e2e.Fatalf) framework.Plugin {
+func newPlugin(ctx context.Context, t e2e.Testing) framework.Plugin {
 	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleNodeNumber})
 	if err != nil {
-		fatalf("failed to create plugin: %v", err)
+		t.Fatalf("failed to create plugin: %v", err)
 	}
 	return plugin
 }

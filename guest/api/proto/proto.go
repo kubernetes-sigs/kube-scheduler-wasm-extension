@@ -28,6 +28,11 @@ type Node interface {
 	Status() *api.NodeStatus
 }
 
+type NodeList interface {
+	Metadata() *meta.ListMeta
+	Items() []*api.Node
+}
+
 type Pod interface {
 	Metadata() *meta.ObjectMeta
 	Spec() *api.PodSpec

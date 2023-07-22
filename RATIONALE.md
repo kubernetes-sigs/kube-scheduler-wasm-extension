@@ -157,6 +157,17 @@ width 8 byte header (for ActionType and GVK as uint32 little-endian encoding).
 If we also kept GVK as a string, it would make two variable length fields,
 instead of one, while inviting invalid GVK values.
 
+### []*v1.Node
+
+`framework.PreScorePlugin` has a `node []*v1.Node` parameter. A raw slice is
+not a protobuf message, so encoding it would be custom. Instead, we marshal
+with `*v1.NodeList`. This allows guests to use built-in codecs and has little
+performance impact vs custom list encoding.
+
+The main downside is that `v1.NodeList` exposes `ListMeta` which will always be
+nil when unmarshalled from `PreScorePlugin`. However, this is ok as it is
+optional anyway.
+
 ### Status
 
 The `framework.Status` type is used as a nilable result with a status code and

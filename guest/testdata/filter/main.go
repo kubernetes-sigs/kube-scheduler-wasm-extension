@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 )
 
-type filterPlugin interface {
+type extensionPoints interface {
 	api.PreFilterPlugin
 	api.FilterPlugin
 }
@@ -37,39 +37,39 @@ type filterPlugin interface {
 func main() {
 	// Multiple tests are here to reduce re-compilation time and size checked
 	// into git.
-	var plugin filterPlugin = noop{}
+	var plugin extensionPoints = noopPlugin{}
 	if len(os.Args) == 2 {
 		switch os.Args[1] {
-		case "nameEqualsPodSpec":
-			plugin = nameEqualsPodSpec{}
-		case "podSpecName":
-			plugin = podSpecName{}
+		case "filter":
+			plugin = filterPlugin{}
+		case "preFilter":
+			plugin = preFilterPlugin{}
 		}
 	}
 	prefilter.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
 }
 
-// noop doesn't do anything, except evaluate each parameter.
-type noop struct{}
+// noopPlugin doesn't do anything, except evaluate each parameter.
+type noopPlugin struct{}
 
-func (noop) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
+func (noopPlugin) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	return
 }
 
-func (noop) Filter(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func (noopPlugin) Filter(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeInfo.Node().Spec() // trigger lazy loading
 	return
 }
 
-// podSpecName schedules a node if its name equals its pod spec.
-type podSpecName struct{ noop }
+// preFilterPlugin schedules a node if its name equals its pod spec.
+type preFilterPlugin struct{ noopPlugin }
 
-func (podSpecName) PreFilter(_ api.CycleState, pod proto.Pod) ([]string, *api.Status) {
+func (preFilterPlugin) PreFilter(_ api.CycleState, pod proto.Pod) ([]string, *api.Status) {
 	// First, check if the pod spec node name is empty. If so, pass!
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if len(podSpecNodeName) == 0 {
@@ -78,10 +78,10 @@ func (podSpecName) PreFilter(_ api.CycleState, pod proto.Pod) ([]string, *api.St
 	return []string{podSpecNodeName}, nil
 }
 
-// nameEqualsPodSpec schedules a node if its name equals its pod spec.
-type nameEqualsPodSpec struct{ noop }
+// filterPlugin schedules a node if its name equals its pod spec.
+type filterPlugin struct{ noopPlugin }
 
-func (nameEqualsPodSpec) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) *api.Status {
+func (filterPlugin) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) *api.Status {
 	// First, check if the pod spec node name is empty. If so, pass!
 	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
 	if len(podSpecNodeName) == 0 {

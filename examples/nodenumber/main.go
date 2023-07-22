@@ -27,7 +27,7 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/nodenumber/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
@@ -38,6 +38,6 @@ func main() {
 	// Below is like `var _ api.EnqueueExtensions = plugin`, except it also
 	// wires up functions the host should provide (go:wasmimport).
 	enqueue.SetPlugin(plugin)
-	prefilter.SetPlugin(plugin)
+	prescore.SetPlugin(plugin)
 	score.SetPlugin(plugin)
 }

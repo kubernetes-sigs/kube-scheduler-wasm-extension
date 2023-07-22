@@ -42,6 +42,11 @@ func Test_maskInterfaces(t *testing.T) {
 			expectScore: true,
 		},
 		{
+			name:        "prescore|score",
+			plugin:      &wasmPlugin{guestInterfaces: iPreScorePlugin | iScorePlugin},
+			expectScore: true,
+		},
+		{
 			name:        "score",
 			plugin:      &wasmPlugin{guestInterfaces: iScorePlugin},
 			expectScore: true,

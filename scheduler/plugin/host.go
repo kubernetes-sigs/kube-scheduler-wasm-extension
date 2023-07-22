@@ -45,6 +45,9 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiNode).
 		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeList).
+		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeNameFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeName).
 		NewFunctionBuilder().
@@ -85,6 +88,9 @@ type stack struct {
 	// node is used by guest.filterFn
 	node *v1.Node
 
+	// nodes are used by guest.prescoreFn
+	nodes []*v1.Node
+
 	// nodeName is used by guest.scoreFn
 	nodeName string
 
@@ -116,6 +122,19 @@ func k8sApiNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	node := paramsFromContext(ctx).node
 
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), node, buf, bufLimit))
+}
+
+func k8sApiNodeListFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	nodes := paramsFromContext(ctx).nodes
+	// Use v1.NodeList to encode the nodes, as it is easier for both sides.
+	nl := make([]v1.Node, len(nodes))
+	for i := range nodes {
+		nl[i] = *nodes[i]
+	}
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), &v1.NodeList{Items: nl}, buf, bufLimit))
 }
 
 func k8sApiNodeNameFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {

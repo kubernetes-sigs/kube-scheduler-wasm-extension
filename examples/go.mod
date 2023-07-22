@@ -3,7 +3,7 @@ module sigs.k8s.io/kube-scheduler-wasm-extension/examples
 go 1.20
 
 require (
-	github.com/wasilibs/nottinygc v0.3.0
+	github.com/wasilibs/nottinygc v0.4.0
 	sigs.k8s.io/kube-scheduler-wasm-extension/guest v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto v0.0.0-00010101000000-000000000000
 )

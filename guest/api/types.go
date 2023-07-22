@@ -50,6 +50,7 @@ type Plugin interface {
 //   - Any state kept in the plugin should be assigned to CycleState, not
 //     global variables.
 //   - Duplicate nodeNames are a bug, but will not cause a failure.
+//   - The pod parameter is lazy to avoid unmarshal overhead when unused.
 type PreFilterPlugin interface {
 	Plugin
 
@@ -57,6 +58,9 @@ type PreFilterPlugin interface {
 }
 
 // FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
+//
+// Note: The pod and nodeInfo parameters are lazy to avoid unmarshal overhead
+// when unused.
 type FilterPlugin interface {
 	Plugin
 
@@ -66,6 +70,16 @@ type FilterPlugin interface {
 // EnqueueExtensions is a WebAssembly implementation of framework.EnqueueExtensions.
 type EnqueueExtensions interface {
 	EventsToRegister() []ClusterEvent
+}
+
+// PreScorePlugin is a WebAssembly implementation of framework.PreScorePlugin.
+//
+// Note: The pod and nodeList parameters are lazy to avoid unmarshal overhead
+// when unused.
+type PreScorePlugin interface {
+	Plugin
+
+	PreScore(state CycleState, pod proto.Pod, nodeList proto.NodeList) *Status
 }
 
 // ScorePlugin is a WebAssembly implementation of framework.ScorePlugin.

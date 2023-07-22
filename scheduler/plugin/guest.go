@@ -32,6 +32,7 @@ const (
 	guestExportEnqueue   = "enqueue"
 	guestExportPreFilter = "prefilter"
 	guestExportFilter    = "filter"
+	guestExportPreScore  = "prescore"
 	guestExportScore     = "score"
 )
 
@@ -41,6 +42,7 @@ type guest struct {
 	enqueueFn   wazeroapi.Function
 	prefilterFn wazeroapi.Function
 	filterFn    wazeroapi.Function
+	prescoreFn  wazeroapi.Function
 	scoreFn     wazeroapi.Function
 	callStack   []uint64
 }
@@ -85,6 +87,7 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 		enqueueFn:   g.ExportedFunction(guestExportEnqueue),
 		prefilterFn: g.ExportedFunction(guestExportPreFilter),
 		filterFn:    g.ExportedFunction(guestExportFilter),
+		prescoreFn:  g.ExportedFunction(guestExportPreScore),
 		scoreFn:     g.ExportedFunction(guestExportScore),
 		callStack:   callStack,
 	}, nil
@@ -122,6 +125,19 @@ func (g *guest) filter(ctx context.Context) *framework.Status {
 
 	if err := g.filterFn.CallWithStack(ctx, callStack); err != nil {
 		return framework.AsStatus(decorateError(g.out, guestExportFilter, err))
+	}
+	statusCode := int32(callStack[0])
+	statusReason := paramsFromContext(ctx).resultStatusReason
+	return framework.NewStatus(framework.Code(statusCode), statusReason)
+}
+
+// preScore calls guestExportPreScore.
+func (g *guest) preScore(ctx context.Context) *framework.Status {
+	defer g.out.Reset()
+	callStack := g.callStack
+
+	if err := g.prescoreFn.CallWithStack(ctx, callStack); err != nil {
+		return framework.AsStatus(decorateError(g.out, guestExportPreScore, err))
 	}
 	statusCode := int32(callStack[0])
 	statusReason := paramsFromContext(ctx).resultStatusReason
@@ -172,6 +188,11 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
 			}
 			e |= iFilterPlugin
+		case guestExportPreScore:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
+			}
+			e |= iPreScorePlugin
 		case guestExportScore:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i64}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i64)", name)

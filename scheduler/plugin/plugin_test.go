@@ -162,40 +162,40 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 // against, based on exports in the guest.
 func TestNew_maskInterfaces(t *testing.T) {
 	tests := []struct {
-		name          string
-		guestPath     string
-		expectError   bool
-		expectFilter  bool
-		expectScore   bool
-		expectReserve bool
-		expectPermit  bool
-		expectBind    bool
+		name            string
+		guestPath       string
+		expectedFilter  bool
+		expectedScore   bool
+		expectedReserve bool
+		expectedPermit  bool
+		expectedBind    bool
+		expectedError   string
 	}{
 		{
-			name:        "not plugin",
-			guestPath:   test.PathErrorNotPlugin,
-			expectError: true, // not supported to be only enqueue
+			name:          "not plugin",
+			guestPath:     test.PathErrorNotPlugin,
+			expectedError: "wasm: guest does not export any plugin functions", // not supported to be only enqueue
 		},
 		{
-			name:         "filter",
-			guestPath:    test.PathErrorPanicOnFilter,
-			expectFilter: true,
+			name:           "filter",
+			guestPath:      test.PathErrorPanicOnFilter,
+			expectedFilter: true,
 		},
 		{
-			name:        "prefilter|score",
-			guestPath:   test.PathExampleNodeNumber,
-			expectScore: true,
+			name:          "prescore|score",
+			guestPath:     test.PathExampleNodeNumber,
+			expectedScore: true,
 		},
 		{
-			name:        "score",
-			guestPath:   test.PathErrorPanicOnScore,
-			expectScore: true,
+			name:          "score",
+			guestPath:     test.PathErrorPanicOnScore,
+			expectedScore: true,
 		},
 		{
-			name:         "prefilter|filter|score",
-			guestPath:    test.PathTestAllNoopWat,
-			expectFilter: true,
-			expectScore:  true,
+			name:           "prefilter|filter|prescore|score",
+			guestPath:      test.PathTestAllNoopWat,
+			expectedFilter: true,
+			expectedScore:  true,
 		},
 	}
 
@@ -205,10 +205,8 @@ func TestNew_maskInterfaces(t *testing.T) {
 				ContentType: runtime.ContentTypeJSON,
 				Raw:         []byte(fmt.Sprintf(`{"guestPath": "%s"}`, tc.guestPath)),
 			}, nil)
-			if tc.expectError {
-				if err == nil {
-					t.Fatal("expected to error")
-				}
+			if tc.expectedError != "" {
+				requireError(t, err, tc.expectedError)
 				return
 			}
 			if err != nil {
@@ -217,22 +215,22 @@ func TestNew_maskInterfaces(t *testing.T) {
 			defer p.(io.Closer).Close()
 
 			if _, ok := p.(wasm.BasePlugin); !ok {
-				t.Fatalf("expected BasePlugin %v", p)
+				t.Fatalf("expecteded BasePlugin %v", p)
 			}
-			if _, ok := p.(wasm.FilterPlugin); tc.expectFilter != ok {
-				t.Fatalf("didn't expect FilterPlugin %v", p)
+			if _, ok := p.(wasm.FilterPlugin); tc.expectedFilter != ok {
+				t.Fatalf("didn't expected FilterPlugin %v", p)
 			}
-			if _, ok := p.(wasm.ScorePlugin); tc.expectScore != ok {
-				t.Fatalf("didn't expect ScorePlugin %v", p)
+			if _, ok := p.(wasm.ScorePlugin); tc.expectedScore != ok {
+				t.Fatalf("didn't expected ScorePlugin %v", p)
 			}
-			if _, ok := p.(wasm.ReservePlugin); tc.expectReserve != ok {
-				t.Fatalf("didn't expect ReservePlugin %v", p)
+			if _, ok := p.(wasm.ReservePlugin); tc.expectedReserve != ok {
+				t.Fatalf("didn't expected ReservePlugin %v", p)
 			}
-			if _, ok := p.(wasm.PermitPlugin); tc.expectPermit != ok {
-				t.Fatalf("didn't expect PermitPlugin %v", p)
+			if _, ok := p.(wasm.PermitPlugin); tc.expectedPermit != ok {
+				t.Fatalf("didn't expected PermitPlugin %v", p)
 			}
-			if _, ok := p.(wasm.BindPlugin); tc.expectBind != ok {
-				t.Fatalf("didn't expect BindPlugin %v", p)
+			if _, ok := p.(wasm.BindPlugin); tc.expectedBind != ok {
+				t.Fatalf("didn't expected BindPlugin %v", p)
 			}
 		})
 	}
@@ -359,33 +357,33 @@ func TestPreFilter(t *testing.T) {
 		{
 			name:               "success: pod has spec.NodeName",
 			pod:                test.PodSmall,
-			args:               []string{"prefilter", "podSpecName"},
+			args:               []string{"test", "preFilter"},
 			expectedResult:     &framework.PreFilterResult{NodeNames: sets.NewString("good-node")},
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:               "success: pod has no spec.NodeName",
-			args:               []string{"prefilter", "podSpecName"},
+			args:               []string{"test", "preFilter"},
 			pod:                &v1.Pod{ObjectMeta: test.PodSmall.ObjectMeta},
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:               "min statusCode",
-			guestPath:          test.PathTestPrefilterFromGlobal,
+			guestPath:          test.PathTestPreFilterFromGlobal,
 			pod:                test.PodSmall,
 			globals:            map[string]int32{"status_code": math.MinInt32},
 			expectedStatusCode: math.MinInt32,
 		},
 		{
 			name:               "max statusCode",
-			guestPath:          test.PathTestPrefilterFromGlobal,
+			guestPath:          test.PathTestPreFilterFromGlobal,
 			pod:                test.PodSmall,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
 			expectedStatusCode: math.MaxInt32,
 		},
 		{
 			name:               "panic",
-			guestPath:          test.PathErrorPanicOnPrefilter,
+			guestPath:          test.PathErrorPanicOnPreFilter,
 			pod:                test.PodSmall,
 			expectedStatusCode: framework.Error,
 			expectedStatusMessage: `wasm: prefilter error: panic!
@@ -440,14 +438,14 @@ func TestFilter(t *testing.T) {
 	}{
 		{
 			name:               "success: node matches spec.NodeName",
-			args:               []string{"filter", "nameEqualsPodSpec"},
+			args:               []string{"test", "filter"},
 			pod:                test.PodSmall,
 			node:               test.NodeSmall,
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:                  "unscheduled: bad-node",
-			args:                  []string{"filter", "nameEqualsPodSpec"},
+			args:                  []string{"test", "filter"},
 			pod:                   test.PodSmall,
 			node:                  st.MakeNode().Name("bad-node").Obj(),
 			expectedStatusCode:    framework.Unschedulable,
@@ -513,6 +511,104 @@ wasm stack trace:
 	}
 }
 
+func TestPreScore(t *testing.T) {
+	tests := []struct {
+		name                  string
+		guestPath             string
+		args                  []string
+		globals               map[string]int32
+		pod                   *v1.Pod
+		nodes                 []*v1.Node
+		expectedStatusCode    framework.Code
+		expectedStatusMessage string
+		expectedError         string
+	}{
+		{
+			name:               "success: no nodes",
+			pod:                test.PodSmall,
+			args:               []string{"test", "preScore"},
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:               "success: one node",
+			args:               []string{"test", "preScore"},
+			nodes:              []*v1.Node{test.NodeSmall},
+			pod:                &v1.Pod{ObjectMeta: test.PodSmall.ObjectMeta},
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:               "success: two nodes",
+			args:               []string{"test", "preScore"},
+			nodes:              []*v1.Node{test.NodeSmall, test.NodeReal},
+			pod:                &v1.Pod{ObjectMeta: test.PodSmall.ObjectMeta},
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:               "min statusCode",
+			guestPath:          test.PathTestPreScoreFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"status_code": math.MinInt32},
+			expectedStatusCode: math.MinInt32,
+		},
+		{
+			name:               "max statusCode",
+			guestPath:          test.PathTestPreScoreFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"status_code": math.MaxInt32},
+			expectedStatusCode: math.MaxInt32,
+		},
+		{
+			name:               "panic",
+			guestPath:          test.PathErrorPanicOnPreScore,
+			pod:                test.PodSmall,
+			expectedStatusCode: framework.Error,
+			expectedStatusMessage: `wasm: prescore error: panic!
+wasm error: unreachable
+wasm stack trace:
+	panic_on_prescore.$1() i32`,
+		},
+		{
+			name:               "missing score",
+			guestPath:          test.PathErrorPreScoreWithoutScore,
+			pod:                test.PodSmall,
+			expectedStatusCode: framework.Error,
+			expectedError:      `wasm: filter, score, reserve, permit or bind must be exported`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestPath := tc.guestPath
+			if guestPath == "" {
+				guestPath = test.PathTestScore
+			}
+
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
+			if tc.expectedError != "" {
+				requireError(t, err, tc.expectedError)
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			status := p.(framework.PreScorePlugin).PreScore(ctx, nil, tc.pod, tc.nodes)
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
 func TestScore(t *testing.T) {
 	tests := []struct {
 		name                  string
@@ -527,7 +623,7 @@ func TestScore(t *testing.T) {
 	}{
 		{
 			name:               "scored: nodeName equals spec.NodeName",
-			args:               []string{"score", "score100IfNameEqualsPodSpec"},
+			args:               []string{"test", "score"},
 			pod:                test.PodSmall,
 			nodeName:           test.PodSmall.Spec.NodeName,
 			expectedScore:      100,
@@ -535,7 +631,7 @@ func TestScore(t *testing.T) {
 		},
 		{
 			name:               "skipped: bad-node",
-			args:               []string{"score", "score100IfNameEqualsPodSpec"},
+			args:               []string{"test", "score"},
 			pod:                test.PodSmall,
 			nodeName:           "bad-node",
 			expectedScore:      0,
@@ -628,5 +724,15 @@ wasm stack trace:
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
 			}
 		})
+	}
+}
+
+func requireError(t *testing.T, err error, expectedError string) {
+	var have string
+	if err != nil {
+		have = err.Error()
+	}
+	if want := expectedError; want != have {
+		t.Fatalf("unexpected error: want %v, have %v", want, have)
 	}
 }
