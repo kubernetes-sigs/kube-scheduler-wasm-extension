@@ -12,11 +12,17 @@ build-tinygo: examples/nodenumber/main.wasm guest/testdata/all/main.wasm guest/t
 	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi .)
 
 # Testing the guest code means running it with TinyGo, which internally
-# compiles the unit tests to a wasm binary, then runs it in a WASI runtime.
+# compiles the unit tests to a wasm binary, then runs it with wazero.
 .PHONY: test-guest
 test-guest: guest/.tinygo-target.json
 	@(cd guest; tinygo test -v -target .tinygo-target.json ./...)
 	@(cd examples; tinygo test -v -target ../guest/.tinygo-target.json ./nodenumber/plugin/...)
+
+# Benchmarking the guest code means running it with TinyGo, which internally
+# compiles the benchmarks to a wasm binary, then runs it with wazero.
+.PHONY: bench-guest
+bench-guest: guest/.tinygo-target.json
+	@(cd internal/e2e/guest; tinygo test -gc=custom -tags=custommalloc -scheduler=none -v -count=6 -target ../../../guest/.tinygo-target.json -run='^$$' -bench '^Benchmark.*$$' .)
 
 # By default, TinyGo's wasi target uses wasmtime. but our plugin uses wazero.
 # This makes a wasi target that uses the same wazero version as the scheduler.
@@ -46,7 +52,7 @@ profile: examples/nodenumber/main-debug.wasm
 
 .PHONY: bench-example
 bench-example:
-	@(cd internal/e2e; go test -run='^$$' -bench '^BenchmarkExample.*$$' . -count=6)
+	@(cd internal/e2e/scheduler; go test -run='^$$' -bench '^BenchmarkExample.*$$' . -count=6)
 
 .PHONY: proto-tools
 proto-tools:

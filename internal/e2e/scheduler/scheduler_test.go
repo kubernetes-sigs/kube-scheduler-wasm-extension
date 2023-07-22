@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package e2e_test
+package scheduler_test
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 
 // TestGuest_CycleStateCoherence ensures cycle state data is coherent in a
 // scheduling context.
-func TestGuest_CycleStateCoherence(t *testing.T) {
+func TestCycleStateCoherence(t *testing.T) {
 	ctx := context.Background()
 
 	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestCycleState})
