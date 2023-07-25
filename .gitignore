@@ -7,3 +7,5 @@ main-debug.wasm
 # don't check in profiler data
 cpu.pprof
 mem.pprof
+
+BenchmarkPerfScheduling_*.json

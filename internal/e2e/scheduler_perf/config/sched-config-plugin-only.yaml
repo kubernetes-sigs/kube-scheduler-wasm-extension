@@ -1,0 +1,7 @@
+kind: KubeSchedulerConfiguration
+apiVersion: kubescheduler.config.k8s.io/v1
+profiles:
+  - plugins:
+      multiPoint:
+        enabled:
+          - name: NodeNumber

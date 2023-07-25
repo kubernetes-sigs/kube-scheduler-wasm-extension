@@ -1,0 +1,18 @@
+kind: KubeSchedulerConfiguration
+apiVersion: kubescheduler.config.k8s.io/v1
+profiles:
+  - plugins:
+      multiPoint:
+        enabled:
+          - name: wasm
+          - name: NodeNumber
+    pluginConfig:
+      - name: wasm
+        args:
+          guestPath: "../../../examples/nodenumber/main.wasm"
+extenders:
+  - urlPrefix: "http://localhost:8080/"
+    prioritizeVerb: "priorities"
+    weight: 1
+    enableHTTPS: false
+    nodeCacheCapable: false
