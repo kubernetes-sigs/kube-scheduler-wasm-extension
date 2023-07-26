@@ -22,7 +22,6 @@
 //   - Doesn't return an error if state has the wrong type, as it is
 //     impossible: this panics instead with the default message.
 //   - TODO: logging
-//   - TODO: config
 //
 // See https://github.com/kubernetes-sigs/kube-scheduler-simulator/blob/simulator/v0.1.0/simulator/docs/sample/nodenumber/plugin.go
 //
@@ -30,6 +29,9 @@
 package plugin
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 )
@@ -48,6 +50,21 @@ import (
 //     a numeric match gets a results in a lower score than a match.
 type NodeNumber struct {
 	reverse bool
+}
+
+// New creates a new NodeNumber plugin for the given host or returns an error.
+func New(host api.Host) (*NodeNumber, error) {
+	var args nodeNumberArgs
+	if config := host.GetConfig(); config != nil {
+		if err := json.Unmarshal(config, &args); err != nil {
+			return nil, fmt.Errorf("decode arg into NodeNumberArgs: %w", err)
+		}
+	}
+	return &NodeNumber{reverse: args.Reverse}, nil
+}
+
+type nodeNumberArgs struct {
+	Reverse bool `json:"reverse"`
 }
 
 const (

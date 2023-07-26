@@ -1,5 +1,5 @@
 ;; panic_on_prefilter is a prefilter which issues an unreachable instruction
-;; after writing and error to stdout. This simulates a panic in TinyGo.
+;; after writing an error to stdout. This simulates a panic in TinyGo.
 (module $panic_on_prefilter
   ;; Import the fd_write function from wasi, used in TinyGo for println.
   (import "wasi_snapshot_preview1" "fd_write"

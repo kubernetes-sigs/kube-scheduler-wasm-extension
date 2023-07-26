@@ -1,3 +1,5 @@
+//go:build !tinygo.wasm
+
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -14,15 +16,9 @@
    limitations under the License.
 */
 
-package wasm
+package host
 
-type PluginConfig struct {
-	// GuestPath is the path to the guest wasm.
-	GuestPath string `json:"guestPath"`
+import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
-	// GuestConfig is any configuration to give to the guest.
-	GuestConfig string `json:"guestConfig"`
-
-	// Args are the os.Args the guest will receive, exposed for tests.
-	Args []string
-}
+// getConfig is stubbed for compilation outside TinyGo.
+func getConfig(ptr uint32, limit mem.BufLimit) (len uint32) { return }

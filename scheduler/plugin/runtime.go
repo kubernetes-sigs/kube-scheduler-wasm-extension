@@ -26,7 +26,7 @@ import (
 )
 
 // prepareRuntime compiles the guest and instantiates any host modules it needs.
-func prepareRuntime(ctx context.Context, guestBin []byte) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
+func prepareRuntime(ctx context.Context, guestBin []byte, guestConfig string) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
 	// Create the runtime, which when closed releases any resources associated with it.
 	runtime = wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().
 		// Here are settings required by the wasm profiler wzprof:
@@ -63,7 +63,7 @@ func prepareRuntime(ctx context.Context, guestBin []byte) (runtime wazero.Runtim
 		}
 		fallthrough // proceed to more imports
 	case imports&importK8sScheduler != 0:
-		if _, err = instantiateHostScheduler(ctx, runtime); err != nil {
+		if _, err = instantiateHostScheduler(ctx, runtime, guestConfig); err != nil {
 			err = fmt.Errorf("wasm: error instantiating scheduler host functions: %w", err)
 			return
 		}

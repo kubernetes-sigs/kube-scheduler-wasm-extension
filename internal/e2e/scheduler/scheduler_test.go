@@ -18,6 +18,7 @@ package scheduler_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"testing"
 
@@ -52,7 +53,7 @@ func TestCycleStateCoherence(t *testing.T) {
 
 func TestExample_NodeNumber(t *testing.T) {
 	ctx := context.Background()
-	plugin := newPlugin(ctx, t)
+	plugin := newNodeNumberPlugin(ctx, t, false)
 	defer plugin.(io.Closer).Close()
 
 	pod := &v1.Pod{Spec: v1.PodSpec{NodeName: "happy8"}}
@@ -74,6 +75,17 @@ func TestExample_NodeNumber(t *testing.T) {
 			t.Fatalf("unexpected score: want %v, have %v", want, have)
 		}
 	})
+
+	t.Run("Reverse means score zero on match", func(t *testing.T) {
+		// This proves we can read configuration.
+		reversed := newNodeNumberPlugin(ctx, t, true)
+		defer reversed.(io.Closer).Close()
+
+		score := e2e.RunAll(ctx, t, reversed, pod, nodeInfoWithName("glad8"))
+		if want, have := int64(0), score; want != have {
+			t.Fatalf("unexpected score: want %v, have %v", want, have)
+		}
+	})
 }
 
 func BenchmarkExample_NodeNumber(b *testing.B) {
@@ -81,11 +93,11 @@ func BenchmarkExample_NodeNumber(b *testing.B) {
 	b.Run("New", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			newPlugin(ctx, b).(io.Closer).Close()
+			newNodeNumberPlugin(ctx, b, false).(io.Closer).Close()
 		}
 	})
 
-	plugin := newPlugin(ctx, b)
+	plugin := newNodeNumberPlugin(ctx, b, false)
 	defer plugin.(io.Closer).Close()
 
 	pod := *test.PodReal // copy
@@ -102,8 +114,11 @@ func BenchmarkExample_NodeNumber(b *testing.B) {
 	})
 }
 
-func newPlugin(ctx context.Context, t e2e.Testing) framework.Plugin {
-	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathExampleNodeNumber})
+func newNodeNumberPlugin(ctx context.Context, t e2e.Testing, reverse bool) framework.Plugin {
+	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
+		GuestPath:   test.PathExampleNodeNumber,
+		GuestConfig: fmt.Sprintf(`{"reverse": %v}`, reverse),
+	})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}

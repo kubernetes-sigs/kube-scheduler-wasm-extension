@@ -34,6 +34,7 @@ const (
 	k8sApiNodeName                  = "nodeName"
 	k8sApiPod                       = "pod"
 	k8sScheduler                    = "k8s.io/scheduler"
+	k8sSchedulerGetConfig           = "get_config"
 	k8sSchedulerResultClusterEvents = "result.cluster_events"
 	k8sSchedulerResultNodeNames     = "result.node_names"
 	k8sSchedulerResultStatusReason  = "result.status_reason"
@@ -56,8 +57,12 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 		Instantiate(ctx)
 }
 
-func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
+func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guestConfig string) (wazeroapi.Module, error) {
+	host := &host{guestConfig: guestConfig}
 	return runtime.NewHostModuleBuilder(k8sScheduler).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sSchedulerGetConfigFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sSchedulerGetConfig).
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultClusterEventsFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultClusterEvents).
@@ -152,6 +157,19 @@ func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 
 	pod := paramsFromContext(ctx).pod
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
+}
+
+type host struct {
+	guestConfig string
+}
+
+func (h host) k8sSchedulerGetConfigFn(_ context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	config := h.guestConfig
+
+	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), config, buf, bufLimit))
 }
 
 // k8sSchedulerResultClusterEventsFn is a function used by the wasm guest to set the
