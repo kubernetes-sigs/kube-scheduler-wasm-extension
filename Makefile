@@ -54,6 +54,10 @@ profile: examples/nodenumber/main-debug.wasm
 bench-example:
 	@(cd internal/e2e/scheduler; go test -run='^$$' -bench '^BenchmarkExample.*$$' . -count=6)
 
+.PHONY: scheduler-perf
+scheduler-perf:
+	@(cd internal/e2e/scheduler_perf; go test -run='^$$' -bench '^BenchmarkPerfScheduling$$' .)
+
 .PHONY: proto-tools
 proto-tools:
 	cd ./kubernetes/proto/tools; \
