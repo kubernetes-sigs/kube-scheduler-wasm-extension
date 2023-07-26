@@ -27,6 +27,7 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/nodenumber/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/host"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
@@ -34,7 +35,10 @@ import (
 // main is compiled to a WebAssembly function named "_start", called by the
 // wasm scheduler plugin during initialization.
 func main() {
-	plugin := &plugin.NodeNumber{}
+	plugin, err := plugin.New(host.Get())
+	if err != nil {
+		panic(err)
+	}
 	// Below is like `var _ api.EnqueueExtensions = plugin`, except it also
 	// wires up functions the host should provide (go:wasmimport).
 	enqueue.SetPlugin(plugin)

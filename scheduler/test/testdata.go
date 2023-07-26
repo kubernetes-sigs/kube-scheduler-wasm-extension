@@ -18,6 +18,8 @@ import (
 
 var PathErrorNotPlugin = pathWatError("not_plugin")
 
+var PathErrorPanicOnGetConfig = pathWatError("panic_on_get_config")
+
 var PathErrorPanicOnEnqueue = pathWatError("panic_on_enqueue")
 
 var PathErrorPanicOnPreFilter = pathWatError("panic_on_prefilter")

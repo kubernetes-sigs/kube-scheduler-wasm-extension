@@ -68,6 +68,27 @@ func Update(
 	return updater(readBuf)
 }
 
+func GetBytes(fn func(ptr uint32, limit BufLimit) (len uint32)) []byte {
+	size := fn(uint32(readBufPtr), readBufLimit)
+	if size == 0 {
+		return nil
+	}
+
+	buf := make([]byte, size)
+
+	// If the function result fit in our read buffer, copy it out.
+	if size <= readBufLimit {
+		copy(buf, readBuf[:size])
+		return buf
+	}
+
+	// If the size returned from the function was larger than our read buffer,
+	// we need to execute it again.
+	ptr := unsafe.Pointer(&buf[0])
+	_ = fn(uint32(uintptr(ptr)), size)
+	return buf
+}
+
 func GetString(fn func(ptr uint32, limit BufLimit) (len uint32)) string {
 	size := fn(uint32(readBufPtr), readBufLimit)
 	if size == 0 {

@@ -347,6 +347,7 @@ func TestPreFilter(t *testing.T) {
 	tests := []struct {
 		name                  string
 		guestPath             string
+		guestConfig           string
 		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
@@ -391,6 +392,26 @@ wasm error: unreachable
 wasm stack trace:
 	panic_on_prefilter.$1() i32`,
 		},
+		{
+			name:               "panic no guestConfig",
+			guestPath:          test.PathErrorPanicOnGetConfig,
+			pod:                test.PodSmall,
+			expectedStatusCode: framework.Error,
+			expectedStatusMessage: `wasm: prefilter error: wasm error: unreachable
+wasm stack trace:
+	panic_on_get_config.$2() i32`,
+		},
+		{ // This only tests that configuration gets assigned
+			name:               "panic guestConfig",
+			guestPath:          test.PathErrorPanicOnGetConfig,
+			guestConfig:        "hello",
+			pod:                test.PodSmall,
+			expectedStatusCode: framework.Error,
+			expectedStatusMessage: `wasm: prefilter error: hello
+wasm error: unreachable
+wasm stack trace:
+	panic_on_get_config.$2() i32`,
+		},
 	}
 
 	for _, tc := range tests {
@@ -400,7 +421,7 @@ wasm stack trace:
 				guestPath = test.PathTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args, GuestConfig: tc.guestConfig})
 			if err != nil {
 				t.Fatal(err)
 			}
