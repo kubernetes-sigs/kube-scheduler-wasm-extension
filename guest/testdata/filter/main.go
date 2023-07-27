@@ -71,7 +71,7 @@ type preFilterPlugin struct{ noopPlugin }
 
 func (preFilterPlugin) PreFilter(_ api.CycleState, pod proto.Pod) ([]string, *api.Status) {
 	// First, check if the pod spec node name is empty. If so, pass!
-	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
+	podSpecNodeName := pod.Spec().GetNodeName()
 	if len(podSpecNodeName) == 0 {
 		return nil, nil
 	}
@@ -83,13 +83,13 @@ type filterPlugin struct{ noopPlugin }
 
 func (filterPlugin) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) *api.Status {
 	// First, check if the pod spec node name is empty. If so, pass!
-	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
+	podSpecNodeName := pod.Spec().GetNodeName()
 	if len(podSpecNodeName) == 0 {
 		return nil
 	}
 
 	// Next, check if the node name matches the spec node. If so, pass!
-	nodeName := nilToEmpty(nodeInfo.Node().Metadata().Name)
+	nodeName := nodeInfo.Node().GetName()
 	if podSpecNodeName == nodeName {
 		return nil
 	}
@@ -99,11 +99,4 @@ func (filterPlugin) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInf
 		Code:   api.StatusCodeUnschedulable,
 		Reason: podSpecNodeName + " != " + nodeName,
 	}
-}
-
-func nilToEmpty(ptr *string) string {
-	if ptr != nil {
-		return *ptr
-	}
-	return ""
 }

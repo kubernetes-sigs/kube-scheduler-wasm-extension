@@ -20,11 +20,13 @@ package prescore
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
 // prescore is the current plugin assigned with SetPlugin.
@@ -89,27 +91,36 @@ func _prescore() uint32 {
 //
 // Note: Unlike proto.Pod, this is not special cased for the scheduling cycle.
 type nodeList struct {
-	nl *protoapi.NodeList
+	items []proto.Node
 }
 
-func (n *nodeList) Metadata() *meta.ListMeta {
-	return n.lazyNodeList().Metadata
+func (n *nodeList) Items() []proto.Node {
+	return n.lazyItems()
 }
 
-func (n *nodeList) Items() []*protoapi.Node {
-	return n.lazyNodeList().Items
-}
-
-// lazyNodeList lazy initializes node from imports.NodeList.
-func (n *nodeList) lazyNodeList() *protoapi.NodeList {
-	if nl := n.nl; nl != nil {
-		return nl
+// lazyItems lazy initializes the nodes from lodeList.
+func (n *nodeList) lazyItems() []proto.Node {
+	if items := n.items; items != nil {
+		return items
 	}
 
 	var msg protoapi.NodeList
-	if err := imports.Node(msg.UnmarshalVT); err != nil {
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	if err := mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
+		return k8sApiNodeList(ptr, limit)
+	}, msg.UnmarshalVT); err != nil {
 		panic(err.Error())
 	}
-	n.nl = &msg
-	return n.nl
+
+	size := len(msg.Items)
+	if size == 0 {
+		return nil
+	}
+
+	items := make([]proto.Node, size)
+	for i := range msg.Items {
+		items[i] = &internalproto.Node{Msg: msg.Items[i]}
+	}
+	n.items = items
+	return items
 }

@@ -36,7 +36,7 @@ replace (
 
 require (
 	github.com/google/uuid v1.3.0
-	github.com/tetratelabs/wazero v1.3.0
+	github.com/tetratelabs/wazero v1.3.1
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
 	k8s.io/component-base v0.27.3

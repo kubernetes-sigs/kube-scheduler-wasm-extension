@@ -91,7 +91,7 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
-	podnum, ok := lastNumber(pod.Spec().NodeName)
+	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
 		return nil // return success even if its suffix is non-number.
 	}
@@ -105,7 +105,7 @@ func (pl *NodeNumber) Score(state api.CycleState, _ proto.Pod, nodeName string) 
 	var match bool
 	if data, ok := state.Read(preScoreStateKey); ok {
 		// Match is when there is a last digit, and it is the pod suffix.
-		nodenum, ok := lastNumber(&nodeName)
+		nodenum, ok := lastNumber(nodeName)
 		match = ok && data.(*preScoreState).podSuffixNumber == nodenum
 	} else {
 		// Match is also when there is no pod spec node name.
@@ -122,13 +122,8 @@ func (pl *NodeNumber) Score(state api.CycleState, _ proto.Pod, nodeName string) 
 	return 0, nil
 }
 
-// lastNumber returns the last number in the string being pointed to or false.
-func lastNumber(ptr *string) (uint8, bool) {
-	// Early exit on nil or empty string.
-	if ptr == nil {
-		return 0, false
-	}
-	str := *ptr
+// lastNumber returns the last number in the string or false.
+func lastNumber(str string) (uint8, bool) {
 	if len(str) == 0 {
 		return 0, false
 	}

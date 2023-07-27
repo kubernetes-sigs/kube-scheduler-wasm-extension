@@ -78,16 +78,9 @@ func (preScorePlugin) PreScore(_ api.CycleState, _ proto.Pod, nodeList proto.Nod
 type scorePlugin struct{ noopPlugin }
 
 func (scorePlugin) Score(_ api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
-	podSpecNodeName := nilToEmpty(pod.Spec().NodeName)
+	podSpecNodeName := pod.Spec().GetNodeName()
 	if nodeName == podSpecNodeName {
 		return 100, nil
 	}
 	return 0, nil
-}
-
-func nilToEmpty(ptr *string) string {
-	if ptr != nil {
-		return *ptr
-	}
-	return ""
 }

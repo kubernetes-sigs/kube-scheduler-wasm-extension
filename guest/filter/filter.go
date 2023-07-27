@@ -24,8 +24,8 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
 // filter is the current plugin assigned with SetPlugin.
@@ -79,27 +79,15 @@ var _ api.NodeInfo = (*nodeInfo)(nil)
 //
 // Note: Unlike proto.Pod, this is not special cased for the scheduling cycle.
 type nodeInfo struct {
-	node *protoapi.Node
+	node proto.Node
 }
 
 func (n *nodeInfo) Node() proto.Node {
-	return n
-}
-
-func (n *nodeInfo) Metadata() *meta.ObjectMeta {
-	return n.lazyNode().Metadata
-}
-
-func (n *nodeInfo) Spec() *protoapi.NodeSpec {
-	return n.lazyNode().Spec
-}
-
-func (n *nodeInfo) Status() *protoapi.NodeStatus {
-	return n.lazyNode().Status
+	return n.lazyNode()
 }
 
 // lazyNode lazy initializes node from imports.Node.
-func (n *nodeInfo) lazyNode() *protoapi.Node {
+func (n *nodeInfo) lazyNode() proto.Node {
 	if node := n.node; node != nil {
 		return node
 	}
@@ -108,6 +96,6 @@ func (n *nodeInfo) lazyNode() *protoapi.Node {
 	if err := imports.Node(msg.UnmarshalVT); err != nil {
 		panic(err.Error())
 	}
-	n.node = &msg
+	n.node = &internalproto.Node{Msg: &msg}
 	return n.node
 }

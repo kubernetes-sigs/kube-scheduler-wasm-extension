@@ -1,3 +1,5 @@
+//go:build tinygo.wasm
+
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -14,34 +16,9 @@
    limitations under the License.
 */
 
-// Package proto includes any types derived from Kubernetes protobuf messages.
-package proto
+package prescore
 
-import (
-	api "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-)
+import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
-// Metadata are fields on top-level types, used for logging and metrics.
-type Metadata interface {
-	GetUid() string
-	GetName() string
-	GetNamespace() string
-}
-
-type Node interface {
-	Metadata
-
-	Spec() *api.NodeSpec
-	Status() *api.NodeStatus
-}
-
-type NodeList interface {
-	Items() []Node
-}
-
-type Pod interface {
-	Metadata
-
-	Spec() *api.PodSpec
-	Status() *api.PodStatus
-}
+//go:wasmimport k8s.io/api nodeList
+func k8sApiNodeList(ptr uint32, limit mem.BufLimit) (len uint32)
