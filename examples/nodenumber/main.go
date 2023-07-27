@@ -26,8 +26,8 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/nodenumber/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/host"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
@@ -35,7 +35,7 @@ import (
 // main is compiled to a WebAssembly function named "_start", called by the
 // wasm scheduler plugin during initialization.
 func main() {
-	plugin, err := plugin.New(host.Get())
+	plugin, err := plugin.New(config.Get())
 	if err != nil {
 		panic(err)
 	}
