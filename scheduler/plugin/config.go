@@ -17,8 +17,10 @@
 package wasm
 
 type PluginConfig struct {
-	// GuestPath is the path to the guest wasm.
-	GuestPath string `json:"guestPath"`
+	// GuestURL is the URL to the guest wasm.
+	// Valid schemes are file:// for a local file or http[s]:// for one
+	// retrieved via HTTP.
+	GuestURL string `json:"guestURL"`
 
 	// GuestConfig is any configuration to give to the guest.
 	GuestConfig string `json:"guestConfig"`

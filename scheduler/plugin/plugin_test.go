@@ -21,6 +21,11 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"path"
 	"reflect"
 	"testing"
 
@@ -40,7 +45,7 @@ var ctx = context.Background()
 
 // Test_guestPool_bindingCycles tests that the bindingCycles field is set correctly.
 func Test_guestPool_bindingCycles(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestAll})
+	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestAll})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -118,7 +123,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 // Test_guestPool_assignedToSchedulingPod tests that the scheduledPodUID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestAll})
+	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestAll})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -163,7 +168,7 @@ func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
 func TestNew_maskInterfaces(t *testing.T) {
 	tests := []struct {
 		name            string
-		guestPath       string
+		guestURL        string
 		expectedFilter  bool
 		expectedScore   bool
 		expectedReserve bool
@@ -173,27 +178,27 @@ func TestNew_maskInterfaces(t *testing.T) {
 	}{
 		{
 			name:          "not plugin",
-			guestPath:     test.PathErrorNotPlugin,
+			guestURL:      test.URLErrorNotPlugin,
 			expectedError: "wasm: guest does not export any plugin functions", // not supported to be only enqueue
 		},
 		{
 			name:           "filter",
-			guestPath:      test.PathErrorPanicOnFilter,
+			guestURL:       test.URLErrorPanicOnFilter,
 			expectedFilter: true,
 		},
 		{
 			name:          "prescore|score",
-			guestPath:     test.PathExampleNodeNumber,
+			guestURL:      test.URLExampleNodeNumber,
 			expectedScore: true,
 		},
 		{
 			name:          "score",
-			guestPath:     test.PathErrorPanicOnScore,
+			guestURL:      test.URLErrorPanicOnScore,
 			expectedScore: true,
 		},
 		{
 			name:           "prefilter|filter|prescore|score",
-			guestPath:      test.PathTestAllNoopWat,
+			guestURL:       test.URLTestAllNoopWat,
 			expectedFilter: true,
 			expectedScore:  true,
 		},
@@ -203,7 +208,7 @@ func TestNew_maskInterfaces(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p, err := wasm.New(&runtime.Unknown{
 				ContentType: runtime.ContentTypeJSON,
-				Raw:         []byte(fmt.Sprintf(`{"guestPath": "%s"}`, tc.guestPath)),
+				Raw:         []byte(fmt.Sprintf(`{"guestURL": "%s"}`, tc.guestURL)),
 			}, nil)
 			if tc.expectedError != "" {
 				requireError(t, err, tc.expectedError)
@@ -237,23 +242,24 @@ func TestNew_maskInterfaces(t *testing.T) {
 }
 
 func TestNewFromConfig(t *testing.T) {
-	tests := []struct {
+	type testcase struct {
 		name          string
-		guestPath     string
+		guestURL      string
 		expectedError string
-	}{
+	}
+	tests := []testcase{
 		{
-			name:      "valid wasm",
-			guestPath: test.PathTestFilter,
+			name:     "valid wasm",
+			guestURL: test.URLTestFilter,
 		},
 		{
 			name:          "not plugin",
-			guestPath:     test.PathErrorNotPlugin,
+			guestURL:      test.URLErrorNotPlugin,
 			expectedError: `wasm: guest does not export any plugin functions`,
 		},
 		{
-			name:      "panic on _start",
-			guestPath: test.PathErrorPanicOnStart,
+			name:     "panic on _start",
+			guestURL: test.URLErrorPanicOnStart,
 			expectedError: `failed to create a guest pool: wasm: instantiate error: panic!
 module[1] function[_start] failed: wasm error: unreachable
 wasm stack trace:
@@ -261,9 +267,9 @@ wasm stack trace:
 		},
 	}
 
-	for _, tc := range tests {
+	testWithURL := func(t *testing.T, tc testcase) {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: tc.guestPath})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: tc.guestURL})
 			if err != nil {
 				if want, have := tc.expectedError, err.Error(); want != have {
 					t.Fatalf("unexpected error: want %v, have %v", want, have)
@@ -276,14 +282,36 @@ wasm stack trace:
 			}
 		})
 	}
+
+	t.Run("local", func(t *testing.T) {
+		for _, tc := range tests {
+			testWithURL(t, tc)
+		}
+	})
+
+	t.Run("remote (http)", func(t *testing.T) {
+		for _, tc := range tests {
+			uri, _ := url.ParseRequestURI(tc.guestURL)
+			bytes, _ := os.ReadFile(uri.Path)
+			_, file := path.Split(uri.Path)
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/"+file {
+					_, _ = w.Write(bytes)
+				}
+			}))
+			defer ts.Close()
+			tc.guestURL = ts.URL + "/" + file
+			testWithURL(t, tc)
+		}
+	})
 }
 
 func TestEnqueue(t *testing.T) {
 	tests := []struct {
-		name      string
-		guestPath string
-		args      []string
-		expected  []framework.ClusterEvent
+		name     string
+		guestURL string
+		args     []string
+		expected []framework.ClusterEvent
 	}{
 		{
 			name:     "success: 0",
@@ -308,12 +336,12 @@ func TestEnqueue(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			guestPath := tc.guestPath
-			if guestPath == "" {
-				guestPath = test.PathTestCycleState
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestCycleState
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -327,9 +355,9 @@ func TestEnqueue(t *testing.T) {
 	}
 
 	t.Run("panic", func(t *testing.T) {
-		guestPath := test.PathErrorPanicOnEnqueue
+		guestURL := test.URLErrorPanicOnEnqueue
 
-		p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
+		p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -346,7 +374,7 @@ func TestEnqueue(t *testing.T) {
 func TestPreFilter(t *testing.T) {
 	tests := []struct {
 		name                  string
-		guestPath             string
+		guestURL              string
 		guestConfig           string
 		args                  []string
 		globals               map[string]int32
@@ -370,21 +398,21 @@ func TestPreFilter(t *testing.T) {
 		},
 		{
 			name:               "min statusCode",
-			guestPath:          test.PathTestPreFilterFromGlobal,
+			guestURL:           test.URLTestPreFilterFromGlobal,
 			pod:                test.PodSmall,
 			globals:            map[string]int32{"status_code": math.MinInt32},
 			expectedStatusCode: math.MinInt32,
 		},
 		{
 			name:               "max statusCode",
-			guestPath:          test.PathTestPreFilterFromGlobal,
+			guestURL:           test.URLTestPreFilterFromGlobal,
 			pod:                test.PodSmall,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
 			expectedStatusCode: math.MaxInt32,
 		},
 		{
 			name:               "panic",
-			guestPath:          test.PathErrorPanicOnPreFilter,
+			guestURL:           test.URLErrorPanicOnPreFilter,
 			pod:                test.PodSmall,
 			expectedStatusCode: framework.Error,
 			expectedStatusMessage: `wasm: prefilter error: panic!
@@ -394,7 +422,7 @@ wasm stack trace:
 		},
 		{
 			name:               "panic no guestConfig",
-			guestPath:          test.PathErrorPanicOnGetConfig,
+			guestURL:           test.URLErrorPanicOnGetConfig,
 			pod:                test.PodSmall,
 			expectedStatusCode: framework.Error,
 			expectedStatusMessage: `wasm: prefilter error: wasm error: unreachable
@@ -403,7 +431,7 @@ wasm stack trace:
 		},
 		{ // This only tests that configuration gets assigned
 			name:               "panic guestConfig",
-			guestPath:          test.PathErrorPanicOnGetConfig,
+			guestURL:           test.URLErrorPanicOnGetConfig,
 			guestConfig:        "hello",
 			pod:                test.PodSmall,
 			expectedStatusCode: framework.Error,
@@ -416,12 +444,12 @@ wasm stack trace:
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			guestPath := tc.guestPath
-			if guestPath == "" {
-				guestPath = test.PathTestFilter
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args, GuestConfig: tc.guestConfig})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args, GuestConfig: tc.guestConfig})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -449,7 +477,7 @@ wasm stack trace:
 func TestFilter(t *testing.T) {
 	tests := []struct {
 		name                  string
-		guestPath             string
+		guestURL              string
 		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
@@ -474,7 +502,7 @@ func TestFilter(t *testing.T) {
 		},
 		{
 			name:               "min statusCode",
-			guestPath:          test.PathTestFilterFromGlobal,
+			guestURL:           test.URLTestFilterFromGlobal,
 			pod:                test.PodSmall,
 			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MinInt32},
@@ -482,7 +510,7 @@ func TestFilter(t *testing.T) {
 		},
 		{
 			name:               "max statusCode",
-			guestPath:          test.PathTestFilterFromGlobal,
+			guestURL:           test.URLTestFilterFromGlobal,
 			pod:                test.PodSmall,
 			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
@@ -490,7 +518,7 @@ func TestFilter(t *testing.T) {
 		},
 		{
 			name:               "panic",
-			guestPath:          test.PathErrorPanicOnFilter,
+			guestURL:           test.URLErrorPanicOnFilter,
 			pod:                test.PodSmall,
 			node:               test.NodeSmall,
 			expectedStatusCode: framework.Error,
@@ -503,12 +531,12 @@ wasm stack trace:
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			guestPath := tc.guestPath
-			if guestPath == "" {
-				guestPath = test.PathTestFilter
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -535,7 +563,7 @@ wasm stack trace:
 func TestPreScore(t *testing.T) {
 	tests := []struct {
 		name                  string
-		guestPath             string
+		guestURL              string
 		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
@@ -566,21 +594,21 @@ func TestPreScore(t *testing.T) {
 		},
 		{
 			name:               "min statusCode",
-			guestPath:          test.PathTestPreScoreFromGlobal,
+			guestURL:           test.URLTestPreScoreFromGlobal,
 			pod:                test.PodSmall,
 			globals:            map[string]int32{"status_code": math.MinInt32},
 			expectedStatusCode: math.MinInt32,
 		},
 		{
 			name:               "max statusCode",
-			guestPath:          test.PathTestPreScoreFromGlobal,
+			guestURL:           test.URLTestPreScoreFromGlobal,
 			pod:                test.PodSmall,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
 			expectedStatusCode: math.MaxInt32,
 		},
 		{
 			name:               "panic",
-			guestPath:          test.PathErrorPanicOnPreScore,
+			guestURL:           test.URLErrorPanicOnPreScore,
 			pod:                test.PodSmall,
 			expectedStatusCode: framework.Error,
 			expectedStatusMessage: `wasm: prescore error: panic!
@@ -590,7 +618,7 @@ wasm stack trace:
 		},
 		{
 			name:               "missing score",
-			guestPath:          test.PathErrorPreScoreWithoutScore,
+			guestURL:           test.URLErrorPreScoreWithoutScore,
 			pod:                test.PodSmall,
 			expectedStatusCode: framework.Error,
 			expectedError:      `wasm: filter, score, reserve, permit or bind must be exported`,
@@ -599,12 +627,12 @@ wasm stack trace:
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			guestPath := tc.guestPath
-			if guestPath == "" {
-				guestPath = test.PathTestScore
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestScore
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
 			if tc.expectedError != "" {
 				requireError(t, err, tc.expectedError)
 				return
@@ -633,7 +661,7 @@ wasm stack trace:
 func TestScore(t *testing.T) {
 	tests := []struct {
 		name                  string
-		guestPath             string
+		guestURL              string
 		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
@@ -660,7 +688,7 @@ func TestScore(t *testing.T) {
 		},
 		{
 			name:               "most negative score",
-			guestPath:          test.PathTestScoreFromGlobal,
+			guestURL:           test.URLTestScoreFromGlobal,
 			pod:                test.PodSmall,
 			nodeName:           test.NodeSmall.Name,
 			globals:            map[string]int32{"score": math.MinInt32},
@@ -669,7 +697,7 @@ func TestScore(t *testing.T) {
 		},
 		{
 			name:               "min score",
-			guestPath:          test.PathTestScoreFromGlobal,
+			guestURL:           test.URLTestScoreFromGlobal,
 			pod:                test.PodSmall,
 			nodeName:           test.NodeSmall.Name,
 			globals:            map[string]int32{"score": math.MinInt32},
@@ -678,7 +706,7 @@ func TestScore(t *testing.T) {
 		},
 		{
 			name:               "max score",
-			guestPath:          test.PathTestScoreFromGlobal,
+			guestURL:           test.URLTestScoreFromGlobal,
 			pod:                test.PodSmall,
 			nodeName:           test.NodeSmall.Name,
 			globals:            map[string]int32{"score": math.MaxInt32},
@@ -687,7 +715,7 @@ func TestScore(t *testing.T) {
 		},
 		{
 			name:               "min statusCode",
-			guestPath:          test.PathTestScoreFromGlobal,
+			guestURL:           test.URLTestScoreFromGlobal,
 			pod:                test.PodSmall,
 			nodeName:           test.NodeSmall.Name,
 			globals:            map[string]int32{"status_code": math.MinInt32},
@@ -696,7 +724,7 @@ func TestScore(t *testing.T) {
 		},
 		{
 			name:               "max statusCode",
-			guestPath:          test.PathTestScoreFromGlobal,
+			guestURL:           test.URLTestScoreFromGlobal,
 			pod:                test.PodSmall,
 			nodeName:           test.NodeSmall.Name,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
@@ -705,7 +733,7 @@ func TestScore(t *testing.T) {
 		},
 		{
 			name:               "panic",
-			guestPath:          test.PathErrorPanicOnScore,
+			guestURL:           test.URLErrorPanicOnScore,
 			pod:                test.PodSmall,
 			nodeName:           test.NodeSmall.Name,
 			expectedStatusCode: framework.Error,
@@ -718,12 +746,12 @@ wasm stack trace:
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			guestPath := tc.guestPath
-			if guestPath == "" {
-				guestPath = test.PathTestScore
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestScore
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}

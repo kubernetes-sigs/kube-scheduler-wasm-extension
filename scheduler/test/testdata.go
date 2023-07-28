@@ -16,43 +16,43 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 )
 
-var PathErrorNotPlugin = pathWatError("not_plugin")
+var URLErrorNotPlugin = localURL(pathWatError("not_plugin"))
 
-var PathErrorPanicOnGetConfig = pathWatError("panic_on_get_config")
+var URLErrorPanicOnGetConfig = localURL(pathWatError("panic_on_get_config"))
 
-var PathErrorPanicOnEnqueue = pathWatError("panic_on_enqueue")
+var URLErrorPanicOnEnqueue = localURL(pathWatError("panic_on_enqueue"))
 
-var PathErrorPanicOnPreFilter = pathWatError("panic_on_prefilter")
+var URLErrorPanicOnPreFilter = localURL(pathWatError("panic_on_prefilter"))
 
-var PathErrorPanicOnFilter = pathWatError("panic_on_filter")
+var URLErrorPanicOnFilter = localURL(pathWatError("panic_on_filter"))
 
-var PathErrorPanicOnPreScore = pathWatError("panic_on_prescore")
+var URLErrorPanicOnPreScore = localURL(pathWatError("panic_on_prescore"))
 
-var PathErrorPreScoreWithoutScore = pathWatError("prescore_without_score")
+var URLErrorPreScoreWithoutScore = localURL(pathWatError("prescore_without_score"))
 
-var PathErrorPanicOnScore = pathWatError("panic_on_score")
+var URLErrorPanicOnScore = localURL(pathWatError("panic_on_score"))
 
-var PathErrorPanicOnStart = pathWatError("panic_on_start")
+var URLErrorPanicOnStart = localURL(pathWatError("panic_on_start"))
 
-var PathExampleNodeNumber = pathTinyGoExample("nodenumber")
+var URLExampleNodeNumber = localURL(pathTinyGoExample("nodenumber"))
 
-var PathTestAll = pathTinyGoTest("all")
+var URLTestAll = localURL(pathTinyGoTest("all"))
 
-var PathTestAllNoopWat = pathWatTest("all_noop")
+var URLTestAllNoopWat = localURL(pathWatTest("all_noop"))
 
-var PathTestCycleState = pathTinyGoTest("cyclestate")
+var URLTestCycleState = localURL(pathTinyGoTest("cyclestate"))
 
-var PathTestPreFilterFromGlobal = pathWatTest("prefilter_from_global")
+var URLTestPreFilterFromGlobal = localURL(pathWatTest("prefilter_from_global"))
 
-var PathTestFilter = pathTinyGoTest("filter")
+var URLTestFilter = localURL(pathTinyGoTest("filter"))
 
-var PathTestFilterFromGlobal = pathWatTest("filter_from_global")
+var URLTestFilterFromGlobal = localURL(pathWatTest("filter_from_global"))
 
-var PathTestPreScoreFromGlobal = pathWatTest("prescore_from_global")
+var URLTestPreScoreFromGlobal = localURL(pathWatTest("prescore_from_global"))
 
-var PathTestScore = pathTinyGoTest("score")
+var URLTestScore = localURL(pathTinyGoTest("score"))
 
-var PathTestScoreFromGlobal = pathWatTest("score_from_global")
+var URLTestScoreFromGlobal = localURL(pathWatTest("score_from_global"))
 
 //go:embed testdata/yaml/node.yaml
 var yamlNodeReal string
@@ -64,7 +64,7 @@ var NodeReal = func() *v1.Node {
 	return &node
 }()
 
-// NodeSmall is the smallest node that works with PathExampleFilterSimple.
+// NodeSmall is the smallest node that works with URLExampleFilterSimple.
 var NodeSmall = &v1.Node{ObjectMeta: apimeta.ObjectMeta{Name: "good-node"}}
 
 //go:embed testdata/yaml/pod.yaml
@@ -77,7 +77,7 @@ var PodReal = func() *v1.Pod {
 	return &pod
 }()
 
-// PodSmall is the smallest pod that works with PathExampleFilterSimple.
+// PodSmall is the smallest pod that works with URLExampleFilterSimple.
 var PodSmall = &v1.Pod{
 	ObjectMeta: apimeta.ObjectMeta{
 		Name:      "good-pod",
@@ -102,28 +102,33 @@ func decodeYaml[O apiruntime.Object](yaml string, object O) {
 	}
 }
 
+// localURL prefixes file:// to a given path.
+func localURL(path string) string {
+	return "file://" + path
+}
+
 // pathTinyGoExample gets the absolute path to a given TinyGo example.
 func pathTinyGoExample(name string) string {
-	return relativePath(path.Join("..", "..", "examples", name, "main.wasm"))
+	return relativeURL(path.Join("..", "..", "examples", name, "main.wasm"))
 }
 
 // pathTinyGoTest gets the absolute path to a given TinyGo test.
 func pathTinyGoTest(name string) string {
-	return relativePath(path.Join("..", "..", "guest", "testdata", name, "main.wasm"))
+	return relativeURL(path.Join("..", "..", "guest", "testdata", name, "main.wasm"))
 }
 
 // pathWatError gets the absolute path wasm compiled from a %.wat source.
 func pathWatError(name string) string {
-	return relativePath(path.Join("testdata", "error", name+".wasm"))
+	return relativeURL(path.Join("testdata", "error", name+".wasm"))
 }
 
 // pathWatTest gets the absolute path wasm compiled from a %.wat source.
 func pathWatTest(name string) string {
-	return relativePath(path.Join("testdata", "test", name+".wasm"))
+	return relativeURL(path.Join("testdata", "test", name+".wasm"))
 }
 
-// relativePath gets the absolute from this file.
-func relativePath(fromThisFile string) string {
+// relativeURL gets the absolute from this file.
+func relativeURL(fromThisFile string) string {
 	_, thisFile, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("cannot determine current path")

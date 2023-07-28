@@ -35,7 +35,7 @@ import (
 func TestCycleStateCoherence(t *testing.T) {
 	ctx := context.Background()
 
-	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: test.PathTestCycleState})
+	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestCycleState})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -116,7 +116,7 @@ func BenchmarkExample_NodeNumber(b *testing.B) {
 
 func newNodeNumberPlugin(ctx context.Context, t e2e.Testing, reverse bool) framework.Plugin {
 	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
-		GuestPath:   test.PathExampleNodeNumber,
+		GuestURL:    test.URLExampleNodeNumber,
 		GuestConfig: fmt.Sprintf(`{"reverse": %v}`, reverse),
 	})
 	if err != nil {
