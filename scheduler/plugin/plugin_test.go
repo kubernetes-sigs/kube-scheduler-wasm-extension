@@ -45,7 +45,7 @@ var ctx = context.Background()
 
 // Test_guestPool_bindingCycles tests that the bindingCycles field is set correctly.
 func Test_guestPool_bindingCycles(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestAll})
+	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestCycleState})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -123,7 +123,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 // Test_guestPool_assignedToSchedulingPod tests that the scheduledPodUID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestAll})
+	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestCycleState})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}

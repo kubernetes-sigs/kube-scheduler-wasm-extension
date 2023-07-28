@@ -17,9 +17,7 @@
 // Package proto includes any types derived from Kubernetes protobuf messages.
 package proto
 
-import (
-	api "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-)
+import api "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 
 // Metadata are fields on top-level types, used for logging and metrics.
 type Metadata interface {

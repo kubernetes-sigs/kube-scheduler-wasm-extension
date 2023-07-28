@@ -22,6 +22,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
@@ -33,6 +34,10 @@ const (
 	k8sApiNodeList                  = "nodeList"
 	k8sApiNodeName                  = "nodeName"
 	k8sApiPod                       = "pod"
+	k8sKlog                         = "k8s.io/klog"
+	k8sKlogLog                      = "log"
+	k8sKlogLogs                     = "logs"
+	k8sKlogSeverity                 = "severity"
 	k8sScheduler                    = "k8s.io/scheduler"
 	k8sSchedulerGetConfig           = "get_config"
 	k8sSchedulerResultClusterEvents = "result.cluster_events"
@@ -54,6 +59,21 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiPod).
+		Instantiate(ctx)
+}
+
+func instantiateHostKlog(ctx context.Context, runtime wazero.Runtime, logSeverity int32) (wazeroapi.Module, error) {
+	host := &host{logSeverity: logSeverity}
+	return runtime.NewHostModuleBuilder(k8sKlog).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sKlogLogFn), []wazeroapi.ValueType{i32, i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("severity", "msg", "msg_len").Export(k8sKlogLog).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sKlogLogsFn), []wazeroapi.ValueType{i32, i32, i32, i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("severity", "msg", "msg_len", "kvs", "kvs_len").Export(k8sKlogLogs).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sKlogSeverityFn), []wazeroapi.ValueType{}, []wazeroapi.ValueType{i32}).
+		WithResultNames("severity").Export(k8sKlogSeverity).
 		Instantiate(ctx)
 }
 
@@ -161,6 +181,7 @@ func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 
 type host struct {
 	guestConfig string
+	logSeverity int32
 }
 
 func (h host) k8sSchedulerGetConfigFn(_ context.Context, mod wazeroapi.Module, stack []uint64) {
@@ -172,14 +193,94 @@ func (h host) k8sSchedulerGetConfigFn(_ context.Context, mod wazeroapi.Module, s
 	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), config, buf, bufLimit))
 }
 
+const (
+	severityInfo int32 = iota
+	severityWarning
+	severityError
+	severityFatal
+)
+
+// k8sKlogLogFn is a function used by the wasm guest to access klog.Info and
+// klog.Error.
+func (h host) k8sKlogLogFn(_ context.Context, mod wazeroapi.Module, stack []uint64) {
+	severity := int32(stack[0])
+	msg := uint32(stack[1])
+	msgLen := uint32(stack[2])
+
+	if severity > h.logSeverity {
+		return
+	}
+
+	if b, ok := mod.Memory().Read(msg, msgLen); !ok {
+		// don't panic if we can't read the message.
+	} else {
+		switch severity {
+		case severityInfo:
+			klog.Info(string(b))
+		case severityError:
+			klog.Error(string(b))
+		}
+	}
+}
+
+// k8sKlogLogsFn is a function used by the wasm guest to access klog.InfoS and
+// klog.ErrorS.
+func (h host) k8sKlogLogsFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	severity := int32(stack[0])
+	msg := uint32(stack[1])
+	msgLen := uint32(stack[2])
+	kvs := uint32(stack[3])
+	kvsLen := uint32(stack[4])
+
+	// no key-values is unlikely, but possible
+	if kvsLen == 0 {
+		h.k8sKlogLogFn(ctx, mod, stack)
+		return
+	}
+
+	if severity < h.logSeverity {
+		return
+	}
+
+	var msgS string
+	if b, ok := mod.Memory().Read(msg, msgLen); !ok {
+		return // don't panic if we can't read the message.
+	} else {
+		msgS = string(b)
+	}
+
+	var kvsS []any
+	if b, ok := mod.Memory().Read(kvs, kvsLen); !ok {
+		return // don't panic if we can't read the kvs.
+	} else if strings := fromNULTerminated(b); len(strings) > 0 {
+		kvsS = make([]any, len(strings))
+		for i := range strings {
+			kvsS[i] = strings[i]
+		}
+	}
+
+	switch severity {
+	case severityInfo:
+		klog.InfoS(msgS, kvsS...)
+	case severityError:
+		klog.ErrorS(nil, msgS, kvsS...)
+	}
+}
+
+// k8sKlogSeverityFn is a function used by the wasm guest to obviate log
+// overhead when a message won't be written.
+func (h host) k8sKlogSeverityFn(_ context.Context, _ wazeroapi.Module, stack []uint64) {
+	stack[0] = uint64(h.logSeverity)
+}
+
 // k8sSchedulerResultClusterEventsFn is a function used by the wasm guest to set the
 // cluster events result from guestExportEnqueue.
 func k8sSchedulerResultClusterEventsFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
-	ptr := uint32(stack[0])
-	size := uint32(stack[1])
+	buf := uint32(stack[0])
+	bufLen := uint32(stack[1])
 
 	var clusterEvents []framework.ClusterEvent
-	if b, ok := mod.Memory().Read(ptr, size); !ok {
+	if b, ok := mod.Memory().Read(buf, bufLen); !ok {
 		panic("out of memory reading clusterEvents")
 	} else {
 		clusterEvents = decodeClusterEvents(b)
@@ -190,11 +291,11 @@ func k8sSchedulerResultClusterEventsFn(ctx context.Context, mod wazeroapi.Module
 // k8sSchedulerResultNodeNamesFn is a function used by the wasm guest to set the
 // node names result from guestExportPreFilter.
 func k8sSchedulerResultNodeNamesFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
-	ptr := uint32(stack[0])
-	size := uint32(stack[1])
+	buf := uint32(stack[0])
+	bufLen := uint32(stack[1])
 
 	var nodeNames []string
-	if b, ok := mod.Memory().Read(ptr, size); !ok {
+	if b, ok := mod.Memory().Read(buf, bufLen); !ok {
 		panic("out of memory reading nodeNames")
 	} else {
 		nodeNames = fromNULTerminated(b)
@@ -205,11 +306,11 @@ func k8sSchedulerResultNodeNamesFn(ctx context.Context, mod wazeroapi.Module, st
 // k8sSchedulerResultStatusReasonFn is a function used by the wasm guest to set the
 // framework.Status reason result from all functions.
 func k8sSchedulerResultStatusReasonFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
-	ptr := uint32(stack[0])
-	size := uint32(stack[1])
+	buf := uint32(stack[0])
+	bufLen := uint32(stack[1])
 
 	var reason string
-	if b, ok := mod.Memory().Read(ptr, size); !ok {
+	if b, ok := mod.Memory().Read(buf, bufLen); !ok {
 		// don't panic if we can't read the message.
 		reason = "BUG: out of memory reading message"
 	} else {

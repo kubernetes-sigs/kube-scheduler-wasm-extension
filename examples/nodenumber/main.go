@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"
 )
 
@@ -36,6 +37,7 @@ func main() {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
 			panic(fmt.Errorf("decode arg into NodeNumberArgs: %w", err))
 		}
+		klog.Info("NodeNumberArgs is successfully applied")
 	}
 	plugin.Set(&NodeNumber{reverse: args.Reverse})
 }
@@ -80,6 +82,8 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+	klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
+
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
 		return nil // return success even if its suffix is non-number.
@@ -90,7 +94,9 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.Node
 }
 
 // Score implements api.ScorePlugin
-func (pl *NodeNumber) Score(state api.CycleState, _ proto.Pod, nodeName string) (int32, *api.Status) {
+func (pl *NodeNumber) Score(state api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
+	klog.InfoS("execute Score on NodeNumber plugin", "pod", klog.KObj(pod))
+
 	var match bool
 	if data, ok := state.Read(preScoreStateKey); ok {
 		// Match is when there is a last digit, and it is the pod suffix.

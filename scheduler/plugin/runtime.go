@@ -26,7 +26,7 @@ import (
 )
 
 // prepareRuntime compiles the guest and instantiates any host modules it needs.
-func prepareRuntime(ctx context.Context, guestBin []byte, guestConfig string) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
+func prepareRuntime(ctx context.Context, guestBin []byte, logSeverity int32, guestConfig string) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
 	// Create the runtime, which when closed releases any resources associated with it.
 	runtime = wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().
 		// Here are settings required by the wasm profiler wzprof:
@@ -61,6 +61,12 @@ func prepareRuntime(ctx context.Context, guestBin []byte, guestConfig string) (r
 			return
 		}
 	}
+	if imports&importK8sKlog != 0 {
+		if _, err = instantiateHostKlog(ctx, runtime, logSeverity); err != nil {
+			err = fmt.Errorf("wasm: error instantiating klog functions: %w", err)
+			return
+		}
+	}
 	if imports&importK8sScheduler != 0 {
 		if _, err = instantiateHostScheduler(ctx, runtime, guestConfig); err != nil {
 			err = fmt.Errorf("wasm: error instantiating scheduler host functions: %w", err)
@@ -75,6 +81,7 @@ type imports uint
 const (
 	importWasiP1 imports = 1 << iota
 	importK8sApi
+	importK8sKlog
 	importK8sScheduler
 )
 
@@ -85,6 +92,8 @@ func detectImports(importedFns []api.FunctionDefinition) imports {
 		switch moduleName {
 		case k8sApi:
 			imports |= importK8sApi
+		case k8sKlog:
+			imports |= importK8sKlog
 		case k8sScheduler:
 			imports |= importK8sScheduler
 		case wasi_snapshot_preview1.ModuleName:

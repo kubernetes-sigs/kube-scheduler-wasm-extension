@@ -60,7 +60,7 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, 
 		return nil, fmt.Errorf("wasm: error reading guestURL %s: %w", url, err)
 	}
 
-	runtime, guestModule, err := prepareRuntime(ctx, guestBin, config.GuestConfig)
+	runtime, guestModule, err := prepareRuntime(ctx, guestBin, config.LogSeverity, config.GuestConfig)
 	if err != nil {
 		return nil, err
 	}

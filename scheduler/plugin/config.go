@@ -25,6 +25,14 @@ type PluginConfig struct {
 	// GuestConfig is any configuration to give to the guest.
 	GuestConfig string `json:"guestConfig"`
 
+	// LogSeverity has the following values:
+	//
+	//   - 0: info (default)
+	//   - 1: warning
+	//   - 2: error
+	//   - 3: fatal
+	LogSeverity int32 `json:"logSeverity"`
+
 	// Args are the os.Args the guest will receive, exposed for tests.
 	Args []string
 }

@@ -19,10 +19,13 @@ package guest_test
 // Override the default GC with a more performant one.
 // Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
+	"fmt"
 	"testing"
 
 	_ "github.com/wasilibs/nottinygc"
 
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
@@ -38,6 +41,72 @@ var podSmall = &protoapi.Pod{
 	Spec: &protoapi.PodSpec{NodeName: nodeSmall.Metadata.Name},
 }
 
+var _ proto.Metadata = &testMetadata{}
+
+type testMetadata struct {
+	Name, Namespace, UID string
+}
+
+func (t *testMetadata) GetName() string {
+	return t.Name
+}
+
+func (t *testMetadata) GetNamespace() string {
+	return t.Namespace
+}
+
+func (t *testMetadata) GetUid() string {
+	return t.UID
+}
+
+type stringerFunc func() string
+
+func (s stringerFunc) String() string {
+	return s()
+}
+
+// BenchmarkKlog shows that slice functions like api.KObjSlice are more optimal
+// than doing concatenation manually.
+func BenchmarkKlog(b *testing.B) {
+	pod := &testMetadata{
+		Name:      "good-pod",
+		Namespace: "test",
+		UID:       "384900cd-dc7b-41ec-837e-9c4c1762363e",
+	}
+
+	benches := []struct {
+		name  string
+		input fmt.Stringer
+	}{
+		{
+			name: "KObj",
+			input: stringerFunc(func() string {
+				return fmt.Sprint("[", klogapi.KObj(pod), klogapi.KObj(pod), "]")
+			}),
+		},
+		{
+			name:  "KObjSlice",
+			input: klogapi.KObjSlice([]proto.Metadata{pod, pod}),
+		},
+		{
+			name: "KObjSliceFn",
+			input: klogapi.KObjSliceFn(func() []proto.Metadata {
+				return []proto.Metadata{pod, pod}
+			}),
+		},
+	}
+
+	for _, bc := range benches {
+		b.Run(bc.name, func(b *testing.B) {
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				_ = bc.input.String()
+			}
+		})
+	}
+}
+
 func BenchmarkUnmarshalVT(b *testing.B) {
 	unmarshalNode := func(data []byte) error {
 		var msg protoapi.Node
@@ -51,7 +120,7 @@ func BenchmarkUnmarshalVT(b *testing.B) {
 
 	// TODO: Find a way to convert yaml to proto in a way that compiles in
 	// TinyGo, so that we can use real data. Or check in the serialized protos.
-	tests := []struct {
+	benches := []struct {
 		name      string
 		input     []byte
 		unmarshal func(data []byte) error
@@ -68,12 +137,12 @@ func BenchmarkUnmarshalVT(b *testing.B) {
 		},
 	}
 
-	for _, tc := range tests {
-		b.Run(tc.name, func(b *testing.B) {
+	for _, bc := range benches {
+		b.Run(bc.name, func(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				if err := tc.unmarshal(tc.input); err != nil {
+				if err := bc.unmarshal(bc.input); err != nil {
 					b.Fatal(err)
 				}
 			}
