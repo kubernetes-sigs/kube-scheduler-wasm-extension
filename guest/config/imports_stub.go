@@ -16,7 +16,7 @@
    limitations under the License.
 */
 
-package host
+package config
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 

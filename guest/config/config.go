@@ -14,44 +14,29 @@
    limitations under the License.
 */
 
-// Package host imports an api.Host from the WebAssembly host.
-package host
+// Package config allows reading configuration from the WebAssembly host.
+package config
 
 import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config/internal"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 )
 
-// Get can be called at any time, to use features exported by the host.
+// Get can be called at any time, to read configuration set by the host.
 //
 // For example:
 //
 //	func main() {
-//		config := host.Get().GetConfig()
+//		config := config.Get()
 //		// decode yaml
 //	}
-func Get() api.Host {
-	return currentHost
+func Get() []byte {
+	return internal.Get(readConfig)
 }
 
-var currentHost api.Host = &host{}
-
-type host struct {
-	config []byte
-}
-
-func (n *host) GetConfig() []byte {
-	return n.lazyConfig()
-}
-
-func (n *host) lazyConfig() []byte {
-	if config := n.config; config != nil {
-		return config
-	}
-
+func readConfig() string {
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
-	n.config = mem.GetBytes(func(ptr uint32, limit mem.BufLimit) (len uint32) {
+	return mem.GetString(func(ptr uint32, limit mem.BufLimit) (len uint32) {
 		return getConfig(ptr, limit)
 	})
-	return n.config
 }

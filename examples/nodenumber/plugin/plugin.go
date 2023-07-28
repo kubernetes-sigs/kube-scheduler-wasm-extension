@@ -52,11 +52,15 @@ type NodeNumber struct {
 	reverse bool
 }
 
-// New creates a new NodeNumber plugin for the given host or returns an error.
-func New(host api.Host) (*NodeNumber, error) {
+// New creates a new NodeNumber plugin with the given jsonConfig or returns an
+// error.
+//
+// Note: This accepts config instead of implicitly calling config.Get for
+// testing.
+func New(jsonConfig []byte) (*NodeNumber, error) {
 	var args nodeNumberArgs
-	if config := host.GetConfig(); config != nil {
-		if err := json.Unmarshal(config, &args); err != nil {
+	if jsonConfig != nil {
+		if err := json.Unmarshal(jsonConfig, &args); err != nil {
 			return nil, fmt.Errorf("decode arg into NodeNumberArgs: %w", err)
 		}
 	}
