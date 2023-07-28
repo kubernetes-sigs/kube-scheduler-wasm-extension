@@ -4,8 +4,8 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
+	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
 // Pod is exposed for the cyclestate package.
@@ -33,8 +33,16 @@ func (cycleState) Delete(key string) {
 
 type pod struct{}
 
-func (pod) Metadata() *meta.ObjectMeta {
-	return lazyPod().Metadata
+func (pod) GetName() string {
+	return internalproto.GetName(lazyPod())
+}
+
+func (pod) GetNamespace() string {
+	return internalproto.GetNamespace(lazyPod())
+}
+
+func (pod) GetUid() string {
+	return internalproto.GetUid(lazyPod())
 }
 
 func (pod) Spec() *protoapi.PodSpec {

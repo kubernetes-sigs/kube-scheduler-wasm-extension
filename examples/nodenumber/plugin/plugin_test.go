@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
-	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
 func Test_NodeNumber(t *testing.T) {
@@ -36,11 +35,11 @@ func Test_NodeNumber(t *testing.T) {
 		{name: "empty,empty", pod: &testPod{}, nodeName: "", expectedMatch: true},
 		{name: "empty,letter", pod: &testPod{}, nodeName: "a", expectedMatch: true},
 		{name: "empty,digit", pod: &testPod{}, nodeName: "1", expectedMatch: true},
-		{name: "letter,letter", pod: &testPod{nodeName: stringPtr("a")}, nodeName: "a", expectedMatch: true},
-		{name: "letter,digit", pod: &testPod{nodeName: stringPtr("a")}, nodeName: "1", expectedMatch: true},
-		{name: "digit,letter", pod: &testPod{nodeName: stringPtr("1")}, nodeName: "a", expectedMatch: false},
-		{name: "digit,digit", pod: &testPod{nodeName: stringPtr("1")}, nodeName: "1", expectedMatch: true},
-		{name: "digit,different digit", pod: &testPod{nodeName: stringPtr("1")}, nodeName: "2", expectedMatch: false},
+		{name: "letter,letter", pod: &testPod{nodeName: "a"}, nodeName: "a", expectedMatch: true},
+		{name: "letter,digit", pod: &testPod{nodeName: "a"}, nodeName: "1", expectedMatch: true},
+		{name: "digit,letter", pod: &testPod{nodeName: "1"}, nodeName: "a", expectedMatch: false},
+		{name: "digit,digit", pod: &testPod{nodeName: "1"}, nodeName: "1", expectedMatch: true},
+		{name: "digit,different digit", pod: &testPod{nodeName: "1"}, nodeName: "2", expectedMatch: false},
 	}
 
 	for _, reverse := range []bool{false, true} {
@@ -82,18 +81,17 @@ func Test_NodeNumber(t *testing.T) {
 func Test_lastNumber(t *testing.T) {
 	tests := []struct {
 		name          string
-		input         *string
+		input         string
 		expectedDigit uint8
 		expectedOk    bool
 	}{
-		{name: "nil"},
-		{name: "empty", input: stringPtr("")},
-		{name: "not digit", input: stringPtr("a")},
-		{name: "unicode", input: stringPtr("ó")},
-		{name: "middle digit", input: stringPtr("a1a")},
-		{name: "digit after letter", input: stringPtr("a1"), expectedDigit: 1, expectedOk: true},
-		{name: "digit after digit", input: stringPtr("12"), expectedDigit: 2, expectedOk: true},
-		{name: "digit after unicode", input: stringPtr("ó2"), expectedDigit: 2, expectedOk: true},
+		{name: "empty", input: ""},
+		{name: "not digit", input: "a"},
+		{name: "unicode", input: "ó"},
+		{name: "middle digit", input: "a1a"},
+		{name: "digit after letter", input: "a1", expectedDigit: 1, expectedOk: true},
+		{name: "digit after digit", input: "12", expectedDigit: 2, expectedOk: true},
+		{name: "digit after unicode", input: "ó2", expectedDigit: 2, expectedOk: true},
 	}
 
 	for _, tc := range tests {
@@ -107,10 +105,6 @@ func Test_lastNumber(t *testing.T) {
 			}
 		})
 	}
-}
-
-func stringPtr(s string) *string {
-	return &s
 }
 
 var _ api.CycleState = testCycleState{}
@@ -134,15 +128,24 @@ var _ proto.Pod = &testPod{}
 
 // testPod is test data just to set the nodeName
 type testPod struct {
-	nodeName *string
+	nodeName string
 }
 
-func (t testPod) Metadata() *meta.ObjectMeta {
-	return nil
+func (t testPod) GetUid() string {
+	return ""
+}
+
+func (t testPod) GetName() string {
+	return ""
+}
+
+func (t testPod) GetNamespace() string {
+	return ""
 }
 
 func (t testPod) Spec() *protoapi.PodSpec {
-	return &protoapi.PodSpec{NodeName: t.nodeName}
+	nodeName := t.nodeName
+	return &protoapi.PodSpec{NodeName: &nodeName}
 }
 
 func (t testPod) Status() *protoapi.PodStatus {

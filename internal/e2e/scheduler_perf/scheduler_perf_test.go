@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path"
@@ -607,7 +606,7 @@ func initTestOutput(tb testing.TB) io.Writer {
 			if err := fileOutput.Close(); err != nil {
 				tb.Fatalf("close log file: %v", err)
 			}
-			log, err := ioutil.ReadFile(logfileName)
+			log, err := os.ReadFile(logfileName)
 			if err != nil {
 				tb.Fatalf("read log file: %v", err)
 			}
@@ -812,7 +811,7 @@ func runWorkload(ctx context.Context, b *testing.B, tc *testCase, w *workload) [
 				b.Fatalf("op %d: %v", opIndex, err)
 			}
 			if err := nsPreparer.prepare(ctx); err != nil {
-				nsPreparer.cleanup(ctx)
+				_ = nsPreparer.cleanup(ctx)
 				b.Fatalf("op %d: %v", opIndex, err)
 			}
 			for _, n := range nsPreparer.namespaces() {
@@ -859,11 +858,7 @@ func runWorkload(ctx context.Context, b *testing.B, tc *testCase, w *workload) [
 			if concreteOp.SkipWaitToCompletion {
 				// Only record those namespaces that may potentially require barriers
 				// in the future.
-				if _, ok := numPodsScheduledPerNamespace[namespace]; ok {
-					numPodsScheduledPerNamespace[namespace] += concreteOp.Count
-				} else {
-					numPodsScheduledPerNamespace[namespace] = concreteOp.Count
-				}
+				numPodsScheduledPerNamespace[namespace] += concreteOp.Count
 			} else {
 				if err := waitUntilPodsScheduledInNamespace(ctx, b, podInformer, namespace, concreteOp.Count); err != nil {
 					b.Fatalf("op %d: error in waiting for pods to get scheduled: %v", opIndex, err)
@@ -925,7 +920,7 @@ func runWorkload(ctx context.Context, b *testing.B, tc *testCase, w *workload) [
 
 				churnFns = append(churnFns, func(name string) string {
 					if name != "" {
-						dynRes.Delete(ctx, name, metav1.DeleteOptions{})
+						_ = dynRes.Delete(ctx, name, metav1.DeleteOptions{})
 						return ""
 					}
 
@@ -1085,7 +1080,7 @@ func createPods(ctx context.Context, b *testing.B, namespace string, cpo *create
 // namespace are scheduled. Times out after 10 minutes because even at the
 // lowest observed QPS of ~10 pods/sec, a 5000-node test should complete.
 func waitUntilPodsScheduledInNamespace(ctx context.Context, b *testing.B, podInformer coreinformers.PodInformer, namespace string, wantCount int) error {
-	return wait.PollImmediate(1*time.Second, 10*time.Minute, func() (bool, error) {
+	return wait.PollImmediate(1*time.Second, 10*time.Minute, func() (bool, error) { //nolint:staticcheck // TODO: deprecated
 		select {
 		case <-ctx.Done():
 			return true, ctx.Err()
@@ -1199,8 +1194,6 @@ func validateTestCases(testCases []*testCase) error {
 	}
 	return nil
 }
-
-var count = 1
 
 func getPodStrategy(cpo *createPodsOp) (testutils.TestPodCreateStrategy, error) {
 	basePod := makeBasePod()

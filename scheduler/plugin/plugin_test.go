@@ -548,21 +548,21 @@ func TestPreScore(t *testing.T) {
 			name:               "success: no nodes",
 			pod:                test.PodSmall,
 			args:               []string{"test", "preScore"},
-			expectedStatusCode: framework.Success,
+			expectedStatusCode: 0, // count of nodes
 		},
 		{
 			name:               "success: one node",
 			args:               []string{"test", "preScore"},
 			nodes:              []*v1.Node{test.NodeSmall},
 			pod:                &v1.Pod{ObjectMeta: test.PodSmall.ObjectMeta},
-			expectedStatusCode: framework.Success,
+			expectedStatusCode: 1, // count of nodes
 		},
 		{
 			name:               "success: two nodes",
 			args:               []string{"test", "preScore"},
 			nodes:              []*v1.Node{test.NodeSmall, test.NodeReal},
 			pod:                &v1.Pod{ObjectMeta: test.PodSmall.ObjectMeta},
-			expectedStatusCode: framework.Success,
+			expectedStatusCode: 2, // count of nodes
 		},
 		{
 			name:               "min statusCode",
