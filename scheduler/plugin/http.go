@@ -46,18 +46,19 @@ func (f *httpClient) get(ctx context.Context, u *url.URL) ([]byte, error) {
 		return nil, err
 	}
 	resp, err := f.c.Do(req.WithContext(ctx))
+	defer func() {
+		io.Copy(io.Discard, resp.Body) //nolint
+		resp.Body.Close()
+	}()
 	if err != nil {
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		io.Copy(io.Discard, resp.Body) //nolint
-		resp.Body.Close()
 		return nil, fmt.Errorf("received %v status code from %q", resp.StatusCode, u)
 	}
 
 	bytes, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
 	if err != nil {
 		return nil, err
 	}

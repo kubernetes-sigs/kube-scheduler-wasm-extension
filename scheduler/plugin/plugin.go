@@ -88,7 +88,7 @@ func readFromURI(ctx context.Context, u string) ([]byte, error) {
 	case "file":
 		return os.ReadFile(uri.Path)
 	case "http", "https":
-		c := newHTTPCLient(http.DefaultTransport)
+		c := newHTTPClient(http.DefaultTransport)
 		return c.get(ctx, uri)
 	default:
 		return nil, fmt.Errorf("unsupported URL scheme: %s", uri.Scheme)
