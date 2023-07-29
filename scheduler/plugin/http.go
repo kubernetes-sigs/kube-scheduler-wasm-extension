@@ -29,17 +29,17 @@ type httpClient struct {
 	c http.Client
 }
 
-// newHTTPFetcher is a constructor for httpFetcher.
+// newHTTPClient is a constructor for httpFetcher.
 //
 // It is possible to plug a custom http.RoundTripper to handle other concerns (e.g. retries)
 // Compression is handled transparently and automatically by http.Client.
-func newHTTPCLient(transport http.RoundTripper) *httpClient {
+func newHTTPClient(transport http.RoundTripper) *httpClient {
 	return &httpClient{
 		c: http.Client{Transport: transport},
 	}
 }
 
-// fetch returns a byte slice of the wasm module found at the given URL, or an error otherwise.
+// get returns a byte slice of the wasm module found at the given URL, or an error otherwise.
 func (f *httpClient) get(ctx context.Context, u *url.URL) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
