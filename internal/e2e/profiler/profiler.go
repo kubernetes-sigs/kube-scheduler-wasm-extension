@@ -67,7 +67,7 @@ func main() {
 	)
 
 	// Pass the profiling context to the plugin.
-	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestPath: guestPath})
+	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: "file://" + guestPath})
 	if err != nil {
 		log.Panicln("failed to create plugin:", err)
 	}
