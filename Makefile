@@ -2,11 +2,14 @@ gofumpt       := mvdan.cc/gofumpt@v0.5.0
 gosimports    := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
 golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
 
-%/main.wasm: %/main.go
+examples/advanced/main.wasm: examples/advanced/main.go
 	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi .)
 
+%/main.wasm: %/main.go
+	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi .)
+
 .PHONY: build-tinygo
-build-tinygo: examples/nodenumber/main.wasm guest/testdata/all/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
+build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm guest/testdata/all/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
 
 %/main-debug.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi .)
@@ -16,7 +19,7 @@ build-tinygo: examples/nodenumber/main.wasm guest/testdata/all/main.wasm guest/t
 .PHONY: test-guest
 test-guest: guest/.tinygo-target.json
 	@(cd guest; tinygo test -v -target .tinygo-target.json ./...)
-	@(cd examples; tinygo test -v -target ../guest/.tinygo-target.json ./nodenumber/plugin/...)
+	@(cd examples/advanced; tinygo test -v -target ../../guest/.tinygo-target.json ./plugin/...)
 
 # Benchmarking the guest code means running it with TinyGo, which internally
 # compiles the benchmarks to a wasm binary, then runs it with wazero.
@@ -43,7 +46,7 @@ testdata:
 	@$(MAKE) build-wat
 
 .PHONY: profile
-profile: examples/nodenumber/main-debug.wasm
+profile: examples/advanced/main-debug.wasm
 	@cd ./internal/e2e; \
 	go run ./profiler/profiler.go ../../$^; \
 	go tool pprof -text cpu.pprof; \
@@ -117,7 +120,7 @@ format:
 
 # all_mods are the go modules including examples. Examples should also be
 # formatted, lint checked, etc. even if they are are built with TinyGo.
-all_mods      := ./internal/e2e/go.mod ./scheduler/go.mod ./guest/go.mod ./guest/testdata/go.mod ./kubernetes/proto/go.mod ./examples/go.mod
+all_mods      := ./internal/e2e/go.mod ./scheduler/go.mod ./guest/go.mod ./guest/testdata/go.mod ./kubernetes/proto/go.mod ./examples/go.mod ./examples/advanced/go.mod
 all_nottinygo := ./examples/go.mod ./guest/testdata/go.mod
 
 .PHONY: tidy
@@ -139,7 +142,8 @@ build:
 test:
 	@(cd scheduler; go test -v ./...)
 	@(cd guest; go test -v ./...)
-	@(cd examples; go test -v ./nodenumber/plugin/...)
+	@(cd examples; go test -v ./...)
+	@(cd examples/advanced; go test -v ./plugin/...)
 	@(cd internal/e2e; go test -v ./...)
 
 .PHONY: check  # Pre-flight check for pull requests

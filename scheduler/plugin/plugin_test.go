@@ -188,7 +188,7 @@ func TestNew_maskInterfaces(t *testing.T) {
 		},
 		{
 			name:          "prescore|score",
-			guestURL:      test.URLExampleNodeNumber,
+			guestURL:      test.URLExampleAdvanced,
 			expectedScore: true,
 		},
 		{
@@ -197,8 +197,8 @@ func TestNew_maskInterfaces(t *testing.T) {
 			expectedScore: true,
 		},
 		{
-			name:           "prefilter|filter|prescore|score",
-			guestURL:       test.URLTestAllNoopWat,
+			name:           "all",
+			guestURL:       test.URLExampleNodeNumber,
 			expectedFilter: true,
 			expectedScore:  true,
 		},
@@ -223,25 +223,35 @@ func TestNew_maskInterfaces(t *testing.T) {
 				t.Fatalf("expecteded BasePlugin %v", p)
 			}
 			if _, ok := p.(wasm.FilterPlugin); tc.expectedFilter != ok {
-				t.Fatalf("didn't expected FilterPlugin %v", p)
+				t.Fatalf("unexpected FilterPlugin %v", p)
 			}
 			if _, ok := p.(wasm.ScorePlugin); tc.expectedScore != ok {
-				t.Fatalf("didn't expected ScorePlugin %v", p)
+				t.Fatalf("unexpected ScorePlugin %v", p)
 			}
 			if _, ok := p.(wasm.ReservePlugin); tc.expectedReserve != ok {
-				t.Fatalf("didn't expected ReservePlugin %v", p)
+				t.Fatalf("unexpected ReservePlugin %v", p)
 			}
 			if _, ok := p.(wasm.PermitPlugin); tc.expectedPermit != ok {
-				t.Fatalf("didn't expected PermitPlugin %v", p)
+				t.Fatalf("unexpected PermitPlugin %v", p)
 			}
 			if _, ok := p.(wasm.BindPlugin); tc.expectedBind != ok {
-				t.Fatalf("didn't expected BindPlugin %v", p)
+				t.Fatalf("unexpected BindPlugin %v", p)
 			}
 		})
 	}
 }
 
 func TestNewFromConfig(t *testing.T) {
+	uri, _ := url.ParseRequestURI(test.URLTestFilter)
+	bytes, _ := os.ReadFile(uri.Path)
+	_, file := path.Split(uri.Path)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/"+file {
+			_, _ = w.Write(bytes)
+		}
+	}))
+	t.Cleanup(ts.Close)
+
 	type testcase struct {
 		name          string
 		guestURL      string
@@ -249,8 +259,21 @@ func TestNewFromConfig(t *testing.T) {
 	}
 	tests := []testcase{
 		{
-			name:     "valid wasm",
+			name:     "file: valid",
 			guestURL: test.URLTestFilter,
+		},
+		{
+			name:     "http: valid",
+			guestURL: ts.URL + "/" + file,
+		},
+		{
+			name:          "missing guestURL",
+			expectedError: "wasm: guestURL is required",
+		},
+		{
+			name:          "invalid guestURL",
+			guestURL:      "c:\\foo.wasm",
+			expectedError: "wasm: error reading guestURL c:\\foo.wasm: unsupported URL scheme: c",
 		},
 		{
 			name:          "not plugin",
@@ -267,7 +290,7 @@ wasm stack trace:
 		},
 	}
 
-	testWithURL := func(t *testing.T, tc testcase) {
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: tc.guestURL})
 			if err != nil {
@@ -282,28 +305,6 @@ wasm stack trace:
 			}
 		})
 	}
-
-	t.Run("local", func(t *testing.T) {
-		for _, tc := range tests {
-			testWithURL(t, tc)
-		}
-	})
-
-	t.Run("remote (http)", func(t *testing.T) {
-		for _, tc := range tests {
-			uri, _ := url.ParseRequestURI(tc.guestURL)
-			bytes, _ := os.ReadFile(uri.Path)
-			_, file := path.Split(uri.Path)
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path == "/"+file {
-					_, _ = w.Write(bytes)
-				}
-			}))
-			defer ts.Close()
-			tc.guestURL = ts.URL + "/" + file
-			testWithURL(t, tc)
-		}
-	})
 }
 
 func TestEnqueue(t *testing.T) {

@@ -36,7 +36,6 @@ replace (
 
 require (
 	github.com/google/uuid v1.3.0
-	github.com/stretchr/testify v1.8.1
 	github.com/tetratelabs/wazero v1.3.1
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
@@ -91,7 +90,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/selinux v1.10.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect

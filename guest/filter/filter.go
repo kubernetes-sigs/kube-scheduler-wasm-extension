@@ -61,10 +61,10 @@ var _ func() uint32 = _filter
 //
 //export filter
 func _filter() uint32 { //nolint
-	if filter == nil {
-		// If we got here, someone imported the package, but forgot to set the
-		// filter. Panic with what's wrong.
-		panic("filter imported, but filter.SetPlugin not called")
+	if filter == nil { // Then, the user didn't define one.
+		// This is likely caused by use of plugin.Set(p), where 'p' didn't
+		// implement FilterPlugin: return success.
+		return 0
 	}
 
 	s := filter.Filter(cyclestate.Values, cyclestate.Pod, &nodeInfo{})
