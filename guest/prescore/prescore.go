@@ -72,10 +72,10 @@ var _ func() uint32 = _prescore
 //
 //export prescore
 func _prescore() uint32 {
-	if prescore == nil {
-		// If we got here, someone imported the package, but forgot to set the
-		// filter. Panic with what's wrong.
-		panic("prescore imported, but prescore.SetPlugin not called")
+	if prescore == nil { // Then, the user didn't define one.
+		// This is likely caused by use of plugin.Set(p), where 'p' didn't
+		// implement PreScorePlugin: return success.
+		return 0
 	}
 
 	// Pod is lazy and the same value for all plugins in a scheduling cycle.

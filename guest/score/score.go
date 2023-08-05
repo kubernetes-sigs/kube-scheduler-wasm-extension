@@ -58,10 +58,10 @@ var _ func() uint64 = _score
 //
 //export score
 func _score() uint64 {
-	if score == nil {
-		// If we got here, someone imported the package, but forgot to set the
-		// filter. Panic with what's wrong.
-		panic("score imported, but score.SetPlugin not called")
+	if score == nil { // Then, the user didn't define one.
+		// This is likely caused by use of plugin.Set(p), where 'p' didn't
+		// implement ScorePlugin: return success and score zero.
+		return 0
 	}
 
 	// Pod is lazy and the same value for all plugins in a scheduling cycle.

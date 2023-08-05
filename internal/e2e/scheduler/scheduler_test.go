@@ -52,8 +52,17 @@ func TestCycleStateCoherence(t *testing.T) {
 }
 
 func TestExample_NodeNumber(t *testing.T) {
+	t.Run("Simple", func(t *testing.T) {
+		testExample_NodeNumber(t, false)
+	})
+	t.Run("Advanced", func(t *testing.T) {
+		testExample_NodeNumber(t, true)
+	})
+}
+
+func testExample_NodeNumber(t *testing.T, advanced bool) {
 	ctx := context.Background()
-	plugin := newNodeNumberPlugin(ctx, t, false)
+	plugin := newNodeNumberPlugin(ctx, t, advanced, false)
 	defer plugin.(io.Closer).Close()
 
 	pod := &v1.Pod{Spec: v1.PodSpec{NodeName: "happy8"}}
@@ -78,7 +87,7 @@ func TestExample_NodeNumber(t *testing.T) {
 
 	t.Run("Reverse means score zero on match", func(t *testing.T) {
 		// This proves we can read configuration.
-		reversed := newNodeNumberPlugin(ctx, t, true)
+		reversed := newNodeNumberPlugin(ctx, t, advanced, true)
 		defer reversed.(io.Closer).Close()
 
 		score := e2e.RunAll(ctx, t, reversed, pod, nodeInfoWithName("glad8"))
@@ -89,15 +98,26 @@ func TestExample_NodeNumber(t *testing.T) {
 }
 
 func BenchmarkExample_NodeNumber(b *testing.B) {
+	b.Run("Simple", func(b *testing.B) {
+		benchmarkExample_NodeNumber(b, false)
+	})
+	b.Run("Advanced", func(b *testing.B) {
+		benchmarkExample_NodeNumber(b, true)
+	})
+}
+
+func benchmarkExample_NodeNumber(b *testing.B, advanced bool) {
+	b.Helper()
 	ctx := context.Background()
+
 	b.Run("New", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			newNodeNumberPlugin(ctx, b, false).(io.Closer).Close()
+			newNodeNumberPlugin(ctx, b, advanced, false).(io.Closer).Close()
 		}
 	})
 
-	plugin := newNodeNumberPlugin(ctx, b, false)
+	plugin := newNodeNumberPlugin(ctx, b, advanced, false)
 	defer plugin.(io.Closer).Close()
 
 	pod := *test.PodReal // copy
@@ -114,9 +134,14 @@ func BenchmarkExample_NodeNumber(b *testing.B) {
 	})
 }
 
-func newNodeNumberPlugin(ctx context.Context, t e2e.Testing, reverse bool) framework.Plugin {
+func newNodeNumberPlugin(ctx context.Context, t e2e.Testing, advanced, reverse bool) framework.Plugin {
+	t.Helper()
+	guestURL := test.URLExampleNodeNumber
+	if advanced {
+		guestURL = test.URLExampleAdvanced
+	}
 	plugin, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{
-		GuestURL:    test.URLExampleNodeNumber,
+		GuestURL:    guestURL,
 		GuestConfig: fmt.Sprintf(`{"reverse": %v}`, reverse),
 	})
 	if err != nil {

@@ -45,10 +45,10 @@ var _ func() = _enqueue
 //
 //export enqueue
 func _enqueue() {
-	if enqueue == nil {
-		// If we got here, someone imported the package, but forgot to set the
-		// filter. Panic with what's wrong.
-		panic("enqueue imported, but enqueue.SetPlugin not called")
+	if enqueue == nil { // Then, the user didn't define one.
+		// This is likely caused by use of plugin.Set(p), where 'p' didn't
+		// implement EnqueueExtensions: return to use default events.
+		return
 	}
 
 	clusterEvents := enqueue.EventsToRegister()

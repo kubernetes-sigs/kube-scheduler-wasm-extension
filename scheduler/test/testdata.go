@@ -36,6 +36,8 @@ var URLErrorPanicOnStart = localURL(pathWatError("panic_on_start"))
 
 var URLExampleNodeNumber = localURL(pathTinyGoExample("nodenumber"))
 
+var URLExampleAdvanced = localURL(pathTinyGoExample("advanced"))
+
 var URLTestAll = localURL(pathTinyGoTest("all"))
 
 var URLTestAllNoopWat = localURL(pathWatTest("all_noop"))

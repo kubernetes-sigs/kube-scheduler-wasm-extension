@@ -18,10 +18,8 @@ package wasm
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net/http"
-	"net/url"
-	"os"
 	"sync/atomic"
 	"time"
 
@@ -44,7 +42,7 @@ var _ frameworkruntime.PluginFactory = New
 func New(configuration runtime.Object, frameworkHandle framework.Handle) (framework.Plugin, error) {
 	config := PluginConfig{}
 	if err := frameworkruntime.DecodeInto(configuration, &config); err != nil {
-		return nil, fmt.Errorf("failed to decode into %s PluginConfig: %w", PluginName, err)
+		return nil, fmt.Errorf("wasm: failed to decode into PluginConfig: %w", err)
 	}
 
 	return NewFromConfig(context.Background(), config)
@@ -53,9 +51,13 @@ func New(configuration runtime.Object, frameworkHandle framework.Handle) (framew
 // NewFromConfig is like New, except it allows us to explicitly provide the
 // context and configuration of the plugin. This allows flexibility in tests.
 func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, error) {
-	guestBin, err := readFromURI(ctx, config.GuestURL)
+	url := config.GuestURL
+	if url == "" {
+		return nil, errors.New("wasm: guestURL is required")
+	}
+	guestBin, err := getURL(ctx, url)
 	if err != nil {
-		return nil, fmt.Errorf("wasm: error reading guest binary at %s: %w", config.GuestURL, err)
+		return nil, fmt.Errorf("wasm: error reading guestURL %s: %w", url, err)
 	}
 
 	runtime, guestModule, err := prepareRuntime(ctx, guestBin, config.GuestConfig)
@@ -76,22 +78,6 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, 
 		return nil, err
 	} else {
 		return pl, nil
-	}
-}
-
-func readFromURI(ctx context.Context, u string) ([]byte, error) {
-	uri, err := url.ParseRequestURI(u)
-	if err != nil {
-		return nil, err
-	}
-	switch uri.Scheme {
-	case "file":
-		return os.ReadFile(uri.Path)
-	case "http", "https":
-		c := newHTTPClient(http.DefaultTransport)
-		return c.get(ctx, uri)
-	default:
-		return nil, fmt.Errorf("unsupported URL scheme: %s", uri.Scheme)
 	}
 }
 

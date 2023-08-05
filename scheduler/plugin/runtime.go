@@ -49,20 +49,19 @@ func prepareRuntime(ctx context.Context, guestBin []byte, guestConfig string) (r
 
 	// Detect and handle any host imports or lack thereof.
 	imports := detectImports(guest.ImportedFunctions())
-	switch {
-	case imports&importWasiP1 != 0:
+	if imports&importWasiP1 != 0 {
 		if _, err = wasi_snapshot_preview1.Instantiate(ctx, runtime); err != nil {
 			err = fmt.Errorf("wasm: error instantiating wasi: %w", err)
 			return
 		}
-		fallthrough // proceed to more imports
-	case imports&importK8sApi != 0:
+	}
+	if imports&importK8sApi != 0 {
 		if _, err = instantiateHostApi(ctx, runtime); err != nil {
 			err = fmt.Errorf("wasm: error instantiating api host functions: %w", err)
 			return
 		}
-		fallthrough // proceed to more imports
-	case imports&importK8sScheduler != 0:
+	}
+	if imports&importK8sScheduler != 0 {
 		if _, err = instantiateHostScheduler(ctx, runtime, guestConfig); err != nil {
 			err = fmt.Errorf("wasm: error instantiating scheduler host functions: %w", err)
 			return
