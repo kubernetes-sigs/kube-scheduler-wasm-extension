@@ -34,11 +34,20 @@ var (
 
 // StringToPtr returns a pointer and size pair for the given string in a way
 // compatible with WebAssembly numeric types.
-// The returned pointer aliases the string hence the string must be kept alive
-// until ptr is no longer needed.
+// The returned pointer aliases the string hence it must be kept alive until
+// ptr is no longer needed.
 func StringToPtr(s string) (uint32, uint32) {
 	ptr := unsafe.Pointer(unsafe.StringData(s))
 	return uint32(uintptr(ptr)), uint32(len(s))
+}
+
+// BytesToPtr returns a pointer and size pair for the given byte slice in a way
+// compatible with WebAssembly numeric types.
+// The returned pointer aliases the slice hence it must be kept alive until ptr
+// is no longer needed.
+func BytesToPtr(b []byte) (uint32, uint32) {
+	ptr := unsafe.Pointer(&b[0])
+	return uint32(uintptr(ptr)), uint32(len(b))
 }
 
 // Update is for decoding values from memory. The updater doesn't keep a

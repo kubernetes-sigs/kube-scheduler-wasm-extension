@@ -92,5 +92,8 @@ type ScorePlugin interface {
 }
 
 type NodeInfo interface {
+	// Metadata is a convenience that triggers Get.
+	proto.Metadata
+
 	Node() proto.Node
 }

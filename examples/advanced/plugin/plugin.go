@@ -21,7 +21,6 @@
 //   - Logic was refactored to be cleaner and more testable.
 //   - Doesn't return an error if state has the wrong type, as it is
 //     impossible: this panics instead with the default message.
-//   - TODO: logging
 //
 // See https://github.com/kubernetes-sigs/kube-scheduler-simulator/blob/simulator/v0.1.0/simulator/docs/sample/nodenumber/plugin.go
 //
@@ -34,6 +33,7 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // NodeNumber is an example plugin that favors nodes that share a numerical
@@ -50,25 +50,7 @@ import (
 //     a numeric match gets a results in a lower score than a match.
 type NodeNumber struct {
 	reverse bool
-}
-
-// New creates a new NodeNumber plugin with the given jsonConfig or returns an
-// error.
-//
-// Note: This accepts config instead of implicitly calling config.Get for
-// testing.
-func New(jsonConfig []byte) (*NodeNumber, error) {
-	var args nodeNumberArgs
-	if jsonConfig != nil {
-		if err := json.Unmarshal(jsonConfig, &args); err != nil {
-			return nil, fmt.Errorf("decode arg into NodeNumberArgs: %w", err)
-		}
-	}
-	return &NodeNumber{reverse: args.Reverse}, nil
-}
-
-type nodeNumberArgs struct {
-	Reverse bool `json:"reverse"`
+	klog    klog.Klog
 }
 
 const (
@@ -91,6 +73,8 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+	pl.klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
+
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
 		return nil // return success even if its suffix is non-number.
@@ -101,7 +85,9 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.Node
 }
 
 // Score implements api.ScorePlugin
-func (pl *NodeNumber) Score(state api.CycleState, _ proto.Pod, nodeName string) (int32, *api.Status) {
+func (pl *NodeNumber) Score(state api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
+	pl.klog.InfoS("execute Score on NodeNumber plugin", "pod", klog.KObj(pod))
+
 	var match bool
 	if data, ok := state.Read(preScoreStateKey); ok {
 		// Match is when there is a last digit, and it is the pod suffix.
@@ -134,4 +120,24 @@ func lastNumber(str string) (uint8, bool) {
 		return lastChar - '0', true
 	}
 	return 0, false
+}
+
+// New creates a new NodeNumber plugin with the given jsonConfig or returns an
+// error.
+//
+// Note: This accepts config instead of implicitly calling config.Get for
+// testing.
+func New(klog klog.Klog, jsonConfig []byte) (*NodeNumber, error) {
+	var args nodeNumberArgs
+	if jsonConfig != nil {
+		if err := json.Unmarshal(jsonConfig, &args); err != nil {
+			return nil, fmt.Errorf("decode arg into NodeNumberArgs: %w", err)
+		}
+		klog.Info("NodeNumberArgs is successfully applied")
+	}
+	return &NodeNumber{klog: klog, reverse: args.Reverse}, nil
+}
+
+type nodeNumberArgs struct {
+	Reverse bool `json:"reverse"`
 }

@@ -1,3 +1,5 @@
+//go:build tinygo.wasm
+
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -14,30 +16,15 @@
    limitations under the License.
 */
 
-package prefilter
+package klog
 
-func toNULTerminated(input []string) []byte {
-	count := len(input)
-	if count == 0 {
-		return nil
-	}
+import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/internal"
 
-	size := count // NUL terminator count
-	for _, s := range input {
-		size += len(s)
-	}
+//go:wasmimport k8s.io/klog log
+func log(severity internal.Severity, ptr, size uint32)
 
-	// Write the NUL-terminated string to a byte slice.
-	cStrings := make([]byte, size)
-	pos := 0
-	for i := 0; i < count; i++ {
-		s := input[i]
-		if len(s) == 0 {
-			size--
-			continue // skip empty
-		}
-		copy(cStrings[pos:], s)
-		pos += len(s) + 1 // +1 for NUL-terminator
-	}
-	return cStrings[:size]
-}
+//go:wasmimport k8s.io/klog logs
+func logs(severity internal.Severity, msgPtr, msgSize, kvsPtr, kvsSize uint32)
+
+//go:wasmimport k8s.io/klog severity
+func severity() internal.Severity

@@ -82,6 +82,18 @@ type nodeInfo struct {
 	node proto.Node
 }
 
+func (n *nodeInfo) GetUid() string {
+	return n.lazyNode().GetUid()
+}
+
+func (n *nodeInfo) GetName() string {
+	return n.lazyNode().GetName()
+}
+
+func (n *nodeInfo) GetNamespace() string {
+	return n.lazyNode().GetNamespace()
+}
+
 func (n *nodeInfo) Node() proto.Node {
 	return n.lazyNode()
 }

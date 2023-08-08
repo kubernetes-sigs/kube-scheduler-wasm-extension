@@ -9,7 +9,7 @@ examples/advanced/main.wasm: examples/advanced/main.go
 	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi .)
 
 .PHONY: build-tinygo
-build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm guest/testdata/all/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
+build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm
 
 %/main-debug.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi .)
@@ -120,8 +120,10 @@ format:
 
 # all_mods are the go modules including examples. Examples should also be
 # formatted, lint checked, etc. even if they are are built with TinyGo.
-all_mods      := ./internal/e2e/go.mod ./scheduler/go.mod ./guest/go.mod ./guest/testdata/go.mod ./kubernetes/proto/go.mod ./examples/go.mod ./examples/advanced/go.mod
-all_nottinygo := ./examples/go.mod ./guest/testdata/go.mod
+all_mods             := ./internal/e2e/go.mod ./internal/e2e/guest/go.mod ./scheduler/go.mod ./examples/advanced/go.mod ./guest/testdata/go.mod ./guest/go.mod ./kubernetes/proto/go.mod
+# all_mods are modules that can't be built with normal Go, such as due to being
+# a tool, or a TinyGo main package.
+all_unbuildable_mods := ./examples/go.mod ./kubernetes/proto/tools/go.mod
 
 .PHONY: tidy
 tidy:
@@ -131,9 +133,7 @@ tidy:
 
 .PHONY: build
 build:
-	@# We filter out the examples main packages, as nottinygo cannot compile \
-     # to a normal platform executable.
-	@for f in $(filter-out $(all_nottinygo), $(all_mods)); do \
+	@for f in $(filter-out $(all_unbuildable_mods), $(all_mods)); do \
         (cd $$(dirname $$f); go build ./...); \
 	done
 

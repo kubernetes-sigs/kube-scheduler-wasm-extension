@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/advanced/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
@@ -40,7 +41,7 @@ func main() {
 	//
 	// The real implementations, such as `config.Get()` use Wasm host functions
 	// (go:wasmimport), which cannot be tested with `tinygo test -target=wasi`.
-	plugin, err := plugin.New(config.Get())
+	plugin, err := plugin.New(klog.Get(), config.Get())
 	if err != nil {
 		panic(err)
 	}

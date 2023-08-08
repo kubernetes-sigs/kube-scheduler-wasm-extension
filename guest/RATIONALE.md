@@ -114,6 +114,49 @@ Considering the above, we recommend nottinygc, but as an opt-in process. Our
 examples default to configure it, and all our integration tests use it.
 However, we can't make this default until it no longer crashes our unit tests.
 
+## Why don't we use the normal k8s.io/klog/v2 package for logging?
+
+The scheduler framework uses the k8s.io/klog/v2 package for logging, like:
+```go
+klog.InfoS("execute Score on NodeNumber plugin", "pod", klog.KObj(pod))
+```
+
+The guest SDK cannot use this because some parts of the klog package do not
+compile with TinyGo, due to heavy use of reflection. Also, the initialization
+of the wasm guest is separate from the scheduler process, and it wouldn't be
+able to read the same configuration including filters that need to be applied.
+
+Instead, this adds a minimal working abstraction of klog functions which pass
+strings to the host to log using a real klog function.
+
+As discussed in other sections, you cannot pass an object between the guest and
+the host by reference, rather only by value. For this reason, the guest klog
+package stringifies args including key/values and sends them to the host for
+processing via functions like `klog.Info` or `klog.ErrorS`.
+
+Stringification is expensive in Wasm due to factors including inlined garbage
+collection. To avoid performance problems when not logging, the host includes a
+function not in the normal `klog` package, which exposes the current severity
+level. Anything outside that level won't be logged, and that's how excess
+overhead is avoided.
+
+### Why does `klog.KObj` return a `fmt.Stringer` instead of `ObjectRef`
+
+`klog.KObj` works differently in wasm because unlike the normal scheduler
+framework, objects such as `proto.Node` are lazy unmarshalled. To avoid
+triggering this when logging is disabled, `klog.KObj` returns a `fmt.Stringer`
+which lazy accessed fields needed.
+
+### Why is there an `api` package in `klog`?
+
+The `klog` package imports functions from the host, via `//go:wasmimport`. This
+makes code in that package untestable via `tinygo test -target=wasi`, as the
+implicit Wasm runtime launched does not export these (they are custom to this
+codebase). To allow unit testing of the core logic with both Go and TinyGo, we
+have an `api` package which includes an interface representing the logging
+functions in the `klog` package. Advanced users can also use these interfaces
+for the same reason: to keep their core logic testable in TinyGo.
+
 [1]: https://tinygo.org/
 [2]: https://pkg.go.dev/golang.org/dl/gotip
 [3]: https://github.com/golang/go/issues/42372
