@@ -23,6 +23,11 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 		RequireSuccess(t, s)
 	}
 
+	if postfilterP, ok := plugin.(framework.PostFilterPlugin); ok {
+		_, s = postfilterP.PostFilter(ctx, nil, pod, nil)
+		RequireSuccess(t, s)
+	}
+
 	if prescoreP, ok := plugin.(framework.PreScorePlugin); ok {
 		s = prescoreP.PreScore(ctx, nil, pod, []*v1.Node{ni.Node()})
 		RequireSuccess(t, s)

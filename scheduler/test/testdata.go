@@ -26,6 +26,8 @@ var URLErrorPanicOnPreFilter = localURL(pathWatError("panic_on_prefilter"))
 
 var URLErrorPanicOnFilter = localURL(pathWatError("panic_on_filter"))
 
+var URLErrorPanicOnPostFilter = localURL(pathWatError("panic_on_postfilter"))
+
 var URLErrorPanicOnPreScore = localURL(pathWatError("panic_on_prescore"))
 
 var URLErrorPreScoreWithoutScore = localURL(pathWatError("prescore_without_score"))
@@ -52,6 +54,8 @@ var URLTestFilter = localURL(pathTinyGoTest("filter"))
 
 var URLTestFilterFromGlobal = localURL(pathWatTest("filter_from_global"))
 
+var URLTestPostFilterFromGlobal = localURL(pathWatTest("postfilter_from_global"))
+
 var URLTestPreScoreFromGlobal = localURL(pathWatTest("prescore_from_global"))
 
 var URLTestScore = localURL(pathTinyGoTest("score"))
@@ -74,8 +78,10 @@ var NodeReal = func() *v1.Node {
 	return &node
 }()
 
+var NodeSmallName = "good-node"
+
 // NodeSmall is the smallest node that works with URLExampleFilterSimple.
-var NodeSmall = &v1.Node{ObjectMeta: apimeta.ObjectMeta{Name: "good-node"}}
+var NodeSmall = &v1.Node{ObjectMeta: apimeta.ObjectMeta{Name: NodeSmallName}}
 
 //go:embed testdata/yaml/pod.yaml
 var yamlPodReal string

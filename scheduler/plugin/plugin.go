@@ -262,13 +262,22 @@ func (pl *wasmPlugin) Filter(ctx context.Context, _ *framework.CycleState, pod *
 var _ framework.PostFilterPlugin = (*wasmPlugin)(nil)
 
 // PostFilter implements the same method as documented on framework.PostFilterPlugin.
-func (pl *wasmPlugin) PostFilter(ctx context.Context, state *framework.CycleState, pod *v1.Pod, filteredNodeStatusMap framework.NodeToStatusMap) (*framework.PostFilterResult, *framework.Status) {
+func (pl *wasmPlugin) PostFilter(ctx context.Context, state *framework.CycleState, pod *v1.Pod, filteredNodeStatusMap framework.NodeToStatusMap) (result *framework.PostFilterResult, status *framework.Status) {
 	// We implement PostFilterPlugin with FilterPlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPostFilterPlugin == 0 {
 		return nil, nil // unimplemented
 	}
 
-	panic("TODO: scheduling: PostFilter")
+	// Add the stack to the go context so that the corresponding host function
+	// can look them up.
+	params := &stack{pod: pod, nodeToStatusMap: filteredNodeStatusMap}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
+		result, status = g.postFilter(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	return
 }
 
 var _ framework.PreScorePlugin = (*wasmPlugin)(nil)

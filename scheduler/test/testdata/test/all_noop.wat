@@ -6,5 +6,6 @@
 
   (func (export "prefilter") (result i32) (return (i32.const 0)))
   (func (export "filter") (result i32) (return (i32.const 0)))
+  (func (export "postfilter") (result i32) (return (i32.const 0)))
   (func (export "score") (result i64) (return (i64.const 0)))
 )

@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/bind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
@@ -58,6 +59,7 @@ func main() {
 	enqueue.SetPlugin(plugin)
 	prefilter.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
+	postfilter.SetPlugin(plugin)
 	prescore.SetPlugin(plugin)
 	score.SetPlugin(plugin)
 	prebind.SetPlugin(plugin)
@@ -89,11 +91,11 @@ type preScoreStateVal map[string]any
 type preBindStateVal map[string]any
 
 func (statePlugin) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
-	if nextPodSpec := pod.Spec(); unsafe.Pointer(nextPodSpec) == unsafe.Pointer(podSpec) {
+	nextPodSpec := pod.Spec()
+	if unsafe.Pointer(nextPodSpec) == unsafe.Pointer(podSpec) {
 		panic("didn't reset pod on pre-filter")
-	} else {
-		podSpec = nextPodSpec
 	}
+	podSpec = nextPodSpec
 	mustNotScoreState(state)
 	if _, ok := state.Read(preFilterStateKey); ok {
 		panic("didn't reset filter state on pre-filter")
@@ -116,9 +118,22 @@ func (statePlugin) Filter(state api.CycleState, pod proto.Pod, _ api.NodeInfo) (
 	return
 }
 
-func (statePlugin) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+func (statePlugin) PostFilter(state api.CycleState, pod proto.Pod, _ api.NodeToStatus) (nominatedNodeName string, nominatingMode api.NominatingMode, status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from filter")
+	}
+	mustNotScoreState(state)
+	if val, ok := state.Read(preFilterStateKey); !ok {
+		panic("didn't propagate state from pre-filter")
+	} else if _, ok = val.(preFilterStateVal)["filter"]; !ok {
+		panic("filter value lost propagating from filter")
+	}
+	return
+}
+
+func (statePlugin) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
+		panic("didn't cache pod from pre-filter")
 	}
 	mustFilterState(state)
 	if _, ok := state.Read(preScoreStateKey); ok {

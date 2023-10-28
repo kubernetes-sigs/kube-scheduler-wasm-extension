@@ -29,5 +29,8 @@ func k8sApiNodeName(uint32, mem.BufLimit) (len uint32) { return }
 // k8sApiPod is stubbed for compilation outside TinyGo.
 func k8sApiPod(uint32, mem.BufLimit) (len uint32) { return }
 
+// k8sSchedulerNodeToStatusMap is stubbed for compilation outside TinyGo.
+func k8sSchedulerNodeToStatusMap(uint32, mem.BufLimit) (len uint32) { return }
+
 // k8sSchedulerResultStatusReason is stubbed for compilation outside TinyGo.
 func k8sSchedulerResultStatusReason(uint32, uint32) {}

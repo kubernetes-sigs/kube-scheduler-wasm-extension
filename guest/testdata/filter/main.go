@@ -22,12 +22,14 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 )
 
 type extensionPoints interface {
 	api.PreFilterPlugin
 	api.FilterPlugin
+	api.PostFilterPlugin
 }
 
 func main() {
@@ -40,10 +42,13 @@ func main() {
 			plugin = filterPlugin{}
 		case "preFilter":
 			plugin = preFilterPlugin{}
+		case "postFilter":
+			plugin = postFilterPlugin{}
 		}
 	}
 	prefilter.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
+	postfilter.SetPlugin(plugin)
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.
@@ -59,6 +64,13 @@ func (noopPlugin) Filter(state api.CycleState, pod proto.Pod, nodeInfo api.NodeI
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeInfo.Node().Spec() // trigger lazy loading
+	return
+}
+
+func (noopPlugin) PostFilter(state api.CycleState, pod proto.Pod, nodeMap api.NodeToStatus) (nominatedNodeName string, nominatingMode api.NominatingMode, status *api.Status) {
+	_, _ = state.Read("ok")
+	_ = pod.Spec()
+	_ = nodeMap.Map()
 	return
 }
 
@@ -94,5 +106,30 @@ func (filterPlugin) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInf
 	return &api.Status{
 		Code:   api.StatusCodeUnschedulable,
 		Reason: podSpecNodeName + " != " + nodeName,
+	}
+}
+
+type postFilterPlugin struct{ noopPlugin }
+
+func (postFilterPlugin) PostFilter(_ api.CycleState, pod proto.Pod, nodeMap api.NodeToStatus) (string, api.NominatingMode, *api.Status) {
+	// First, check if the pod spec node name is empty. If so, pass!
+	podSpecNodeName := pod.Spec().GetNodeName()
+	if len(podSpecNodeName) == 0 {
+		return "", 0, nil
+	}
+	m := nodeMap.Map()
+	if m == nil {
+		return "", 0, nil
+	}
+	// If nominatedNodeName is schedulable, pass!
+	if val, ok := m[podSpecNodeName]; ok {
+		if val == 0 {
+			return podSpecNodeName, api.ModeOverride, nil
+		}
+	}
+	// Otherwise, this is unschedulableAndUnresolvable, so note the reason.
+	return podSpecNodeName, api.ModeNoop, &api.Status{
+		Code:   api.StatusCodeUnschedulableAndUnresolvable,
+		Reason: podSpecNodeName + " is unschedulable",
 	}
 }

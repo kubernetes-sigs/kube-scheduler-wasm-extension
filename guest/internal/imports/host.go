@@ -17,6 +17,7 @@
 package imports
 
 import (
+	"encoding/json"
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
@@ -65,4 +66,18 @@ func Pod(updater func([]byte) error) error {
 	return mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
 		return k8sApiPod(ptr, limit)
 	}, updater)
+}
+
+func NodeToStatusMap() map[string]api.StatusCode {
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	jsonStr := mem.GetString(func(ptr uint32, limit mem.BufLimit) (len uint32) {
+		return k8sSchedulerNodeToStatusMap(ptr, limit)
+	})
+	byte := []byte(jsonStr)
+	var nodeToMap map[string]api.StatusCode
+	err := json.Unmarshal(byte, &nodeToMap)
+	if err != nil {
+		panic(err)
+	}
+	return nodeToMap
 }

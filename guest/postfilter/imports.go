@@ -16,21 +16,7 @@
    limitations under the License.
 */
 
-package imports
+package postfilter
 
-import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
-
-//go:wasmimport k8s.io/api node
-func k8sApiNode(ptr uint32, limit mem.BufLimit) (len uint32)
-
-//go:wasmimport k8s.io/api nodeName
-func k8sApiNodeName(ptr uint32, limit mem.BufLimit) (len uint32)
-
-//go:wasmimport k8s.io/api pod
-func k8sApiPod(ptr uint32, limit mem.BufLimit) (len uint32)
-
-//go:wasmimport k8s.io/scheduler nodeToStatusMap
-func k8sSchedulerNodeToStatusMap(ptr uint32, limit mem.BufLimit) (len uint32)
-
-//go:wasmimport k8s.io/scheduler result.status_reason
-func k8sSchedulerResultStatusReason(ptr, size uint32)
+//go:wasmimport k8s.io/scheduler result.nominated_node_name
+func setNominatedNodeNameResult(ptr, size uint32)
