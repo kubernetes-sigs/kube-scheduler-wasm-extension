@@ -129,7 +129,7 @@ func (pl *wasmPlugin) plugin() *wasmPlugin {
 var _ framework.Plugin = (*wasmPlugin)(nil)
 
 // Name implements the same method as documented on framework.Plugin.
-// See /RATIONALE.md for impact
+// The plugin name is defined by the scheduler configuration.
 func (pl *wasmPlugin) Name() string {
 	return pl.pluginName
 }
