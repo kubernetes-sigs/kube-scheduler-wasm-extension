@@ -99,8 +99,9 @@ var (
 	}
 	registory frameworkruntime.Registry = frameworkruntime.Registry{
 		nodenumberplugin.Name: nodenumberplugin.New,
-		wasm.PluginName:       wasm.New,
+		pluginName:            wasm.PluginFactory(pluginName),
 	}
+	pluginName = "wasm"
 )
 
 // testCase defines a set of test cases that intends to test the performance of

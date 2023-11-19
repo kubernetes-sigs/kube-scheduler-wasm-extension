@@ -45,7 +45,7 @@ var ctx = context.Background()
 
 // Test_guestPool_bindingCycles tests that the bindingCycles field is set correctly.
 func Test_guestPool_bindingCycles(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestCycleState})
+	p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -123,7 +123,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 // Test_guestPool_assignedToSchedulingPod tests that the scheduledPodUID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: test.URLTestCycleState})
+	p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState})
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestNew_maskInterfaces(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := wasm.New(&runtime.Unknown{
+			p, err := wasm.PluginFactory("wasm")(&runtime.Unknown{
 				ContentType: runtime.ContentTypeJSON,
 				Raw:         []byte(fmt.Sprintf(`{"guestURL": "%s"}`, tc.guestURL)),
 			}, nil)
@@ -292,7 +292,7 @@ wasm stack trace:
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: tc.guestURL})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: tc.guestURL})
 			if err != nil {
 				if want, have := tc.expectedError, err.Error(); want != have {
 					t.Fatalf("unexpected error: want %v, have %v", want, have)
@@ -342,7 +342,7 @@ func TestEnqueue(t *testing.T) {
 				guestURL = test.URLTestCycleState
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -358,7 +358,7 @@ func TestEnqueue(t *testing.T) {
 	t.Run("panic", func(t *testing.T) {
 		guestURL := test.URLErrorPanicOnEnqueue
 
-		p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL})
+		p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -450,7 +450,7 @@ wasm stack trace:
 				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args, GuestConfig: tc.guestConfig})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args, GuestConfig: tc.guestConfig})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -537,7 +537,7 @@ wasm stack trace:
 				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -633,7 +633,7 @@ wasm stack trace:
 				guestURL = test.URLTestScore
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
 			if tc.expectedError != "" {
 				requireError(t, err, tc.expectedError)
 				return
@@ -752,7 +752,7 @@ wasm stack trace:
 				guestURL = test.URLTestScore
 			}
 
-			p, err := wasm.NewFromConfig(ctx, wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
 			if err != nil {
 				t.Fatal(err)
 			}

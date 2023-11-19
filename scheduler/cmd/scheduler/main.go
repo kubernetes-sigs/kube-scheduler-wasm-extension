@@ -17,20 +17,31 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"k8s.io/component-base/cli"
-	_ "k8s.io/component-base/metrics/prometheus/clientgo" // for rest client metric registration
-	_ "k8s.io/component-base/metrics/prometheus/version"  // for version metric registration
+	_ "k8s.io/component-base/logs/json/register" // for JSON log format registration
+	_ "k8s.io/component-base/metrics/prometheus/clientgo"
+	_ "k8s.io/component-base/metrics/prometheus/version" // for version metric registration
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 )
 
 func main() {
-	command := app.NewSchedulerCommand(
-		app.WithPlugin(wasm.PluginName, wasm.New),
-	)
+	pluginNames, err := getWasmPluginsFromConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to get wasm plugins from config: %v\n", err)
+		os.Exit(1)
+	}
+
+	opt := []app.Option{}
+	for _, pluginName := range pluginNames {
+		opt = append(opt, app.WithPlugin(pluginName, wasm.PluginFactory(pluginName)))
+	}
+
+	command := app.NewSchedulerCommand(opt...)
 
 	code := cli.Run(command)
 	os.Exit(code)

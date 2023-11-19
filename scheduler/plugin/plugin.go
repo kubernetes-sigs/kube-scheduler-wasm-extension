@@ -31,26 +31,19 @@ import (
 	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
 )
 
-// PluginName is static as app.WithPlugin needs to set the name *prior* to
-// reading configuration from New. This means it cannot see any properties
-// there including the path to the wasm binary.
-const PluginName = "wasm"
-
-var _ frameworkruntime.PluginFactory = New
-
-// New initializes a new plugin and returns it.
-func New(configuration runtime.Object, frameworkHandle framework.Handle) (framework.Plugin, error) {
-	config := PluginConfig{}
-	if err := frameworkruntime.DecodeInto(configuration, &config); err != nil {
-		return nil, fmt.Errorf("wasm: failed to decode into PluginConfig: %w", err)
+func PluginFactory(pluginName string) frameworkruntime.PluginFactory {
+	return func(configuration runtime.Object, frameworkHandle framework.Handle) (framework.Plugin, error) {
+		config := PluginConfig{}
+		if err := frameworkruntime.DecodeInto(configuration, &config); err != nil {
+			return nil, fmt.Errorf("failed to decode into %s PluginConfig: %w", pluginName, err)
+		}
+		return NewFromConfig(context.Background(), pluginName, config)
 	}
-
-	return NewFromConfig(context.Background(), config)
 }
 
 // NewFromConfig is like New, except it allows us to explicitly provide the
 // context and configuration of the plugin. This allows flexibility in tests.
-func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, error) {
+func NewFromConfig(ctx context.Context, pluginName string, config PluginConfig) (framework.Plugin, error) {
 	url := config.GuestURL
 	if url == "" {
 		return nil, errors.New("wasm: guestURL is required")
@@ -65,7 +58,7 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, 
 		return nil, err
 	}
 
-	pl, err := newWasmPlugin(ctx, runtime, guestModule, config)
+	pl, err := newWasmPlugin(ctx, pluginName, runtime, guestModule, config)
 	if err != nil {
 		_ = runtime.Close(ctx)
 		return nil, err
@@ -83,7 +76,7 @@ func NewFromConfig(ctx context.Context, config PluginConfig) (framework.Plugin, 
 
 // newWasmPlugin is extracted to prevent small bugs: The caller must close the
 // wazero.Runtime to avoid leaking mmapped files.
-func newWasmPlugin(ctx context.Context, runtime wazero.Runtime, guestModule wazero.CompiledModule, config PluginConfig) (*wasmPlugin, error) {
+func newWasmPlugin(ctx context.Context, pluginName string, runtime wazero.Runtime, guestModule wazero.CompiledModule, config PluginConfig) (*wasmPlugin, error) {
 	var guestInterfaces interfaces
 	var err error
 	if guestInterfaces, err = detectInterfaces(guestModule.ExportedFunctions()); err != nil {
@@ -93,6 +86,7 @@ func newWasmPlugin(ctx context.Context, runtime wazero.Runtime, guestModule waze
 	}
 
 	pl := &wasmPlugin{
+		pluginName:        pluginName,
 		runtime:           runtime,
 		guestModule:       guestModule,
 		guestArgs:         config.Args,
@@ -108,6 +102,7 @@ func newWasmPlugin(ctx context.Context, runtime wazero.Runtime, guestModule waze
 }
 
 type wasmPlugin struct {
+	pluginName        string
 	runtime           wazero.Runtime
 	guestModule       wazero.CompiledModule
 	guestInterfaces   interfaces
@@ -134,9 +129,9 @@ func (pl *wasmPlugin) plugin() *wasmPlugin {
 var _ framework.Plugin = (*wasmPlugin)(nil)
 
 // Name implements the same method as documented on framework.Plugin.
-// See /RATIONALE.md for impact
+// The plugin name is defined by the scheduler configuration.
 func (pl *wasmPlugin) Name() string {
-	return PluginName
+	return pl.pluginName
 }
 
 var _ framework.EnqueueExtensions = (*wasmPlugin)(nil)
