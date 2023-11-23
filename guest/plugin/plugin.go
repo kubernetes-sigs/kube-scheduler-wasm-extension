@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/scoreextensions"
 )
 
 // Set is a convenience to assign lifecycle hooks based on which
@@ -62,6 +63,9 @@ func Set(plugin api.Plugin) {
 	}
 	if plugin, ok := plugin.(api.ScorePlugin); ok {
 		score.SetPlugin(plugin)
+	}
+	if plugin, ok := plugin.(api.ScoreExtensions); ok {
+		scoreextensions.SetPlugin(plugin)
 	}
 	if plugin, ok := plugin.(api.PreBindPlugin); ok {
 		prebind.SetPlugin(plugin)

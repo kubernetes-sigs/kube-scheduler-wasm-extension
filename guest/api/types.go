@@ -107,6 +107,13 @@ type ScorePlugin interface {
 	Score(state CycleState, pod proto.Pod, nodeName string) (int32, *Status)
 }
 
+// ScoreExtensions is a WebAssembly implementation of framework.ScoreExtensions.
+type ScoreExtensions interface {
+	Plugin
+
+	NormalizeScore(state CycleState, pod proto.Pod, scores NodeScore) (map[string]int, *Status)
+}
+
 // PreBindPlugin is a WebAssembly implementation of framework.PreBindPlugin.
 type PreBindPlugin interface {
 	Plugin
@@ -133,4 +140,11 @@ type NodeToStatus interface {
 	// NodeToStatus returns a map
 	// which is keyed by the node name and valued by the status code.
 	Map() map[string]StatusCode
+}
+
+// NodeScore contains which Node got how much score during the scheduling cycle.
+type NodeScore interface {
+	// Map returns a map
+	// which is keyed by the node name and valued by the score.
+	Map() map[string]int
 }

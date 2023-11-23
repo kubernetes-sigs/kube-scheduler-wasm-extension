@@ -28,24 +28,26 @@ import (
 )
 
 const (
-	i32                                 = wazeroapi.ValueTypeI32
-	i64                                 = wazeroapi.ValueTypeI64
-	k8sApi                              = "k8s.io/api"
-	k8sApiNode                          = "node"
-	k8sApiNodeList                      = "nodeList"
-	k8sApiNodeName                      = "nodeName"
-	k8sApiPod                           = "pod"
-	k8sApiNodeToStatusMap               = "nodeToStatusMap"
-	k8sKlog                             = "k8s.io/klog"
-	k8sKlogLog                          = "log"
-	k8sKlogLogs                         = "logs"
-	k8sKlogSeverity                     = "severity"
-	k8sScheduler                        = "k8s.io/scheduler"
-	k8sSchedulerGetConfig               = "get_config"
-	k8sSchedulerResultClusterEvents     = "result.cluster_events"
-	k8sSchedulerResultNodeNames         = "result.node_names"
-	k8sSchedulerResultNominatedNodeName = "result.nominated_node_name"
-	k8sSchedulerResultStatusReason      = "result.status_reason"
+	i32                                   = wazeroapi.ValueTypeI32
+	i64                                   = wazeroapi.ValueTypeI64
+	k8sApi                                = "k8s.io/api"
+	k8sApiNode                            = "node"
+	k8sApiNodeList                        = "nodeList"
+	k8sApiNodeName                        = "nodeName"
+	k8sApiPod                             = "pod"
+	k8sApiNodeToStatusMap                 = "nodeToStatusMap"
+	k8sKlog                               = "k8s.io/klog"
+	k8sKlogLog                            = "log"
+	k8sKlogLogs                           = "logs"
+	k8sKlogSeverity                       = "severity"
+	k8sScheduler                          = "k8s.io/scheduler"
+	k8sSchedulerGetConfig                 = "get_config"
+	k8sSchedulerNodeScoreList             = "nodeScoreList"
+	k8sSchedulerResultClusterEvents       = "result.cluster_events"
+	k8sSchedulerResultNodeNames           = "result.node_names"
+	k8sSchedulerResultNominatedNodeName   = "result.nominated_node_name"
+	k8sSchedulerResultStatusReason        = "result.status_reason"
+	k8sSchedulerResultNormalizedScoreList = "result.normalized_score_list"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
@@ -101,6 +103,12 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerNodeToStatusMapFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeToStatusMap).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultNormalizedScoreListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultNormalizedScoreList).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerNodeScoreListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerNodeScoreList).
 		Instantiate(ctx)
 }
 
@@ -134,6 +142,9 @@ type stack struct {
 	// nodeToStatusMap is used by guest.postfilterFn
 	nodeToStatusMap map[string]*framework.Status
 
+	// nodeScoreList is used by guest.normalizedscoreFn
+	nodeScoreList framework.NodeScoreList
+
 	// resultClusterEvents is returned by guest.enqueueFn
 	resultClusterEvents []framework.ClusterEvent
 
@@ -149,6 +160,9 @@ type stack struct {
 	// avoid having to deal with out-params because TinyGo only supports a
 	// single result.
 	resultStatusReason string
+
+	// resultNormalizedScoreList is returned by guest.normalizedscoreFn
+	resultNormalizedScoreList framework.NodeScoreList
 }
 
 func paramsFromContext(ctx context.Context) *stack {
@@ -372,4 +386,56 @@ func nodeStatusMapToMap(originalMap map[string]*framework.Status) map[string]int
 		}
 	}
 	return newMap
+}
+
+// k8sSchedulerNodeScoreListFn is a function used by the host to send the nodeScoreList.
+func k8sSchedulerNodeScoreListFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	nodeScoreList := paramsFromContext(ctx).nodeScoreList
+	nodeCodeMap := NodeScoreListToMap(nodeScoreList)
+	mapByte, err := json.Marshal(nodeCodeMap)
+	if err != nil {
+		panic(err)
+	}
+	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), string(mapByte), buf, bufLimit))
+}
+
+// k8sSchedulerResultNormalizedScoreListFn is a function used by the wasm guest to set the
+// nodeScoreList result from guestExportNormalizeScore.
+func k8sSchedulerResultNormalizedScoreListFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLen := uint32(stack[1])
+
+	var nodeScoreList map[string]int
+	b, ok := mod.Memory().Read(buf, bufLen)
+	if !ok {
+		panic("out of memory reading normalized score list")
+	}
+	if err := json.Unmarshal(b, &nodeScoreList); err != nil {
+		panic(err)
+	}
+	paramsFromContext(ctx).resultNormalizedScoreList = MapToNodeScoreList(nodeScoreList)
+}
+
+// Converts a list of framework.NodeScore to a map with node names as keys and their scores as integer values.
+func NodeScoreListToMap(nodeScoreList []framework.NodeScore) map[string]int {
+	scoreMap := make(map[string]int)
+	for _, nodeScore := range nodeScoreList {
+		scoreMap[nodeScore.Name] = int(nodeScore.Score)
+	}
+	return scoreMap
+}
+
+// Transforms a map of node names and scores (as integers) into a slice of framework.NodeScore structures.
+func MapToNodeScoreList(scoreMap map[string]int) []framework.NodeScore {
+	var nodeScoreList []framework.NodeScore
+	for nodeName, score := range scoreMap {
+		nodeScoreList = append(nodeScoreList, framework.NodeScore{
+			Name:  nodeName,
+			Score: int64(score),
+		})
+	}
+	return nodeScoreList
 }

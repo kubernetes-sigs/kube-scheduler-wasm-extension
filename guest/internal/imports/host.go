@@ -81,3 +81,18 @@ func NodeToStatusMap() map[string]api.StatusCode {
 	}
 	return nodeToMap
 }
+
+// normalizeScore calls NodeScoreList
+func NodeScoreList() map[string]int {
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	jsonStr := mem.GetString(func(ptr uint32, limit mem.BufLimit) (len uint32) {
+		return k8sSchedulerNodeScoreList(ptr, limit)
+	})
+	byte := []byte(jsonStr)
+	var nodeScoreList map[string]int
+	err := json.Unmarshal(byte, &nodeScoreList)
+	if err != nil {
+		panic(err)
+	}
+	return nodeScoreList
+}

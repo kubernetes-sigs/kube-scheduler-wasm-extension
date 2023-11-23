@@ -37,6 +37,21 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 		score, s = scoreP.Score(ctx, nil, pod, ni.Node().Name)
 		RequireSuccess(t, s)
 	}
+
+	if scoreEx, ok := plugin.(framework.ScoreExtensions); ok {
+		s = scoreEx.NormalizeScore(ctx, nil, pod, nil)
+		RequireSuccess(t, s)
+	}
+
+	if prebindP, ok := plugin.(framework.PreBindPlugin); ok {
+		s = prebindP.PreBind(ctx, nil, pod, "")
+		RequireSuccess(t, s)
+	}
+
+	if bindP, ok := plugin.(framework.BindPlugin); ok {
+		s = bindP.Bind(ctx, nil, pod, "")
+		RequireSuccess(t, s)
+	}
 	return
 }
 
