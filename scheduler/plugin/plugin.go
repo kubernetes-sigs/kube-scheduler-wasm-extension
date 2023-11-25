@@ -354,13 +354,22 @@ func (pl *wasmPlugin) Unreserve(ctx context.Context, state *framework.CycleState
 var _ framework.PreBindPlugin = (*wasmPlugin)(nil)
 
 // PreBind implements the same method as documented on framework.PreBindPlugin.
-func (pl *wasmPlugin) PreBind(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
+func (pl *wasmPlugin) PreBind(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
 	// We implement PreBindPlugin with BindPlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPreBindPlugin == 0 {
 		return nil // unimplemented
 	}
 
-	panic("TODO: binding: PreBind")
+	// Add the stack to the go context so that the corresponding host function
+	// can look them up.
+	params := &stack{pod: pod, nodeName: nodeName}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
+		status = g.preBind(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	return
 }
 
 var _ framework.PostBindPlugin = (*wasmPlugin)(nil)
@@ -390,8 +399,17 @@ func (pl *wasmPlugin) Permit(ctx context.Context, state *framework.CycleState, p
 var _ framework.BindPlugin = (*wasmPlugin)(nil)
 
 // Bind implements the same method as documented on framework.BindPlugin.
-func (pl *wasmPlugin) Bind(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) *framework.Status {
-	panic("TODO: binding: Bind")
+func (pl *wasmPlugin) Bind(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
+	// Add the stack to the go context so that the corresponding host function
+	// can look them up.
+	params := &stack{pod: pod, nodeName: nodeName}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
+		status = g.bind(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	return
 }
 
 // Close implements io.Closer

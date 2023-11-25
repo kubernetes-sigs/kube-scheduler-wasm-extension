@@ -32,6 +32,10 @@ var URLErrorPreScoreWithoutScore = localURL(pathWatError("prescore_without_score
 
 var URLErrorPanicOnScore = localURL(pathWatError("panic_on_score"))
 
+var URLErrorPanicOnPreBind = localURL(pathWatError("panic_on_prebind"))
+
+var URLErrorPanicOnBind = localURL(pathWatError("panic_on_bind"))
+
 var URLErrorPanicOnStart = localURL(pathWatError("panic_on_start"))
 
 var URLExampleNodeNumber = localURL(pathTinyGoExample("nodenumber"))
@@ -53,6 +57,12 @@ var URLTestPreScoreFromGlobal = localURL(pathWatTest("prescore_from_global"))
 var URLTestScore = localURL(pathTinyGoTest("score"))
 
 var URLTestScoreFromGlobal = localURL(pathWatTest("score_from_global"))
+
+var URLTestPreBindFromGlobal = localURL(pathWatTest("prebind_from_global"))
+
+var URLTestBindFromGlobal = localURL(pathWatTest("bind_from_global"))
+
+var URLTestBind = localURL(pathTinyGoTest("bind"))
 
 //go:embed testdata/yaml/node.yaml
 var yamlNodeReal string

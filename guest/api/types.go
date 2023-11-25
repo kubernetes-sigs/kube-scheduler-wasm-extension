@@ -91,6 +91,20 @@ type ScorePlugin interface {
 	Score(state CycleState, pod proto.Pod, nodeName string) (int32, *Status)
 }
 
+// PreBindPlugin is a WebAssembly implementation of framework.PreBindPlugin.
+type PreBindPlugin interface {
+	Plugin
+
+	PreBind(state CycleState, pod proto.Pod, nodeName string) *Status
+}
+
+// BindPlugin is a WebAssembly implementation of framework.BindPlugin.
+type BindPlugin interface {
+	Plugin
+
+	Bind(state CycleState, pod proto.Pod, nodeName string) *Status
+}
+
 type NodeInfo interface {
 	// Metadata is a convenience that triggers Get.
 	proto.Metadata

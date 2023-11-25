@@ -777,6 +777,174 @@ wasm stack trace:
 	}
 }
 
+func TestPreBind(t *testing.T) {
+	tests := []struct {
+		name                  string
+		guestURL              string
+		args                  []string
+		globals               map[string]int32
+		pod                   *v1.Pod
+		nodeName              string
+		expectedStatusCode    framework.Code
+		expectedStatusMessage string
+	}{
+		{
+			name:               "Success",
+			args:               []string{"test", "preBind"},
+			pod:                test.PodSmall,
+			nodeName:           "good",
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:                  "Error",
+			args:                  []string{"test", "preBind"},
+			pod:                   test.PodSmall,
+			nodeName:              "bad",
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "name is bad",
+		},
+		{
+			name:               "min statusCode",
+			guestURL:           test.URLTestPreBindFromGlobal,
+			pod:                test.PodSmall,
+			nodeName:           test.NodeSmall.Name,
+			globals:            map[string]int32{"status_code": math.MinInt32},
+			expectedStatusCode: math.MinInt32,
+		},
+		{
+			name:               "max statusCode",
+			guestURL:           test.URLTestPreBindFromGlobal,
+			pod:                test.PodSmall,
+			nodeName:           test.NodeSmall.Name,
+			globals:            map[string]int32{"status_code": math.MaxInt32},
+			expectedStatusCode: math.MaxInt32,
+		},
+		{
+			name:               "panic",
+			guestURL:           test.URLErrorPanicOnPreBind,
+			pod:                test.PodSmall,
+			nodeName:           test.NodeSmall.Name,
+			expectedStatusCode: framework.Error,
+			expectedStatusMessage: `wasm: prebind error: panic!
+wasm error: unreachable
+wasm stack trace:
+	panic_on_prebind.$1() i32`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestBind
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			status := p.(framework.PreBindPlugin).PreBind(ctx, nil, tc.pod, tc.nodeName)
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
+func TestBind(t *testing.T) {
+	tests := []struct {
+		name                  string
+		guestURL              string
+		args                  []string
+		globals               map[string]int32
+		pod                   *v1.Pod
+		nodeName              string
+		expectedStatusCode    framework.Code
+		expectedStatusMessage string
+	}{
+		{
+			name:               "Success",
+			args:               []string{"test", "bind"},
+			pod:                test.PodSmall,
+			nodeName:           "good",
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:                  "Error",
+			args:                  []string{"test", "bind"},
+			pod:                   test.PodSmall,
+			nodeName:              "bad",
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "name is bad",
+		},
+		{
+			name:               "min statusCode",
+			guestURL:           test.URLTestBindFromGlobal,
+			pod:                test.PodSmall,
+			nodeName:           test.NodeSmall.Name,
+			globals:            map[string]int32{"status_code": math.MinInt32},
+			expectedStatusCode: math.MinInt32,
+		},
+		{
+			name:               "max statusCode",
+			guestURL:           test.URLTestBindFromGlobal,
+			pod:                test.PodSmall,
+			nodeName:           test.NodeSmall.Name,
+			globals:            map[string]int32{"status_code": math.MaxInt32},
+			expectedStatusCode: math.MaxInt32,
+		},
+		{
+			name:               "panic",
+			guestURL:           test.URLErrorPanicOnBind,
+			pod:                test.PodSmall,
+			nodeName:           test.NodeSmall.Name,
+			expectedStatusCode: framework.Error,
+			expectedStatusMessage: `wasm: bind error: panic!
+wasm error: unreachable
+wasm stack trace:
+	panic_on_bind.$1() i32`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestBind
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			status := p.(framework.BindPlugin).Bind(ctx, nil, tc.pod, tc.nodeName)
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
 func requireError(t *testing.T, err error, expectedError string) {
 	var have string
 	if err != nil {
