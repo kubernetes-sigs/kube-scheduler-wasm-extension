@@ -185,6 +185,6 @@ func mustFilterState(state api.CycleState) {
 	if val, ok := state.Read(preFilterStateKey); !ok {
 		panic("didn't propagate state from pre-filter")
 	} else if _, ok = val.(preFilterStateVal)["filter"]; !ok {
-		panic("filter value lost propagating from pre-score")
+		panic("filter value lost propagating from pre-filter")
 	}
 }
