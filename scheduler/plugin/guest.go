@@ -34,6 +34,8 @@ const (
 	guestExportFilter    = "filter"
 	guestExportPreScore  = "prescore"
 	guestExportScore     = "score"
+	guestExportPreBind   = "prebind"
+	guestExportBind      = "bind"
 )
 
 type guest struct {
@@ -44,6 +46,8 @@ type guest struct {
 	filterFn    wazeroapi.Function
 	prescoreFn  wazeroapi.Function
 	scoreFn     wazeroapi.Function
+	prebindFn   wazeroapi.Function
+	bindFn      wazeroapi.Function
 	callStack   []uint64
 }
 
@@ -89,6 +93,8 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 		filterFn:    g.ExportedFunction(guestExportFilter),
 		prescoreFn:  g.ExportedFunction(guestExportPreScore),
 		scoreFn:     g.ExportedFunction(guestExportScore),
+		prebindFn:   g.ExportedFunction(guestExportPreBind),
+		bindFn:      g.ExportedFunction(guestExportBind),
 		callStack:   callStack,
 	}, nil
 }
@@ -159,6 +165,34 @@ func (g *guest) score(ctx context.Context) (int64, *framework.Status) {
 	return int64(score), framework.NewStatus(framework.Code(statusCode), statusReason)
 }
 
+// preBind calls guestExportPreBind.
+func (g *guest) preBind(ctx context.Context) *framework.Status {
+	defer g.out.Reset()
+	callStack := g.callStack
+
+	if err := g.prebindFn.CallWithStack(ctx, callStack); err != nil {
+		return framework.AsStatus(decorateError(g.out, guestExportPreBind, err))
+	}
+
+	statusCode := int32(callStack[0])
+	statusReason := paramsFromContext(ctx).resultStatusReason
+	return framework.NewStatus(framework.Code(statusCode), statusReason)
+}
+
+// bind calls guestExportBind.
+func (g *guest) bind(ctx context.Context) *framework.Status {
+	defer g.out.Reset()
+	callStack := g.callStack
+
+	if err := g.bindFn.CallWithStack(ctx, callStack); err != nil {
+		return framework.AsStatus(decorateError(g.out, guestExportBind, err))
+	}
+
+	statusCode := int32(callStack[0])
+	statusReason := paramsFromContext(ctx).resultStatusReason
+	return framework.NewStatus(framework.Code(statusCode), statusReason)
+}
+
 func decorateError(out fmt.Stringer, fn string, err error) error {
 	detail := out.String()
 	if detail != "" {
@@ -198,6 +232,16 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i64)", name)
 			}
 			e |= iScorePlugin
+		case guestExportPreBind:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
+			}
+			e |= iPreBindPlugin
+		case guestExportBind:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
+			}
+			e |= iBindPlugin
 		}
 	}
 	if e == 0 {

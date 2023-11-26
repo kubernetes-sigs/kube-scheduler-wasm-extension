@@ -24,8 +24,10 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/bind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
@@ -58,6 +60,8 @@ func main() {
 	filter.SetPlugin(plugin)
 	prescore.SetPlugin(plugin)
 	score.SetPlugin(plugin)
+	prebind.SetPlugin(plugin)
+	bind.SetPlugin(plugin)
 }
 
 const (
@@ -65,6 +69,7 @@ const (
 	name              = "CycleState"
 	preFilterStateKey = "PreFilter" + name
 	preScoreStateKey  = "PreScore" + name
+	preBindStateKey   = "PreBind" + name
 )
 
 // statePlugin makes sure api.CycleState is consistent between callbacks.
@@ -80,6 +85,8 @@ var podSpec *protoapi.PodSpec
 type preFilterStateVal map[string]any
 
 type preScoreStateVal map[string]any
+
+type preBindStateVal map[string]any
 
 func (statePlugin) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *api.Status) {
 	if nextPodSpec := pod.Spec(); unsafe.Pointer(nextPodSpec) == unsafe.Pointer(podSpec) {
@@ -131,6 +138,32 @@ func (statePlugin) Score(state api.CycleState, pod proto.Pod, _ string) (score i
 		panic("didn't propagate score state from pre-score")
 	} else {
 		val.(preScoreStateVal)["score"] = struct{}{}
+	}
+	return
+}
+
+func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) *api.Status {
+	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
+		panic("didn't cache pod from score")
+	}
+	mustFilterState(state)
+	if _, ok := state.Read(preBindStateKey); ok {
+		panic("didn't reset pre-bind state on pre-bind")
+	} else {
+		state.Write(preBindStateKey, preBindStateVal{})
+	}
+	return nil
+}
+
+func (statePlugin) Bind(state api.CycleState, pod proto.Pod, _ string) (status *api.Status) {
+	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
+		panic("didn't cache pod from pre-bind")
+	}
+	mustFilterState(state)
+	if val, ok := state.Read(preBindStateKey); !ok {
+		panic("didn't propagate pre-bind state from pre-bind")
+	} else {
+		val.(preScoreStateVal)["bind"] = struct{}{}
 	}
 	return
 }
