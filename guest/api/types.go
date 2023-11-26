@@ -67,6 +67,22 @@ type FilterPlugin interface {
 	Filter(state CycleState, pod proto.Pod, nodeInfo NodeInfo) *Status
 }
 
+// PostFilterPlugin is a WebAssembly implementation of framework.PostFilterPlugin.
+type PostFilterPlugin interface {
+	Plugin
+
+	PostFilter(state CycleState, pod proto.Pod, filteredNodeStatusMap NodeToStatus) (nominatedNodeName string, nominatingMode NominatingMode, status *Status)
+}
+
+// NominatingMode is the Mode which is returned from PostFilter.
+type NominatingMode int32
+
+// These are predefined modes
+const (
+	ModeNoop NominatingMode = iota
+	ModeOverride
+)
+
 // EnqueueExtensions is a WebAssembly implementation of framework.EnqueueExtensions.
 type EnqueueExtensions interface {
 	EventsToRegister() []ClusterEvent
@@ -110,4 +126,11 @@ type NodeInfo interface {
 	proto.Metadata
 
 	Node() proto.Node
+}
+
+// NodeToStatus contains which Node got which status during the scheduling cycle.
+type NodeToStatus interface {
+	// NodeToStatus returns a map
+	// which is keyed by the node name and valued by the status code.
+	Map() map[string]StatusCode
 }

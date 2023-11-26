@@ -18,6 +18,7 @@ package wasm
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
@@ -27,22 +28,24 @@ import (
 )
 
 const (
-	i32                             = wazeroapi.ValueTypeI32
-	i64                             = wazeroapi.ValueTypeI64
-	k8sApi                          = "k8s.io/api"
-	k8sApiNode                      = "node"
-	k8sApiNodeList                  = "nodeList"
-	k8sApiNodeName                  = "nodeName"
-	k8sApiPod                       = "pod"
-	k8sKlog                         = "k8s.io/klog"
-	k8sKlogLog                      = "log"
-	k8sKlogLogs                     = "logs"
-	k8sKlogSeverity                 = "severity"
-	k8sScheduler                    = "k8s.io/scheduler"
-	k8sSchedulerGetConfig           = "get_config"
-	k8sSchedulerResultClusterEvents = "result.cluster_events"
-	k8sSchedulerResultNodeNames     = "result.node_names"
-	k8sSchedulerResultStatusReason  = "result.status_reason"
+	i32                                 = wazeroapi.ValueTypeI32
+	i64                                 = wazeroapi.ValueTypeI64
+	k8sApi                              = "k8s.io/api"
+	k8sApiNode                          = "node"
+	k8sApiNodeList                      = "nodeList"
+	k8sApiNodeName                      = "nodeName"
+	k8sApiPod                           = "pod"
+	k8sApiNodeToStatusMap               = "nodeToStatusMap"
+	k8sKlog                             = "k8s.io/klog"
+	k8sKlogLog                          = "log"
+	k8sKlogLogs                         = "logs"
+	k8sKlogSeverity                     = "severity"
+	k8sScheduler                        = "k8s.io/scheduler"
+	k8sSchedulerGetConfig               = "get_config"
+	k8sSchedulerResultClusterEvents     = "result.cluster_events"
+	k8sSchedulerResultNodeNames         = "result.node_names"
+	k8sSchedulerResultNominatedNodeName = "result.nominated_node_name"
+	k8sSchedulerResultStatusReason      = "result.status_reason"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
@@ -90,8 +93,14 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultNodeNamesFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultNodeNames).
 		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultNominatedNodeNameFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultNominatedNodeName).
+		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultStatusReasonFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultStatusReason).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerNodeToStatusMapFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeToStatusMap).
 		Instantiate(ctx)
 }
 
@@ -122,11 +131,17 @@ type stack struct {
 	// pod is used by guest.filterFn and guest.scoreFn
 	pod *v1.Pod
 
+	// nodeToStatusMap is used by guest.postfilterFn
+	nodeToStatusMap map[string]*framework.Status
+
 	// resultClusterEvents is returned by guest.enqueueFn
 	resultClusterEvents []framework.ClusterEvent
 
 	// resultNodeNames is returned by guest.prefilterFn
 	resultNodeNames []string
+
+	// resultNominatedNodeName is returned by guest.postfilterFn
+	resultNominatedNodeName string
 
 	// reason returned by all guest exports except guest.enqueueFn
 	//
@@ -177,6 +192,20 @@ func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 
 	pod := paramsFromContext(ctx).pod
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
+}
+
+// k8sSchedulerNodeToStatusMapFn is a function used by the host to send the nodeStatusMap.
+func k8sSchedulerNodeToStatusMapFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	nodeToStatusMap := paramsFromContext(ctx).nodeToStatusMap
+	nodeCodeMap := nodeStatusMapToMap(nodeToStatusMap)
+	mapByte, err := json.Marshal(nodeCodeMap)
+	if err != nil {
+		panic(err)
+	}
+	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), string(mapByte), buf, bufLimit))
 }
 
 type host struct {
@@ -303,6 +332,21 @@ func k8sSchedulerResultNodeNamesFn(ctx context.Context, mod wazeroapi.Module, st
 	paramsFromContext(ctx).resultNodeNames = nodeNames
 }
 
+// k8sSchedulerResultNominatedNodeNameFn is a function used by the wasm guest to set the
+// nominated node name result from guestExportPostFilter.
+func k8sSchedulerResultNominatedNodeNameFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLen := uint32(stack[1])
+
+	var nominatedNodeName string
+	if b, ok := mod.Memory().Read(buf, bufLen); !ok {
+		panic("out of memory reading nominatedNodeName")
+	} else {
+		nominatedNodeName = string(b)
+	}
+	paramsFromContext(ctx).resultNominatedNodeName = nominatedNodeName
+}
+
 // k8sSchedulerResultStatusReasonFn is a function used by the wasm guest to set the
 // framework.Status reason result from all functions.
 func k8sSchedulerResultStatusReasonFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
@@ -317,4 +361,15 @@ func k8sSchedulerResultStatusReasonFn(ctx context.Context, mod wazeroapi.Module,
 		reason = string(b)
 	}
 	paramsFromContext(ctx).resultStatusReason = reason
+}
+
+// Converts nodeToStatusMap to a map with node names as keys and their scores as integer values.
+func nodeStatusMapToMap(originalMap map[string]*framework.Status) map[string]int {
+	newMap := make(map[string]int)
+	for key, value := range originalMap {
+		if value != nil {
+			newMap[key] = int(value.Code())
+		}
+	}
+	return newMap
 }

@@ -561,6 +561,111 @@ wasm stack trace:
 	}
 }
 
+func TestPostFilter(t *testing.T) {
+	tests := []struct {
+		name                  string
+		guestURL              string
+		args                  []string
+		globals               map[string]int32
+		pod                   *v1.Pod
+		nodeToStatusMap       map[string]*framework.Status
+		expectedResult        *framework.PostFilterResult
+		expectedStatusCode    framework.Code
+		expectedStatusMessage string
+	}{
+		{
+			name:               "success",
+			args:               []string{"test", "postFilter"},
+			pod:                test.PodSmall,
+			nodeToStatusMap:    map[string]*framework.Status{test.NodeSmallName: framework.NewStatus(framework.Success, "")},
+			expectedResult:     &framework.PostFilterResult{NominatingInfo: &framework.NominatingInfo{NominatedNodeName: "good-node", NominatingMode: framework.ModeOverride}},
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:                  "unschedulable",
+			args:                  []string{"test", "postFilter"},
+			pod:                   test.PodSmall,
+			nodeToStatusMap:       map[string]*framework.Status{test.NodeSmallName: framework.NewStatus(framework.Unschedulable, "")},
+			expectedResult:        &framework.PostFilterResult{NominatingInfo: &framework.NominatingInfo{NominatedNodeName: "good-node", NominatingMode: framework.ModeNoop}},
+			expectedStatusMessage: "good-node is unschedulable",
+			expectedStatusCode:    framework.UnschedulableAndUnresolvable,
+		},
+		{
+			name:               "min statusCode",
+			guestURL:           test.URLTestPostFilterFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"status_code": math.MinInt32},
+			expectedResult:     &framework.PostFilterResult{NominatingInfo: &framework.NominatingInfo{NominatedNodeName: "", NominatingMode: 0}},
+			expectedStatusCode: math.MinInt32,
+		},
+		{
+			name:               "max statusCode",
+			guestURL:           test.URLTestPostFilterFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"status_code": math.MaxInt32},
+			expectedResult:     &framework.PostFilterResult{NominatingInfo: &framework.NominatingInfo{NominatedNodeName: "", NominatingMode: 0}},
+			expectedStatusCode: math.MaxInt32,
+		},
+		{
+			name:               "min nominatingMode",
+			guestURL:           test.URLTestPostFilterFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"nominating_mode": math.MinInt32},
+			expectedResult:     &framework.PostFilterResult{NominatingInfo: &framework.NominatingInfo{NominatedNodeName: "", NominatingMode: math.MinInt32}},
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:               "max nominatingMode",
+			guestURL:           test.URLTestPostFilterFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"nominating_mode": math.MaxInt32},
+			expectedResult:     &framework.PostFilterResult{NominatingInfo: &framework.NominatingInfo{NominatedNodeName: "", NominatingMode: math.MaxInt32}},
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:               "panic",
+			guestURL:           test.URLErrorPanicOnPostFilter,
+			pod:                test.PodSmall,
+			expectedStatusCode: framework.Error,
+			expectedStatusMessage: `wasm: postfilter error: panic!
+wasm error: unreachable
+wasm stack trace:
+	panic_on_postfilter.$1() i64`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestFilter
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			result, status := p.(framework.PostFilterPlugin).PostFilter(ctx, nil, tc.pod, tc.nodeToStatusMap)
+			if want, have := tc.expectedResult, result; !reflect.DeepEqual(want, have) {
+				t.Fatalf("unexpected result: want %#v, have %#v", want.NominatingInfo, have.NominatingInfo)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
 func TestPreScore(t *testing.T) {
 	tests := []struct {
 		name                  string

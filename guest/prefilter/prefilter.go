@@ -35,7 +35,7 @@ import (
 //
 //	type filterPlugin struct{}
 //
-//	func (filterPlugin) PreFilter(state api.CycleState, pod proto.Pod, nodeList proto.NodeList) {
+//	func (filterPlugin) PreFilter(state api.CycleState, pod proto.Pod) (nodeNames []string, status *Status) {
 //		// Write state you need on Filter
 //	}
 //
