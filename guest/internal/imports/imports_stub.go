@@ -34,3 +34,6 @@ func k8sSchedulerNodeToStatusMap(uint32, mem.BufLimit) (len uint32) { return }
 
 // k8sSchedulerResultStatusReason is stubbed for compilation outside TinyGo.
 func k8sSchedulerResultStatusReason(uint32, uint32) {}
+
+// k8sSchedulerNodeScoreList is stubbed for compilation outside TinyGo.
+func k8sSchedulerNodeScoreList(uint32, mem.BufLimit) (len uint32) { return }

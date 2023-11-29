@@ -28,29 +28,31 @@ import (
 )
 
 const (
-	guestExportMemory     = "memory"
-	guestExportEnqueue    = "enqueue"
-	guestExportPreFilter  = "prefilter"
-	guestExportFilter     = "filter"
-	guestExportPostFilter = "postfilter"
-	guestExportPreScore   = "prescore"
-	guestExportScore      = "score"
-	guestExportPreBind    = "prebind"
-	guestExportBind       = "bind"
+	guestExportMemory         = "memory"
+	guestExportEnqueue        = "enqueue"
+	guestExportPreFilter      = "prefilter"
+	guestExportFilter         = "filter"
+	guestExportPostFilter     = "postfilter"
+	guestExportPreScore       = "prescore"
+	guestExportScore          = "score"
+	guestExportNormalizeScore = "normalizescore"
+	guestExportPreBind        = "prebind"
+	guestExportBind           = "bind"
 )
 
 type guest struct {
-	guest        wazeroapi.Module
-	out          *bytes.Buffer
-	enqueueFn    wazeroapi.Function
-	prefilterFn  wazeroapi.Function
-	filterFn     wazeroapi.Function
-	postfilterFn wazeroapi.Function
-	prescoreFn   wazeroapi.Function
-	scoreFn      wazeroapi.Function
-	prebindFn    wazeroapi.Function
-	bindFn       wazeroapi.Function
-	callStack    []uint64
+	guest            wazeroapi.Module
+	out              *bytes.Buffer
+	enqueueFn        wazeroapi.Function
+	prefilterFn      wazeroapi.Function
+	filterFn         wazeroapi.Function
+	postfilterFn     wazeroapi.Function
+	prescoreFn       wazeroapi.Function
+	scoreFn          wazeroapi.Function
+	normalizescoreFn wazeroapi.Function
+	prebindFn        wazeroapi.Function
+	bindFn           wazeroapi.Function
+	callStack        []uint64
 }
 
 func compileGuest(ctx context.Context, runtime wazero.Runtime, guestBin []byte) (guest wazero.CompiledModule, err error) {
@@ -88,17 +90,18 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 	callStack := make([]uint64, 1)
 
 	return &guest{
-		guest:        g,
-		out:          &out,
-		enqueueFn:    g.ExportedFunction(guestExportEnqueue),
-		prefilterFn:  g.ExportedFunction(guestExportPreFilter),
-		filterFn:     g.ExportedFunction(guestExportFilter),
-		postfilterFn: g.ExportedFunction(guestExportPostFilter),
-		prescoreFn:   g.ExportedFunction(guestExportPreScore),
-		scoreFn:      g.ExportedFunction(guestExportScore),
-		prebindFn:    g.ExportedFunction(guestExportPreBind),
-		bindFn:       g.ExportedFunction(guestExportBind),
-		callStack:    callStack,
+		guest:            g,
+		out:              &out,
+		enqueueFn:        g.ExportedFunction(guestExportEnqueue),
+		prefilterFn:      g.ExportedFunction(guestExportPreFilter),
+		filterFn:         g.ExportedFunction(guestExportFilter),
+		postfilterFn:     g.ExportedFunction(guestExportPostFilter),
+		prescoreFn:       g.ExportedFunction(guestExportPreScore),
+		scoreFn:          g.ExportedFunction(guestExportScore),
+		normalizescoreFn: g.ExportedFunction(guestExportNormalizeScore),
+		prebindFn:        g.ExportedFunction(guestExportPreBind),
+		bindFn:           g.ExportedFunction(guestExportBind),
+		callStack:        callStack,
 	}, nil
 }
 
@@ -185,6 +188,21 @@ func (g *guest) score(ctx context.Context) (int64, *framework.Status) {
 	return int64(score), framework.NewStatus(framework.Code(statusCode), statusReason)
 }
 
+// normalizeScore calls guestExportNormalizeScore.
+func (g *guest) normalizeScore(ctx context.Context) (framework.NodeScoreList, *framework.Status) {
+	defer g.out.Reset()
+	callStack := g.callStack
+
+	if err := g.normalizescoreFn.CallWithStack(ctx, callStack); err != nil {
+		return nil, framework.AsStatus(decorateError(g.out, guestExportNormalizeScore, err))
+	}
+
+	statusCode := int32(callStack[0])
+	statusReason := paramsFromContext(ctx).resultStatusReason
+	normalizedScoreList := paramsFromContext(ctx).resultNormalizedScoreList
+	return normalizedScoreList, framework.NewStatus(framework.Code(statusCode), statusReason)
+}
+
 // preBind calls guestExportPreBind.
 func (g *guest) preBind(ctx context.Context) *framework.Status {
 	defer g.out.Reset()
@@ -257,6 +275,11 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i64)", name)
 			}
 			e |= iScorePlugin
+		case guestExportNormalizeScore:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
+			}
+			e |= iScoreExtensions
 		case guestExportPreBind:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)

@@ -34,3 +34,6 @@ func k8sSchedulerNodeToStatusMap(ptr uint32, limit mem.BufLimit) (len uint32)
 
 //go:wasmimport k8s.io/scheduler result.status_reason
 func k8sSchedulerResultStatusReason(ptr, size uint32)
+
+//go:wasmimport k8s.io/scheduler nodeScoreList
+func k8sSchedulerNodeScoreList(ptr uint32, limit mem.BufLimit) (len uint32)

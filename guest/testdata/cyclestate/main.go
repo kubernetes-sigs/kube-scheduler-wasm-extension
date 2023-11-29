@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/scoreextensions"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
@@ -62,6 +63,7 @@ func main() {
 	postfilter.SetPlugin(plugin)
 	prescore.SetPlugin(plugin)
 	score.SetPlugin(plugin)
+	scoreextensions.SetPlugin(plugin)
 	prebind.SetPlugin(plugin)
 	bind.SetPlugin(plugin)
 }
@@ -157,7 +159,22 @@ func (statePlugin) Score(state api.CycleState, pod proto.Pod, _ string) (score i
 	return
 }
 
-func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) *api.Status {
+func (statePlugin) NormalizeScore(state api.CycleState, pod proto.Pod, _ api.NodeScore) (scores map[string]int, status *api.Status) {
+	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
+		panic("didn't cache pod from pre-score")
+	}
+	mustFilterState(state)
+	if val, ok := state.Read(preScoreStateKey); !ok {
+		panic("didn't propagate score state from pre-score")
+	} else if _, ok = val.(preScoreStateVal)["score"]; !ok {
+		panic("score value lost propagating from score-extensions")
+	} else {
+		val.(preScoreStateVal)["scoreextensions"] = struct{}{}
+	}
+	return
+}
+
+func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) (status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from score")
 	}
@@ -167,7 +184,7 @@ func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) *api.S
 	} else {
 		state.Write(preBindStateKey, preBindStateVal{})
 	}
-	return nil
+	return
 }
 
 func (statePlugin) Bind(state api.CycleState, pod proto.Pod, _ string) (status *api.Status) {
@@ -178,7 +195,7 @@ func (statePlugin) Bind(state api.CycleState, pod proto.Pod, _ string) (status *
 	if val, ok := state.Read(preBindStateKey); !ok {
 		panic("didn't propagate pre-bind state from pre-bind")
 	} else {
-		val.(preScoreStateVal)["bind"] = struct{}{}
+		val.(preBindStateVal)["bind"] = struct{}{}
 	}
 	return
 }

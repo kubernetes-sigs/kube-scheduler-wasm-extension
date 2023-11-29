@@ -23,11 +23,13 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/scoreextensions"
 )
 
 type extensionPoints interface {
 	api.PreScorePlugin
 	api.ScorePlugin
+	api.ScoreExtensions
 }
 
 func main() {
@@ -40,10 +42,13 @@ func main() {
 			plugin = scorePlugin{}
 		case "preScore":
 			plugin = preScorePlugin{}
+		case "scoreExtensions":
+			plugin = scoreExtensions{}
 		}
 	}
 	prescore.SetPlugin(plugin)
 	score.SetPlugin(plugin)
+	scoreextensions.SetPlugin(plugin)
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.
@@ -63,6 +68,13 @@ func (noopPlugin) Score(state api.CycleState, pod proto.Pod, nodeName string) (s
 	return
 }
 
+func (noopPlugin) NormalizeScore(state api.CycleState, pod proto.Pod, scores api.NodeScore) (updatedScores map[string]int, status *api.Status) {
+	_, _ = state.Read("ok")
+	_ = pod.Spec()
+	_ = scores
+	return
+}
+
 // preScorePlugin returns the count of the node list as the status
 type preScorePlugin struct{ noopPlugin }
 
@@ -79,4 +91,16 @@ func (scorePlugin) Score(_ api.CycleState, pod proto.Pod, nodeName string) (int3
 		return 100, nil
 	}
 	return 0, nil
+}
+
+type scoreExtensions struct{ noopPlugin }
+
+// NormalizeScore multiply score by 100.
+func (scoreExtensions) NormalizeScore(_ api.CycleState, pod proto.Pod, scores api.NodeScore) (map[string]int, *api.Status) {
+	updatedScoreMap := make(map[string]int)
+	scoreMap := scores.Map()
+	for nodeName, score := range scoreMap {
+		updatedScoreMap[nodeName] = score * 100
+	}
+	return updatedScoreMap, nil
 }

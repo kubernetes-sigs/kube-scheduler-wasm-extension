@@ -304,12 +304,27 @@ func (pl *wasmPlugin) PreScore(ctx context.Context, state *framework.CycleState,
 var _ framework.ScoreExtensions = (*wasmPlugin)(nil)
 
 // NormalizeScore implements the same method as documented on framework.ScoreExtensions.
-func (pl *wasmPlugin) NormalizeScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
+func (pl *wasmPlugin) NormalizeScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) (status *framework.Status) {
 	// We implement ScoreExtensions with ScorePlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iScoreExtensions == 0 {
 		return nil // unimplemented
 	}
-	panic("TODO: scheduling: NormalizeScore")
+	params := &stack{pod: pod, nodeScoreList: scores}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	var updatedScores framework.NodeScoreList
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
+		updatedScores, status = g.normalizeScore(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	if len(scores) != len(updatedScores) {
+		panic(fmt.Sprintf("size mismatch: scores has %d elements, but updatedScores has %d elements", len(scores), len(updatedScores)))
+	}
+	// Copy the contents of updatedScores into scores, modifying scores by reference
+	for i := range scores {
+		scores[i] = updatedScores[i]
+	}
+	return
 }
 
 var _ framework.ScorePlugin = (*wasmPlugin)(nil)
