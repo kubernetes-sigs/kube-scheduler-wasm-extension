@@ -22,12 +22,14 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/bind"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postbind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 )
 
 type extensionPoints interface {
 	api.PreBindPlugin
 	api.BindPlugin
+	api.PostBindPlugin
 }
 
 func main() {
@@ -40,10 +42,13 @@ func main() {
 			plugin = preBindPlugin{}
 		case "bind":
 			plugin = bindPlugin{}
+		case "postBind":
+			plugin = postBindPlugin{}
 		}
 	}
 	prebind.SetPlugin(plugin)
 	bind.SetPlugin(plugin)
+	postbind.SetPlugin(plugin)
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.
@@ -61,6 +66,12 @@ func (noopPlugin) Bind(state api.CycleState, pod proto.Pod, nodeName string) *ap
 	_ = pod.Spec()
 	_ = nodeName
 	return nil
+}
+
+func (noopPlugin) PostBind(state api.CycleState, pod proto.Pod, nodeName string) {
+	_, _ = state.Read("ok")
+	_ = pod.Spec()
+	_ = nodeName
 }
 
 // preBindPlugin returns the length of nodeName
@@ -83,4 +94,13 @@ func (bindPlugin) Bind(_ api.CycleState, _ proto.Pod, nodeName string) *api.Stat
 		status = 1
 	}
 	return &api.Status{Code: api.StatusCode(status), Reason: "name is " + nodeName}
+}
+
+// postBindPlugin returns nothing
+type postBindPlugin struct{ noopPlugin }
+
+func (postBindPlugin) PostBind(_ api.CycleState, _ proto.Pod, nodeName string) {
+	if nodeName == "bad" {
+		panic("name is bad")
+	}
 }

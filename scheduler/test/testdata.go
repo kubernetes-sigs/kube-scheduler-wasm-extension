@@ -38,6 +38,8 @@ var URLErrorPanicOnPreBind = localURL(pathWatError("panic_on_prebind"))
 
 var URLErrorPanicOnBind = localURL(pathWatError("panic_on_bind"))
 
+var URLErrorPanicOnPostBind = localURL(pathWatError("panic_on_postbind"))
+
 var URLErrorPanicOnScoreExtensions = localURL(pathWatError("panic_on_scoreextensions"))
 
 var URLErrorScoreExtensionsWithoutScore = localURL(pathWatError("scoreextensions_without_score"))
@@ -67,6 +69,8 @@ var URLTestScore = localURL(pathTinyGoTest("score"))
 var URLTestScoreFromGlobal = localURL(pathWatTest("score_from_global"))
 
 var URLTestPreBindFromGlobal = localURL(pathWatTest("prebind_from_global"))
+
+var URLTestPostBindFromGlobal = localURL(pathWatTest("postbind_from_global"))
 
 var URLTestBindFromGlobal = localURL(pathWatTest("bind_from_global"))
 

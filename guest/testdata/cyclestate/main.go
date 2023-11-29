@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/bind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postbind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
@@ -66,6 +67,7 @@ func main() {
 	scoreextensions.SetPlugin(plugin)
 	prebind.SetPlugin(plugin)
 	bind.SetPlugin(plugin)
+	postbind.SetPlugin(plugin)
 }
 
 const (
@@ -178,7 +180,6 @@ func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) (statu
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from score")
 	}
-	mustFilterState(state)
 	if _, ok := state.Read(preBindStateKey); ok {
 		panic("didn't reset pre-bind state on pre-bind")
 	} else {
@@ -191,13 +192,23 @@ func (statePlugin) Bind(state api.CycleState, pod proto.Pod, _ string) (status *
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from pre-bind")
 	}
-	mustFilterState(state)
 	if val, ok := state.Read(preBindStateKey); !ok {
 		panic("didn't propagate pre-bind state from pre-bind")
 	} else {
 		val.(preBindStateVal)["bind"] = struct{}{}
 	}
 	return
+}
+
+func (statePlugin) PostBind(state api.CycleState, pod proto.Pod, _ string) {
+	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
+		panic("didn't cache pod from pre-bind")
+	}
+	if val, ok := state.Read(preBindStateKey); !ok {
+		panic("didn't propagate pre-bind state from pre-bind")
+	} else if _, ok = val.(preBindStateVal)["bind"]; !ok {
+		panic("bind value lost propagating from bind")
+	}
 }
 
 // mustNotScoreState ensures that score state, written after filter, cannot
