@@ -57,6 +57,17 @@ func Test_maskInterfaces(t *testing.T) {
 			expectFilter: true,
 			expectScore:  true,
 		},
+		{
+			name:          "reserve",
+			plugin:        &wasmPlugin{guestInterfaces: iReservePlugin},
+			expectReserve: true,
+		},
+		{
+			name:          "reserve|filter",
+			plugin:        &wasmPlugin{guestInterfaces: iReservePlugin | iFilterPlugin},
+			expectReserve: true,
+			expectFilter:  true,
+		},
 	}
 
 	for _, tc := range tests {
