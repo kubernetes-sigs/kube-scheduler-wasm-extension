@@ -32,7 +32,7 @@ var prebind api.PreBindPlugin
 //		func main() {
 //			plugin := bindPlugin{}
 //			bind.SetPlugin(plugin)
-//	     prebind.SetPlugin(plugin)
+//	        prebind.SetPlugin(plugin)
 //		}
 //
 //		type bindPlugin struct{}
