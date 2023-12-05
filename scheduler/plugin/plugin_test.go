@@ -17,6 +17,7 @@
 package wasm_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -27,6 +28,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -970,6 +972,97 @@ wasm stack trace:
 	}
 }
 
+func TestReserve(t *testing.T) {
+	tests := []struct {
+		name                   string
+		guestURL               string
+		args                   []string
+		globals                map[string]int32
+		pod                    *v1.Pod
+		nodeName               string
+		expectedPanic          string
+		expectedStatusCode     framework.Code
+		expectedStatusMessage  string
+		expectedUnreserveError string
+	}{
+		{
+			name:               "Success",
+			pod:                test.PodSmall,
+			nodeName:           "good",
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:                  "Error",
+			pod:                   test.PodSmall,
+			nodeName:              "bad",
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "name is bad",
+		},
+		{
+			name:     "reachable: flag is 0",
+			guestURL: test.URLTestReserveFromGlobal,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			globals:  map[string]int32{"flag": 0},
+		},
+		{
+			name:     "unreachable: flag is 1",
+			guestURL: test.URLTestReserveFromGlobal,
+			pod:      test.PodSmall,
+			// expectedStatusCode: framework.Error,
+			nodeName:               test.NodeSmall.Name,
+			globals:                map[string]int32{"flag": 1},
+			expectedUnreserveError: "wasm: unreserve error: wasm error: unreachable\nwasm stack trace:\n\treserve_from_global.$1()",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestReseve
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			defer func() {
+				if r := recover(); r != nil {
+					// because Reserve doesn't return any values, we need to catch panic here
+					if want, have := tc.expectedPanic, fmt.Sprint(r); want != have {
+						t.Fatalf("unexpected status code: want %v, have %v", want, have)
+					}
+				}
+			}()
+
+			cycleState := framework.NewCycleState()
+			status := p.(framework.ReservePlugin).Reserve(ctx, cycleState, tc.pod, tc.nodeName)
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+
+			// Because Unreserve doesn't return any values, we use klog's error for testing.
+			klogErr := captureStderr(func() {
+				p.(framework.ReservePlugin).Unreserve(ctx, cycleState, tc.pod, tc.nodeName)
+			})
+			if want, have := tc.expectedUnreserveError, extractMessage(klogErr); want != have {
+				t.Fatalf("unexpected log: want %v have %v", want, have)
+			}
+		})
+	}
+}
+
 func TestPreBind(t *testing.T) {
 	tests := []struct {
 		name                  string
@@ -1136,6 +1229,37 @@ wasm stack trace:
 			}
 		})
 	}
+}
+
+// Extracts and trims the actual log message from a formatted klog string
+// (klog includes timestamp before actual log message)
+func extractMessage(log string) string {
+	parts := strings.SplitN(log, "]", 2)
+	if len(parts) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(parts[1])
+}
+
+// captureStderr temporarily redirects the standard error output to capture any data written to it.
+// This function is particularly useful for capturing klog's error output during tests.
+// It takes a function f, executes it, and captures anything written to stderr during its execution.
+// After the function execution, it restores the original stderr and returns the captured output as a string.
+func captureStderr(f func()) string {
+	originalStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	f()
+
+	w.Close()
+	os.Stderr = originalStderr
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	r.Close()
+
+	return buf.String()
 }
 
 func requireError(t *testing.T, err error, expectedError string) {

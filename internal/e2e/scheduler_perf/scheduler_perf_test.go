@@ -91,7 +91,7 @@ var (
 		Metrics: map[string]*labelValues{
 			"scheduler_framework_extension_point_duration_seconds": {
 				label:  extensionPointsLabelName,
-				values: []string{"PreFilter", "Filter", "PostFilter", "PreScore", "Score", "PreBind", "Bind"},
+				values: []string{"PreFilter", "Filter", "PostFilter", "PreScore", "Score", "Reserve", "PreBind", "Bind"},
 			},
 			"scheduler_scheduling_attempt_duration_seconds": nil,
 			"scheduler_pod_scheduling_duration_seconds":     nil,

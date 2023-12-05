@@ -66,6 +66,10 @@ var URLTestScore = localURL(pathTinyGoTest("score"))
 
 var URLTestScoreFromGlobal = localURL(pathWatTest("score_from_global"))
 
+var URLTestReseve = localURL(pathTinyGoTest("reserve"))
+
+var URLTestReserveFromGlobal = localURL(pathWatTest("reserve_from_global"))
+
 var URLTestPreBindFromGlobal = localURL(pathWatTest("prebind_from_global"))
 
 var URLTestBindFromGlobal = localURL(pathWatTest("bind_from_global"))

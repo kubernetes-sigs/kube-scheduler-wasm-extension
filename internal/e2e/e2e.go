@@ -43,6 +43,11 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 		RequireSuccess(t, s)
 	}
 
+	if reserveP, ok := plugin.(framework.ReservePlugin); ok {
+		s = reserveP.Reserve(ctx, nil, pod, ni.Node().Name)
+		RequireSuccess(t, s)
+	}
+
 	if prebindP, ok := plugin.(framework.PreBindPlugin); ok {
 		s = prebindP.PreBind(ctx, nil, pod, "")
 		RequireSuccess(t, s)
