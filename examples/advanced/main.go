@@ -26,8 +26,10 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/advanced/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
@@ -36,19 +38,44 @@ import (
 // main is compiled to an exported Wasm function named "_start", called by the
 // Wasm scheduler plugin during initialization.
 func main() {
+	// Instead of using `plugin.Set`, this configures only the interfaces
+	// implemented by the plugin. The Wasm host only calls functions imported,
+	// so this prevents additional overhead.
+	enqueue.SetPlugin(func(h handleapi.Handle) api.EnqueueExtensions {
+		p := pluginInitializer(h)
+		plugin, ok := p.(api.EnqueueExtensions)
+		if ok {
+			return plugin
+		}
+		panic("pluginInitializer did not return an api.EnqueueExtensions")
+	})
+	prescore.SetPlugin(func(h handleapi.Handle) api.PreScorePlugin {
+		p := pluginInitializer(h)
+		plugin, ok := p.(api.PreScorePlugin)
+		if ok {
+			return plugin
+		}
+		panic("pluginInitializer did not return an api.PreScorePlugin")
+	})
+	score.SetPlugin(func(h handleapi.Handle) api.ScorePlugin {
+		p := pluginInitializer(h)
+		plugin, ok := p.(api.ScorePlugin)
+		if ok {
+			return plugin
+		}
+		panic("pluginInitializer did not return an api.ScorePlugin")
+	})
+}
+
+func pluginInitializer(h handleapi.Handle) api.Plugin {
 	// The plugin package uses only normal Go code, which allows it to be
 	// unit testable via `tinygo test -target=wasi` as well normal `go test`.
 	//
 	// The real implementations, such as `config.Get()` use Wasm host functions
 	// (go:wasmimport), which cannot be tested with `tinygo test -target=wasi`.
-	plugin, err := plugin.New(klog.Get(), config.Get())
+	plugin, err := plugin.New(klog.Get(), config.Get(), h)
 	if err != nil {
 		panic(err)
 	}
-	// Instead of using `plugin.Set`, this configures only the interfaces
-	// implemented by the plugin. The Wasm host only calls functions imported,
-	// so this prevents additional overhead.
-	enqueue.SetPlugin(plugin)
-	prescore.SetPlugin(plugin)
-	score.SetPlugin(plugin)
+	return plugin
 }

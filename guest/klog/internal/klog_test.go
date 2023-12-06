@@ -281,3 +281,7 @@ func (podSmall) GetNamespace() string {
 func (podSmall) GetUid() string {
 	return "384900cd-dc7b-41ec-837e-9c4c1762363e"
 }
+
+func (podSmall) GetResourceVersion() string {
+	return "resource-version"
+}

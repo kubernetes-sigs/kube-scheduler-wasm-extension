@@ -45,6 +45,18 @@ func (pod) GetUid() string {
 	return internalproto.GetUid(lazyPod())
 }
 
+func (pod) GetResourceVersion() string {
+	return internalproto.GetResourceVersion(lazyPod())
+}
+
+func (pod) GetKind() string {
+	return "Pod"
+}
+
+func (pod) GetApiVersion() string {
+	return "v1"
+}
+
 func (pod) Spec() *protoapi.PodSpec {
 	return lazyPod().Spec
 }

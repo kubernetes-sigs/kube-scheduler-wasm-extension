@@ -23,6 +23,8 @@ import (
 	"unsafe"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 )
 
@@ -30,12 +32,13 @@ import (
 var enqueue api.EnqueueExtensions
 
 // SetPlugin is exposed to prevent package cycles.
-func SetPlugin(enqueueExtensions api.EnqueueExtensions) {
-	if enqueueExtensions == nil {
+func SetPlugin(pluginInitializer func(h handleapi.Handle) api.EnqueueExtensions) {
+	handle := handle.NewFrameworkHandle()
+	enqueue = pluginInitializer(handle)
+	if enqueue == nil {
 		panic("nil enqueueExtensions")
 	}
-	enqueue = enqueueExtensions
-	plugin.MustSet(enqueueExtensions)
+	plugin.MustSet(enqueue)
 }
 
 // prevent unused lint errors (lint is run with normal go).

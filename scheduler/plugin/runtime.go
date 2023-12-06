@@ -23,10 +23,11 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
 // prepareRuntime compiles the guest and instantiates any host modules it needs.
-func prepareRuntime(ctx context.Context, guestBin []byte, logSeverity int32, guestConfig string) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
+func prepareRuntime(ctx context.Context, guestBin []byte, logSeverity int32, guestConfig string, handle framework.Handle) (runtime wazero.Runtime, guest wazero.CompiledModule, err error) {
 	// Create the runtime, which when closed releases any resources associated with it.
 	runtime = wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().
 		// Here are settings required by the wasm profiler wzprof:
@@ -73,6 +74,12 @@ func prepareRuntime(ctx context.Context, guestBin []byte, logSeverity int32, gue
 			return
 		}
 	}
+	if imports&importK8sHandle != 0 {
+		if _, err = instantiateHostHandle(ctx, runtime, handle); err != nil {
+			err = fmt.Errorf("wasm: error instantiating handle host functions: %w", err)
+			return
+		}
+	}
 	return
 }
 
@@ -83,6 +90,7 @@ const (
 	importK8sApi
 	importK8sKlog
 	importK8sScheduler
+	importK8sHandle
 )
 
 func detectImports(importedFns []api.FunctionDefinition) imports {
@@ -96,6 +104,8 @@ func detectImports(importedFns []api.FunctionDefinition) imports {
 			imports |= importK8sKlog
 		case k8sScheduler:
 			imports |= importK8sScheduler
+		case k8sHandle:
+			imports |= importK8sHandle
 		case wasi_snapshot_preview1.ModuleName:
 			imports |= importWasiP1
 		}

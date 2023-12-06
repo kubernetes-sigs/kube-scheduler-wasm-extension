@@ -21,6 +21,8 @@ package prescore
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
@@ -39,8 +41,8 @@ var prescore api.PreScorePlugin
 //
 //	func main() {
 //		plugin := scorePlugin{}
-//		prescore.SetPlugin(plugin)
-//		score.SetPlugin(plugin)
+//		prescore.SetPlugin(func(h handleapi.Handle) api.PreScorePlugin { return plugin })
+//		score.SetPlugin(func(h handleapi.Handle) api.ScorePlugin { return plugin })
 //	}
 //
 //	type scorePlugin struct{}
@@ -57,11 +59,12 @@ var prescore api.PreScorePlugin
 //	}
 //
 // Note: This should only be set when score.SetPlugin also is.
-func SetPlugin(preScorePlugin api.PreScorePlugin) {
-	if preScorePlugin == nil {
-		panic("nil PreScorePlugin")
+func SetPlugin(pluginInitializer func(h handleapi.Handle) api.PreScorePlugin) {
+	handle := handle.NewFrameworkHandle()
+	prescore = pluginInitializer(handle)
+	if prescore == nil {
+		panic("nil prescorePlugin")
 	}
-	prescore = preScorePlugin
 	plugin.MustSet(prescore)
 }
 

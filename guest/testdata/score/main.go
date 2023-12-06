@@ -21,6 +21,7 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/scoreextensions"
@@ -46,9 +47,9 @@ func main() {
 			plugin = scoreExtensions{}
 		}
 	}
-	prescore.SetPlugin(plugin)
-	score.SetPlugin(plugin)
-	scoreextensions.SetPlugin(plugin)
+	prescore.SetPlugin(func(h handleapi.Handle) api.PreScorePlugin { return plugin })
+	score.SetPlugin(func(h handleapi.Handle) api.ScorePlugin { return plugin })
+	scoreextensions.SetPlugin(func(h handleapi.Handle) api.ScoreExtensions { return plugin })
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.

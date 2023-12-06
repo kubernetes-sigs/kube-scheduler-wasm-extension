@@ -23,6 +23,8 @@ import (
 	"unsafe"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 )
@@ -31,12 +33,13 @@ import (
 var prefilter api.PreFilterPlugin
 
 // SetPlugin is exposed to prevent package cycles.
-func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
-	if prefilterPlugin == nil {
+func SetPlugin(pluginInitializer func(h handleapi.Handle) api.PreFilterPlugin) {
+	handle := handle.NewFrameworkHandle()
+	prefilter = pluginInitializer(handle)
+	if prefilter == nil {
 		panic("nil prefilterPlugin")
 	}
-	prefilter = prefilterPlugin
-	plugin.MustSet(prefilterPlugin)
+	plugin.MustSet(prefilter)
 }
 
 // prevent unused lint errors (lint is run with normal go).

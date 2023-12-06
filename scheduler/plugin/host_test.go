@@ -19,11 +19,14 @@ package wasm
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/tetratelabs/wazero/experimental/wazerotest"
 	"k8s.io/klog/v2"
 	k8stest "k8s.io/klog/v2/test"
+
+	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
 func Test_k8sKlogLogFn(t *testing.T) {
@@ -90,4 +93,40 @@ func initKlog(t *testing.T, buf *bytes.Buffer) {
 	_ = fs.Set("skip_headers", "true")
 	// Write log output to the buffer
 	klog.SetOutput(buf)
+}
+
+func Test_k8sHandleEventRecorderEventFn(t *testing.T) {
+	recorder := &test.FakeRecorder{EventMsg: ""}
+	handle := &test.FakeHandle{Recorder: recorder}
+	h := host{handle: handle}
+
+	// Create a fake wasm module, which has data the guest should write.
+	mem := wazerotest.NewMemory(wazerotest.PageSize)
+	mod := wazerotest.NewModule(mem)
+	message := EventMessage{
+		RegardingReference: ObjectReference{},
+		RelatedReference:   ObjectReference{},
+		Eventtype:          "event",
+		Reason:             "reason",
+		Action:             "action",
+		Note:               "note",
+	}
+	jsonmsg, err := json.Marshal(message)
+	if err != nil {
+		t.Fatalf("error during json.Marshal %v", err)
+	}
+	copy(mem.Bytes, jsonmsg)
+
+	// Invoke the host function in the same way the guest would have.
+	h.k8sHandleEventRecorderEventFn(context.Background(), mod, []uint64{
+		0,
+		uint64(len(jsonmsg)),
+	})
+
+	have := recorder.EventMsg
+	want := "event reason action note"
+
+	if want != have {
+		t.Fatalf("unexpected event: %v != %v", want, have)
+	}
 }

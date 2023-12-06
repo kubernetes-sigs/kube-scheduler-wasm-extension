@@ -21,6 +21,8 @@ package filter
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
@@ -36,7 +38,7 @@ var filter api.FilterPlugin
 // For example:
 //
 //	func main() {
-//		filter.SetPlugin(filterPlugin{})
+//		filter.SetPlugin(func(h handleapi.Handle) api.FilterPlugin { return plugin })
 //	}
 //
 //	type filterPlugin struct{}
@@ -46,11 +48,12 @@ var filter api.FilterPlugin
 //	}
 //
 // Note: If you need state, you can assign it with prefilter.SetPlugin.
-func SetPlugin(filterPlugin api.FilterPlugin) {
-	if filterPlugin == nil {
+func SetPlugin(pluginInitializer func(h handleapi.Handle) api.FilterPlugin) {
+	handle := handle.NewFrameworkHandle()
+	filter = pluginInitializer(handle)
+	if filter == nil {
 		panic("nil filterPlugin")
 	}
-	filter = filterPlugin
 	plugin.MustSet(filter)
 }
 
@@ -92,6 +95,10 @@ func (n *nodeInfo) GetName() string {
 
 func (n *nodeInfo) GetNamespace() string {
 	return n.lazyNode().GetNamespace()
+}
+
+func (n *nodeInfo) GetResourceVersion() string {
+	return n.lazyNode().GetResourceVersion()
 }
 
 func (n *nodeInfo) Node() proto.Node {

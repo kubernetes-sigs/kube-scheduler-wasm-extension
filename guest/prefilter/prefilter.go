@@ -19,6 +19,7 @@ package prefilter
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	internalprefilter "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 )
 
@@ -29,8 +30,8 @@ import (
 //
 //	func main() {
 //		plugin := filterPlugin{}
-//		prefilter.SetPlugin(plugin)
-//		filter.SetPlugin(plugin)
+//		prefilter.SetPlugin(func(h handleapi.Handle) api.PreFilterPlugin { return plugin })
+//		filter.SetPlugin(func(h handleapi.Handle) api.FilterPlugin { return plugin })
 //	}
 //
 //	type filterPlugin struct{}
@@ -47,6 +48,6 @@ import (
 //
 // Note: This may be set without filter.SetPlugin, if the pre-filter plugin has
 // the only filtering logic, or only used to configure api.CycleState.
-func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
-	internalprefilter.SetPlugin(prefilterPlugin)
+func SetPlugin(pluginInitializer func(h handleapi.Handle) api.PreFilterPlugin) {
+	internalprefilter.SetPlugin(pluginInitializer)
 }

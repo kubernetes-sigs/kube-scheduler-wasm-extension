@@ -33,6 +33,7 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
@@ -51,6 +52,7 @@ import (
 type NodeNumber struct {
 	reverse bool
 	klog    klog.Klog
+	handle  handleapi.Handle
 }
 
 const (
@@ -73,10 +75,18 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+	var recorder handleapi.EventRecorder
+	h := pl.handle
+	if h != nil {
+		recorder = h.EventRecorder()
+	}
 	pl.klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
 
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
+		if recorder != nil {
+			recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
+		}
 		return nil // return success even if its suffix is non-number.
 	}
 
@@ -127,7 +137,7 @@ func lastNumber(str string) (uint8, bool) {
 //
 // Note: This accepts config instead of implicitly calling config.Get for
 // testing.
-func New(klog klog.Klog, jsonConfig []byte) (*NodeNumber, error) {
+func New(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (*NodeNumber, error) {
 	var args nodeNumberArgs
 	if jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
@@ -135,7 +145,7 @@ func New(klog klog.Klog, jsonConfig []byte) (*NodeNumber, error) {
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	return &NodeNumber{klog: klog, reverse: args.Reverse}, nil
+	return &NodeNumber{klog: klog, reverse: args.Reverse, handle: h}, nil
 }
 
 type nodeNumberArgs struct {

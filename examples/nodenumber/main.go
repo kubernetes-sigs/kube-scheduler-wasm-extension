@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"
 )
@@ -39,7 +40,7 @@ func main() {
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	plugin.Set(&NodeNumber{reverse: args.Reverse})
+	plugin.Set(func(h handleapi.Handle) api.Plugin { return &NodeNumber{reverse: args.Reverse, handle: h} })
 }
 
 // NodeNumber is an example plugin that favors nodes that share a numerical
@@ -56,6 +57,7 @@ func main() {
 //     a numeric match gets a results in a lower score than a match.
 type NodeNumber struct {
 	reverse bool
+	handle  handleapi.Handle
 }
 
 type nodeNumberArgs struct {
@@ -82,10 +84,19 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+	var recorder handleapi.EventRecorder
+	h := pl.handle
+	if h != nil {
+		recorder = h.EventRecorder()
+	}
+
 	klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
 
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
+		if recorder != nil {
+			recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
+		}
 		return nil // return success even if its suffix is non-number.
 	}
 

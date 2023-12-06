@@ -20,6 +20,8 @@ package score
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
@@ -33,7 +35,7 @@ var score api.ScorePlugin
 // For example:
 //
 //	func main() {
-//		score.SetPlugin(scorePlugin{})
+//		score.SetPlugin(func(h handleapi.Handle) api.ScorePlugin { return plugin })
 //	}
 //
 //	type scorePlugin struct{}
@@ -43,11 +45,12 @@ var score api.ScorePlugin
 //	}
 //
 // Note: If you need state, you can assign it with prescore.SetPlugin.
-func SetPlugin(scorePlugin api.ScorePlugin) {
-	if scorePlugin == nil {
+func SetPlugin(pluginInitializer func(h handleapi.Handle) api.ScorePlugin) {
+	handle := handle.NewFrameworkHandle()
+	score = pluginInitializer(handle)
+	if score == nil {
 		panic("nil scorePlugin")
 	}
-	score = scorePlugin
 	plugin.MustSet(score)
 }
 

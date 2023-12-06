@@ -40,7 +40,7 @@ import (
 func TestCycleStateCoherence(t *testing.T) {
 	ctx := context.Background()
 
-	plugin, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState})
+	plugin, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState}, nil)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -131,6 +131,14 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 		wantLog := `NodeNumberArgs is successfully applied
 "execute PreScore on NodeNumber plugin" pod="happy8-meta"
 "execute Score on NodeNumber plugin" pod="happy8-meta"`
+		if advanced {
+			// Advanced calls plugin.New three times
+			wantLog = `NodeNumberArgs is successfully applied
+NodeNumberArgs is successfully applied
+NodeNumberArgs is successfully applied
+"execute PreScore on NodeNumber plugin" pod="happy8-meta"
+"execute Score on NodeNumber plugin" pod="happy8-meta"`
+		}
 		if wantLog != strings.TrimSpace(buf.String()) {
 			t.Fatalf("unexpected log: want %v, have %v", wantLog, buf.String())
 		}
@@ -197,7 +205,7 @@ func newNodeNumberPlugin(ctx context.Context, t e2e.Testing, advanced, reverse b
 		GuestURL:    guestURL,
 		LogSeverity: logSeverity,
 		GuestConfig: fmt.Sprintf(`{"reverse": %v}`, reverse),
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}

@@ -143,6 +143,18 @@ func (t testPod) GetNamespace() string {
 	return ""
 }
 
+func (t testPod) GetApiVersion() string {
+	return ""
+}
+
+func (t testPod) GetKind() string {
+	return "pod"
+}
+
+func (t testPod) GetResourceVersion() string {
+	return "v1"
+}
+
 func (t testPod) Spec() *protoapi.PodSpec {
 	nodeName := t.nodeName
 	return &protoapi.PodSpec{NodeName: &nodeName}

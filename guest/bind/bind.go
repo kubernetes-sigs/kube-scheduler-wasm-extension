@@ -16,6 +16,8 @@ package bind
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
@@ -31,7 +33,7 @@ var bind api.BindPlugin
 //
 //	func main() {
 //		plugin := bindPlugin{}
-//		bind.SetPlugin(plugin)
+//		bind.SetPlugin(func(h handleapi.Handle) api.BindPlugin { return plugin })
 //	}
 //
 //	type bindPlugin struct{}
@@ -39,11 +41,12 @@ var bind api.BindPlugin
 //	func (bindPlugin) Bind(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
 //		// Write state you need on Bind
 //	}
-func SetPlugin(bindPlugin api.BindPlugin) {
-	if bindPlugin == nil {
+func SetPlugin(pluginInitializer func(h handleapi.Handle) api.BindPlugin) {
+	handle := handle.NewFrameworkHandle()
+	bind = pluginInitializer(handle)
+	if bind == nil {
 		panic("nil bindPlugin")
 	}
-	bind = bindPlugin
 	plugin.MustSet(bind)
 }
 

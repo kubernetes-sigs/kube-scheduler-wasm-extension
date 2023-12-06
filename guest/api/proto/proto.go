@@ -24,6 +24,7 @@ type Metadata interface {
 	GetUid() string
 	GetName() string
 	GetNamespace() string
+	GetResourceVersion() string
 }
 
 type Node interface {
@@ -31,6 +32,8 @@ type Node interface {
 
 	Spec() *api.NodeSpec
 	Status() *api.NodeStatus
+	GetKind() string
+	GetApiVersion() string
 }
 
 type NodeList interface {
@@ -42,4 +45,6 @@ type Pod interface {
 
 	Spec() *api.PodSpec
 	Status() *api.PodStatus
+	GetKind() string
+	GetApiVersion() string
 }

@@ -16,6 +16,8 @@ package prebind
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
+	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
@@ -31,8 +33,8 @@ var prebind api.PreBindPlugin
 //
 //	func main() {
 //		plugin := bindPlugin{}
-//		bind.SetPlugin(plugin)
-//		prebind.SetPlugin(plugin)
+//		bind.SetPlugin(func(h handleapi.Handle) api.BindPlugin { return plugin })
+//		prebind.SetPlugin(func(h handleapi.Handle) api.PreBindPlugin { return plugin })
 //	}
 //
 //	type bindPlugin struct{}
@@ -44,11 +46,12 @@ var prebind api.PreBindPlugin
 //	func (bindPlugin) PreBind(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
 //		// Write state you need on Bind
 //	}
-func SetPlugin(prebindPlugin api.PreBindPlugin) {
-	if prebindPlugin == nil {
+func SetPlugin(pluginInitializer func(h handleapi.Handle) api.PreBindPlugin) {
+	handle := handle.NewFrameworkHandle()
+	prebind = pluginInitializer(handle)
+	if prebind == nil {
 		panic("nil prebindPlugin")
 	}
-	prebind = prebindPlugin
 	plugin.MustSet(prebind)
 }
 

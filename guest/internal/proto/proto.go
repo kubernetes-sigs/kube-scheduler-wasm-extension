@@ -22,6 +22,13 @@ import (
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
+type KObject interface {
+	proto.Metadata
+
+	GetKind() string
+	GetApiVersion() string
+}
+
 type object interface {
 	GetMetadata() *meta.ObjectMeta
 }
@@ -47,6 +54,13 @@ func GetUid[O object](o O) string {
 	return ""
 }
 
+func GetResourceVersion[O object](o O) string {
+	if md := o.GetMetadata(); md != nil && md.ResourceVersion != nil {
+		return *md.ResourceVersion
+	}
+	return ""
+}
+
 var _ proto.Node = (*Node)(nil)
 
 type Node struct {
@@ -63,6 +77,18 @@ func (o *Node) GetNamespace() string {
 
 func (o *Node) GetUid() string {
 	return GetUid(o.Msg)
+}
+
+func (o *Node) GetResourceVersion() string {
+	return GetResourceVersion(o.Msg)
+}
+
+func (o *Node) GetKind() string {
+	return "Node"
+}
+
+func (o *Node) GetApiVersion() string {
+	return "v1"
 }
 
 func (o *Node) Spec() *protoapi.NodeSpec {

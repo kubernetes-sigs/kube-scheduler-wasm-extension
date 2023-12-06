@@ -38,13 +38,13 @@ func PluginFactory(pluginName string) frameworkruntime.PluginFactory {
 		if err := frameworkruntime.DecodeInto(configuration, &config); err != nil {
 			return nil, fmt.Errorf("failed to decode into %s PluginConfig: %w", pluginName, err)
 		}
-		return NewFromConfig(context.Background(), pluginName, config)
+		return NewFromConfig(context.Background(), pluginName, config, frameworkHandle)
 	}
 }
 
 // NewFromConfig is like New, except it allows us to explicitly provide the
 // context and configuration of the plugin. This allows flexibility in tests.
-func NewFromConfig(ctx context.Context, pluginName string, config PluginConfig) (framework.Plugin, error) {
+func NewFromConfig(ctx context.Context, pluginName string, config PluginConfig, frameworkHandle framework.Handle) (framework.Plugin, error) {
 	url := config.GuestURL
 	if url == "" {
 		return nil, errors.New("wasm: guestURL is required")
@@ -54,7 +54,7 @@ func NewFromConfig(ctx context.Context, pluginName string, config PluginConfig) 
 		return nil, fmt.Errorf("wasm: error reading guestURL %s: %w", url, err)
 	}
 
-	runtime, guestModule, err := prepareRuntime(ctx, guestBin, config.LogSeverity, config.GuestConfig)
+	runtime, guestModule, err := prepareRuntime(ctx, guestBin, config.LogSeverity, config.GuestConfig, frameworkHandle)
 	if err != nil {
 		return nil, err
 	}
