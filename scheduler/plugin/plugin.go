@@ -370,6 +370,8 @@ func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, 
 
 // Unreserve implements the same method as documented on framework.ReservePlugin.
 func (pl *wasmPlugin) Unreserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) {
+	defer pl.pool.freeFromBinding(pod.UID) // the cycle is over, put it back into the pool.
+
 	params := &stack{pod: pod, nodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
