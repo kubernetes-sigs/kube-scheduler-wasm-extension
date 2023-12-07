@@ -54,8 +54,10 @@ func SetPlugin(reservePlugin api.ReservePlugin) {
 }
 
 // prevent unused lint errors (lint is run with normal go).
-var _ func() uint32 = _reserve
-var _ func() = _unreserve
+var (
+	_ func() uint32 = _reserve
+	_ func()        = _unreserve
+)
 
 // _reserve is only exported to the host.
 //
