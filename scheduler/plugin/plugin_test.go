@@ -1053,9 +1053,12 @@ func TestReserve(t *testing.T) {
 			}
 
 			// Because Unreserve doesn't return any values, we use klog's error for testing.
-			klogErr := captureStderr(func() {
+			klogErr, err := captureStderr(func() {
 				p.(framework.ReservePlugin).Unreserve(ctx, cycleState, tc.pod, tc.nodeName)
 			})
+			if err != nil {
+				t.Fatal(err)
+			}
 			if want, have := tc.expectedUnreserveError, extractMessage(klogErr); want != have {
 				t.Fatalf("unexpected log: want %v have %v", want, have)
 			}
@@ -1245,7 +1248,7 @@ func extractMessage(log string) string {
 // This function is particularly useful for capturing klog's error output during tests.
 // It takes a function f, executes it, and captures anything written to stderr during its execution.
 // After the function execution, it restores the original stderr and returns the captured output as a string.
-func captureStderr(f func()) string {
+func captureStderr(f func()) (string, error) {
 	originalStderr := os.Stderr
 	r, w, _ := os.Pipe()
 	os.Stderr = w
@@ -1256,10 +1259,12 @@ func captureStderr(f func()) string {
 	os.Stderr = originalStderr
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, err := io.Copy(&buf, r); err != nil {
+		return "", err
+	}
 	r.Close()
 
-	return buf.String()
+	return buf.String(), nil
 }
 
 func requireError(t *testing.T, err error, expectedError string) {

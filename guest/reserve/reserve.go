@@ -85,5 +85,4 @@ func _unreserve() { //nolint
 
 	nodeName := imports.NodeName()
 	reserve.Unreserve(cyclestate.Values, cyclestate.Pod, nodeName)
-	return
 }
