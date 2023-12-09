@@ -57,7 +57,7 @@ func SetPlugin(postfilterPlugin api.PostFilterPlugin) {
 		panic("nil postfilterPlugin")
 	}
 	postfilter = postfilterPlugin
-	plugin.MustSet(postfilterPlugin)
+	plugin.MustSet(postfilter)
 }
 
 // prevent unused lint errors (lint is run with normal go).

@@ -412,7 +412,14 @@ func (pl *wasmPlugin) PostBind(ctx context.Context, state *framework.CycleState,
 	}
 
 	defer pl.pool.freeFromBinding(pod.UID) // the cycle is over, put it back into the pool.
-	// TODO: partially implemented for testing
+	params := &stack{pod: pod, nodeName: nodeName}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	logger := klog.FromContext(ctx)
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
+		g.postBind(ctx)
+	}); err != nil {
+		logger.Error(err, "doWithSchedulingGuest Failed")
+	}
 }
 
 var _ framework.PermitPlugin = (*wasmPlugin)(nil)

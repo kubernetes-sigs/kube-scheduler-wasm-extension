@@ -41,6 +41,7 @@ const (
 	guestExportUnreserve      = "unreserve"
 	guestExportPreBind        = "prebind"
 	guestExportBind           = "bind"
+	guestExportPostBind       = "postbind"
 )
 
 type guest struct {
@@ -57,6 +58,7 @@ type guest struct {
 	unreserveFn      wazeroapi.Function
 	prebindFn        wazeroapi.Function
 	bindFn           wazeroapi.Function
+	postbindFn       wazeroapi.Function
 	callStack        []uint64
 }
 
@@ -108,6 +110,7 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 		unreserveFn:      g.ExportedFunction(guestExportUnreserve),
 		prebindFn:        g.ExportedFunction(guestExportPreBind),
 		bindFn:           g.ExportedFunction(guestExportBind),
+		postbindFn:       g.ExportedFunction(guestExportPostBind),
 		callStack:        callStack,
 	}, nil
 }
@@ -262,6 +265,16 @@ func (g *guest) bind(ctx context.Context) *framework.Status {
 	return framework.NewStatus(framework.Code(statusCode), statusReason)
 }
 
+// postBind calls guestExportPostBind.
+func (g *guest) postBind(ctx context.Context) {
+	defer g.out.Reset()
+	callStack := g.callStack
+	logger := klog.FromContext(ctx)
+	if err := g.postbindFn.CallWithStack(ctx, callStack); err != nil {
+		logger.Error(decorateError(g.out, guestExportPostBind, err), "failed postbind")
+	}
+}
+
 func decorateError(out fmt.Stringer, fn string, err error) error {
 	detail := out.String()
 	if detail != "" {
@@ -331,6 +344,11 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
 			}
 			e |= iBindPlugin
+		case guestExportPostBind:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
+			}
+			e |= iPostBindPlugin
 		}
 	}
 	if e == 0 {

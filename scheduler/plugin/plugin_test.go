@@ -116,6 +116,18 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 		t.Fatalf("expected bindingCycles to have entry for `nextPod`, have %v", bindingCycles)
 	}
 
+	// nextPod is going to PreBind process.
+	status = pl.PreBind(ctx, nil, nextPod, "node")
+	if !status.IsSuccess() {
+		t.Fatalf("prebind failed: %v", status)
+	}
+
+	// nextPod is going to Bind process.
+	status = pl.Bind(ctx, nil, nextPod, "node")
+	if !status.IsSuccess() {
+		t.Fatalf("bind failed: %v", status)
+	}
+
 	// nextPod is rejected in the binding cycle.
 	pl.PostBind(ctx, nil, nextPod, "node")
 	if len(pl.GetBindingCycles()) != 0 {
@@ -1229,6 +1241,101 @@ wasm stack trace:
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
+func TestPostBind(t *testing.T) {
+	tests := []struct {
+		name          string
+		guestURL      string
+		args          []string
+		globals       map[string]int32
+		pod           *v1.Pod
+		nodeName      string
+		expectedError string
+	}{
+		{
+			name:     "Success",
+			args:     []string{"test", "postBind"},
+			pod:      test.PodSmall,
+			nodeName: "good",
+		},
+		{
+			name:     "Error",
+			args:     []string{"test", "postBind"},
+			pod:      test.PodSmall,
+			nodeName: "bad",
+			expectedError: `"failed postbind" err=<
+	wasm: postbind error: panic: name is bad
+	
+	wasm error: unreachable
+	wasm stack trace:
+		.runtime._panic(i32,i32)
+		.postbind()
+ >`,
+		},
+		{
+			name:     "reachable: flag is 0",
+			guestURL: test.URLTestPostBindFromGlobal,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			globals:  map[string]int32{"flag": 0},
+		},
+		{
+			name:     "unreachable: flag is 1",
+			guestURL: test.URLTestPostBindFromGlobal,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			globals:  map[string]int32{"flag": 1},
+			expectedError: `"failed postbind" err=<
+	wasm: postbind error: wasm error: unreachable
+	wasm stack trace:
+		postbind_from_global.$0()
+ >`,
+		},
+		{
+			name:     "panic",
+			guestURL: test.URLErrorPanicOnPostBind,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			expectedError: `"failed postbind" err=<
+	wasm: postbind error: panic!
+	wasm error: unreachable
+	wasm stack trace:
+		panic_on_postbind.$1()
+ >`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestBind
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			// Because postBind doesn't return any values, we use klog's error for testing.
+			klogErr, err := captureStderr(func() {
+				p.(framework.PostBindPlugin).PostBind(ctx, nil, tc.pod, tc.nodeName)
+			})
+			if err != nil {
+				t.Fatalf("got an error during captureStderr %v", err)
+			}
+			if want, have := tc.expectedError, extractMessage(klogErr); want != have {
+				t.Fatalf("unexpected log: want%v, have%v", want, have)
 			}
 		})
 	}

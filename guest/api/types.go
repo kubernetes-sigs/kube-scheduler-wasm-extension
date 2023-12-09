@@ -136,6 +136,13 @@ type BindPlugin interface {
 	Bind(state CycleState, pod proto.Pod, nodeName string) *Status
 }
 
+// PostBindPlugin is a WebAssembly implementation of framework.PostBindPlugin.
+type PostBindPlugin interface {
+	Plugin
+
+	PostBind(state CycleState, pod proto.Pod, nodeName string)
+}
+
 type NodeInfo interface {
 	// Metadata is a convenience that triggers Get.
 	proto.Metadata

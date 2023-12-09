@@ -11,8 +11,8 @@
    limitations under the License.
 */
 
-// Package prebind exports an api.PreBindPlugin to the host.
-package prebind
+// Package postbind exports an api.PostBindPlugin to the host.
+package postbind
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
@@ -21,10 +21,10 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 )
 
-// prebind is the current plugin assigned with SetPlugin.
-var prebind api.PreBindPlugin
+// postbind is the current plugin assigned with SetPlugin.
+var postbind api.PostBindPlugin
 
-// SetPlugin should be called in `main` to assign an api.PreBindPlugin
+// SetPlugin should be called in `main` to assign an api.PostBindPlugin
 // instance.
 //
 // For example:
@@ -32,7 +32,7 @@ var prebind api.PreBindPlugin
 //	func main() {
 //		plugin := bindPlugin{}
 //		bind.SetPlugin(plugin)
-//		prebind.SetPlugin(plugin)
+//		postbind.SetPlugin(plugin)
 //	}
 //
 //	type bindPlugin struct{}
@@ -41,34 +41,32 @@ var prebind api.PreBindPlugin
 //		// Write state you need on Bind
 //	}
 //
-//	func (bindPlugin) PreBind(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
-//		// Write state you need on Bind
+//	func (bindPlugin) PostBind(state api.CycleState, pod proto.Pod, nodeName string) {
+//		// Write state you need on PostBind
 //	}
-func SetPlugin(prebindPlugin api.PreBindPlugin) {
-	if prebindPlugin == nil {
-		panic("nil prebindPlugin")
+func SetPlugin(postbindPlugin api.PostBindPlugin) {
+	if postbindPlugin == nil {
+		panic("nil postbindPlugin")
 	}
-	prebind = prebindPlugin
-	plugin.MustSet(prebind)
+	postbind = postbindPlugin
+	plugin.MustSet(postbind)
 }
 
 // prevent unused lint errors (lint is run with normal go).
-var _ func() uint32 = _prebind
+var _ func() = _postbind
 
-// _prebind is only exported to the host.
+// _postbind is only exported to the host.
 //
-//export prebind
-func _prebind() uint32 { //nolint
-	if prebind == nil { // Then, the user didn't define one.
+//export postbind
+func _postbind() { //nolint
+	if postbind == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't
-		// implement PreBindPlugin: return success.
-		return 0
+		// implement PostBindPlugin: return success.
+		return
 	}
 
 	nodeName := imports.NodeName()
 	// The parameters passed are lazy with regard to host functions. This means
 	// a no-op plugin should not have any unmarshal penalty.
-	s := prebind.PreBind(cyclestate.Values, cyclestate.Pod, nodeName)
-
-	return imports.StatusToCode(s)
+	postbind.PostBind(cyclestate.Values, cyclestate.Pod, nodeName)
 }
