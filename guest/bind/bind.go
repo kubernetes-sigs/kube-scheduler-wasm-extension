@@ -44,7 +44,7 @@ func SetPlugin(bindPlugin api.BindPlugin) {
 		panic("nil bindPlugin")
 	}
 	bind = bindPlugin
-	plugin.MustSet(bindPlugin)
+	plugin.MustSet(bind)
 }
 
 // prevent unused lint errors (lint is run with normal go).

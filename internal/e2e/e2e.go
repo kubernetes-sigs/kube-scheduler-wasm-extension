@@ -52,6 +52,10 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 		s = bindP.Bind(ctx, nil, pod, "")
 		RequireSuccess(t, s)
 	}
+
+	if postbindP, ok := plugin.(framework.PostBindPlugin); ok {
+		postbindP.PostBind(ctx, nil, pod, "")
+	}
 	return
 }
 

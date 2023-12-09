@@ -17,6 +17,7 @@
 package wasm_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -27,6 +28,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -112,6 +114,18 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	}
 	if _, ok := bindingCycles[nextPod.UID]; !ok {
 		t.Fatalf("expected bindingCycles to have entry for `nextPod`, have %v", bindingCycles)
+	}
+
+	// nextPod is going to PreBind process.
+	status = pl.PreBind(ctx, nil, nextPod, "node")
+	if !status.IsSuccess() {
+		t.Fatalf("prebind failed: %v", status)
+	}
+
+	// nextPod is going to Bind process.
+	status = pl.Bind(ctx, nil, nextPod, "node")
+	if !status.IsSuccess() {
+		t.Fatalf("bind failed: %v", status)
 	}
 
 	// nextPod is rejected in the binding cycle.
@@ -1136,6 +1150,134 @@ wasm stack trace:
 			}
 		})
 	}
+}
+
+func TestPostBind(t *testing.T) {
+	tests := []struct {
+		name          string
+		guestURL      string
+		args          []string
+		globals       map[string]int32
+		pod           *v1.Pod
+		nodeName      string
+		expectedError string
+	}{
+		{
+			name:     "Success",
+			args:     []string{"test", "postBind"},
+			pod:      test.PodSmall,
+			nodeName: "good",
+		},
+		{
+			name:     "Error",
+			args:     []string{"test", "postBind"},
+			pod:      test.PodSmall,
+			nodeName: "bad",
+			expectedError: `"failed postbind" err=<
+	wasm: postbind error: panic: name is bad
+	
+	wasm error: unreachable
+	wasm stack trace:
+		.runtime._panic(i32,i32)
+		.postbind()
+ >`,
+		},
+		{
+			name:     "reachable: flag is 0",
+			guestURL: test.URLTestPostBindFromGlobal,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			globals:  map[string]int32{"flag": 0},
+		},
+		{
+			name:     "unreachable: flag is 1",
+			guestURL: test.URLTestPostBindFromGlobal,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			globals:  map[string]int32{"flag": 1},
+			expectedError: `"failed postbind" err=<
+	wasm: postbind error: wasm error: unreachable
+	wasm stack trace:
+		postbind_from_global.$0()
+ >`,
+		},
+		{
+			name:     "panic",
+			guestURL: test.URLErrorPanicOnPostBind,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			expectedError: `"failed postbind" err=<
+	wasm: postbind error: panic!
+	wasm error: unreachable
+	wasm stack trace:
+		panic_on_postbind.$1()
+ >`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestBind
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			// Because postBind doesn't return any values, we use klog's error for testing.
+			klogErr, err := captureStderr(func() {
+				p.(framework.PostBindPlugin).PostBind(ctx, nil, tc.pod, tc.nodeName)
+			})
+			if err != nil {
+				t.Fatalf("got an error during captureStderr %v", err)
+			}
+			if want, have := tc.expectedError, extractMessage(klogErr); want != have {
+				t.Fatalf("unexpected log: want%v, have%v", want, have)
+			}
+		})
+	}
+}
+
+// Extracts and trims the actual log message from a formatted klog string
+// (klog includes timestamp before actual log message)
+func extractMessage(log string) string {
+	parts := strings.SplitN(log, "]", 2)
+	if len(parts) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(parts[1])
+}
+
+// captureStderr temporarily redirects the standard error output to capture any data written to it.
+// This function is particularly useful for capturing klog's error output during tests.
+// It takes a function f, executes it, and captures anything written to stderr during its execution.
+// After the function execution, it restores the original stderr and returns the captured output as a string.
+func captureStderr(f func()) (string, error) {
+	originalStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	f()
+
+	w.Close()
+	os.Stderr = originalStderr
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, r); err != nil {
+		return "", err
+	}
+	r.Close()
+
+	return buf.String(), nil
 }
 
 func requireError(t *testing.T, err error, expectedError string) {
