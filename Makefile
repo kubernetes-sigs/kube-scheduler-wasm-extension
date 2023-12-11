@@ -111,6 +111,9 @@ update-kubernetes-proto: proto-tools
 lint:
 	@for f in $(all_mods); do \
         (cd $$(dirname $$f); go run $(golangci_lint) run --timeout 5m); \
+        if [ $$? -ne 0 ]; then \
+            exit 1; \
+        fi; \
 	done
 
 .PHONY: format
@@ -129,12 +132,18 @@ all_unbuildable_mods := ./examples/go.mod ./kubernetes/proto/tools/go.mod
 tidy:
 	@for f in $(all_mods); do \
         (cd $$(dirname $$f); go mod tidy); \
+        if [ $$? -ne 0 ]; then \
+            exit 1; \
+        fi; \
 	done
 
 .PHONY: build
 build:
 	@for f in $(filter-out $(all_unbuildable_mods), $(all_mods)); do \
         (cd $$(dirname $$f); go build ./...); \
+        if [ $$? -ne 0 ]; then \
+            exit 1; \
+        fi; \
 	done
 
 # Test runs both host and guest unit tests with normal go.
