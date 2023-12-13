@@ -1025,6 +1025,13 @@ func TestReserve(t *testing.T) {
 			globals:                map[string]int32{"flag": 1},
 			expectedUnreserveError: "wasm: unreserve error: wasm error: unreachable\nwasm stack trace:\n\treserve_from_global.$1()",
 		},
+		{
+			name:                  "panic",
+			guestURL:              test.URLErrorPanicOnReserve,
+			pod:                   test.PodSmall,
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "wasm: reserve error: panic!\nwasm error: unreachable\nwasm stack trace:\n\tpanic_on_reserve.$1() i32",
+		},
 	}
 
 	for _, tc := range tests {
@@ -1062,6 +1069,9 @@ func TestReserve(t *testing.T) {
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
 			}
+			if !status.IsSuccess() {
+				return
+			}
 
 			// Because Unreserve doesn't return any values, we use klog's error for testing.
 			klogErr, err := captureStderr(func() {
@@ -1071,7 +1081,7 @@ func TestReserve(t *testing.T) {
 				t.Fatal(err)
 			}
 			if want, have := tc.expectedUnreserveError, extractMessage(klogErr); want != have {
-				t.Fatalf("unexpected log: want %v have %v", want, have)
+				t.Fatalf("unexpected log: want \n%v\n have \n%v\n", want, have)
 			}
 		})
 	}

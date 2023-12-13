@@ -34,6 +34,8 @@ var URLErrorPreScoreWithoutScore = localURL(pathWatError("prescore_without_score
 
 var URLErrorPanicOnScore = localURL(pathWatError("panic_on_score"))
 
+var URLErrorPanicOnReserve = localURL(pathWatError("panic_on_reserve"))
+
 var URLErrorPanicOnPreBind = localURL(pathWatError("panic_on_prebind"))
 
 var URLErrorPanicOnBind = localURL(pathWatError("panic_on_bind"))
