@@ -992,7 +992,6 @@ func TestReserve(t *testing.T) {
 		globals                map[string]int32
 		pod                    *v1.Pod
 		nodeName               string
-		expectedPanic          string
 		expectedStatusCode     framework.Code
 		expectedStatusMessage  string
 		expectedUnreserveError string

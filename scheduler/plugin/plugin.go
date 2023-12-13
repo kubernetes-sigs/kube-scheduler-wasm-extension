@@ -373,10 +373,11 @@ func (pl *wasmPlugin) Unreserve(ctx context.Context, state *framework.CycleState
 
 	params := &stack{pod: pod, nodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
+	logger := klog.FromContext(ctx)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		g.unreserve(ctx)
 	}); err != nil {
-		klog.Error(err)
+		logger.Error(err, "doWithSchedulingGuest Failed")
 	}
 }
 
