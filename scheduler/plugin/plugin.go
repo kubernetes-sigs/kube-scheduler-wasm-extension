@@ -361,7 +361,6 @@ func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, 
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		status = g.reserve(ctx)
-		ctx = context.WithValue(ctx, stackKey{}, params)
 	}); err != nil {
 		status = framework.AsStatus(err)
 	}

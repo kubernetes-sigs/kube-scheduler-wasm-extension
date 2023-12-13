@@ -47,7 +47,7 @@ var reserve api.ReservePlugin
 //	}
 func SetPlugin(reservePlugin api.ReservePlugin) {
 	if reservePlugin == nil {
-		panic("reservePlugin cannot be nil")
+		panic("nil reservePlugin")
 	}
 	reserve = reservePlugin
 	plugin.MustSet(reserve)

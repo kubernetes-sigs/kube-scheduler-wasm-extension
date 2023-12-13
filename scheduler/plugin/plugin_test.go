@@ -1018,10 +1018,9 @@ func TestReserve(t *testing.T) {
 			globals:  map[string]int32{"flag": 0},
 		},
 		{
-			name:     "unreachable: flag is 1",
-			guestURL: test.URLTestReserveFromGlobal,
-			pod:      test.PodSmall,
-			// expectedStatusCode: framework.Error,
+			name:                   "unreachable: flag is 1",
+			guestURL:               test.URLTestReserveFromGlobal,
+			pod:                    test.PodSmall,
 			nodeName:               test.NodeSmall.Name,
 			globals:                map[string]int32{"flag": 1},
 			expectedUnreserveError: "wasm: unreserve error: wasm error: unreachable\nwasm stack trace:\n\treserve_from_global.$1()",
@@ -1032,7 +1031,7 @@ func TestReserve(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			guestURL := tc.guestURL
 			if guestURL == "" {
-				guestURL = test.URLTestReseve
+				guestURL = test.URLTestReserve
 			}
 
 			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
