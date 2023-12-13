@@ -1052,15 +1052,6 @@ func TestReserve(t *testing.T) {
 				pl.SetGlobals(tc.globals)
 			}
 
-			defer func() {
-				if r := recover(); r != nil {
-					// because Reserve doesn't return any values, we need to catch panic here
-					if want, have := tc.expectedPanic, fmt.Sprint(r); want != have {
-						t.Fatalf("unexpected status code: want %v, have %v", want, have)
-					}
-				}
-			}()
-
 			cycleState := framework.NewCycleState()
 			status := p.(framework.ReservePlugin).Reserve(ctx, cycleState, tc.pod, tc.nodeName)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
