@@ -124,7 +124,7 @@ func (statePlugin) Filter(state api.CycleState, pod proto.Pod, _ api.NodeInfo) (
 
 func (statePlugin) PostFilter(state api.CycleState, pod proto.Pod, _ api.NodeToStatus) (nominatedNodeName string, nominatingMode api.NominatingMode, status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
-		panic("didn't cache pod from filter")
+		panic("didn't cache pod from pre-filter")
 	}
 	mustNotScoreState(state)
 	if val, ok := state.Read(preFilterStateKey); !ok {
@@ -150,7 +150,7 @@ func (statePlugin) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeLis
 
 func (statePlugin) Score(state api.CycleState, pod proto.Pod, _ string) (score int32, status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
-		panic("didn't cache pod from pre-score")
+		panic("didn't cache pod from pre-filter")
 	}
 	mustFilterState(state)
 	if val, ok := state.Read(preScoreStateKey); !ok {
@@ -163,7 +163,7 @@ func (statePlugin) Score(state api.CycleState, pod proto.Pod, _ string) (score i
 
 func (statePlugin) NormalizeScore(state api.CycleState, pod proto.Pod, _ api.NodeScore) (scores map[string]int, status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
-		panic("didn't cache pod from pre-score")
+		panic("didn't cache pod from pre-filter")
 	}
 	mustFilterState(state)
 	if val, ok := state.Read(preScoreStateKey); !ok {
@@ -178,7 +178,7 @@ func (statePlugin) NormalizeScore(state api.CycleState, pod proto.Pod, _ api.Nod
 
 func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) (status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
-		panic("didn't cache pod from score")
+		panic("didn't cache pod from pre-filter")
 	}
 	if _, ok := state.Read(preBindStateKey); ok {
 		panic("didn't reset pre-bind state on pre-bind")
@@ -190,7 +190,7 @@ func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) (statu
 
 func (statePlugin) Bind(state api.CycleState, pod proto.Pod, _ string) (status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
-		panic("didn't cache pod from pre-bind")
+		panic("didn't cache pod from pre-filter")
 	}
 	if val, ok := state.Read(preBindStateKey); !ok {
 		panic("didn't propagate pre-bind state from pre-bind")
@@ -202,7 +202,7 @@ func (statePlugin) Bind(state api.CycleState, pod proto.Pod, _ string) (status *
 
 func (statePlugin) PostBind(state api.CycleState, pod proto.Pod, _ string) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
-		panic("didn't cache pod from pre-bind")
+		panic("didn't cache pod from pre-filter")
 	}
 	if val, ok := state.Read(preBindStateKey); !ok {
 		panic("didn't propagate pre-bind state from pre-bind")
