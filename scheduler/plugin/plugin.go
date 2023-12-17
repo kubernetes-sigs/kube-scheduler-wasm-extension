@@ -27,7 +27,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
 )
@@ -389,11 +388,8 @@ func (pl *wasmPlugin) PreBind(ctx context.Context, state *framework.CycleState, 
 	// can look them up.
 	params := &stack{pod: pod, nodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
-	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
-		status = g.preBind(ctx)
-	}); err != nil {
-		status = framework.AsStatus(err)
-	}
+	g := pl.pool.getForBinding(pod.UID)
+	status = g.preBind(ctx)
 	return
 }
 
@@ -409,12 +405,8 @@ func (pl *wasmPlugin) PostBind(ctx context.Context, state *framework.CycleState,
 	defer pl.pool.freeFromBinding(pod.UID) // the cycle is over, put it back into the pool.
 	params := &stack{pod: pod, nodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
-	logger := klog.FromContext(ctx)
-	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
-		g.postBind(ctx)
-	}); err != nil {
-		logger.Error(err, "doWithSchedulingGuest Failed")
-	}
+	g := pl.pool.getForBinding(pod.UID)
+	g.postBind(ctx)
 }
 
 var _ framework.PermitPlugin = (*wasmPlugin)(nil)
@@ -436,11 +428,8 @@ func (pl *wasmPlugin) Bind(ctx context.Context, state *framework.CycleState, pod
 	// can look them up.
 	params := &stack{pod: pod, nodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
-	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
-		status = g.bind(ctx)
-	}); err != nil {
-		status = framework.AsStatus(err)
-	}
+	g := pl.pool.getForBinding(pod.UID)
+	status = g.bind(ctx)
 	return
 }
 
