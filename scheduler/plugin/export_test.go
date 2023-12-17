@@ -17,6 +17,8 @@
 package wasm
 
 import (
+	"context"
+
 	wazeroapi "github.com/tetratelabs/wazero/api"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -52,6 +54,13 @@ func (w *WasmPlugin) SetGlobals(globals map[string]int32) {
 	}); err != nil {
 		panic(err)
 	}
+}
+
+// CreateGuestInBindingGuestPool creates a guest for the pod in the binding guest pool.
+func (w *WasmPlugin) CreateGuestInBindingGuestPool(podUID types.UID) {
+	// In an actual scheduling, the guest is put in the binding pool when Permit is executed at the end of the scheduling cycle.
+	_ = w.pool.doWithSchedulingGuest(context.Background(), podUID, func(*guest) {})
+	_ = w.pool.getForBinding(podUID)
 }
 
 func (w *WasmPlugin) ClearGuestModule() {
