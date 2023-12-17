@@ -1052,10 +1052,11 @@ wasm stack trace:
 			}
 			defer p.(io.Closer).Close()
 
+			pl := wasm.NewTestWasmPlugin(p)
 			if len(tc.globals) > 0 {
-				pl := wasm.NewTestWasmPlugin(p)
 				pl.SetGlobals(tc.globals)
 			}
+			pl.CreateGuestInBindingGuestPool(tc.pod.UID)
 
 			status := p.(framework.PreBindPlugin).PreBind(ctx, nil, tc.pod, tc.nodeName)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
@@ -1136,10 +1137,11 @@ wasm stack trace:
 			}
 			defer p.(io.Closer).Close()
 
+			pl := wasm.NewTestWasmPlugin(p)
 			if len(tc.globals) > 0 {
-				pl := wasm.NewTestWasmPlugin(p)
 				pl.SetGlobals(tc.globals)
 			}
+			pl.CreateGuestInBindingGuestPool(tc.pod.UID)
 
 			status := p.(framework.BindPlugin).Bind(ctx, nil, tc.pod, tc.nodeName)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
@@ -1228,10 +1230,11 @@ func TestPostBind(t *testing.T) {
 			}
 			defer p.(io.Closer).Close()
 
+			pl := wasm.NewTestWasmPlugin(p)
 			if len(tc.globals) > 0 {
-				pl := wasm.NewTestWasmPlugin(p)
 				pl.SetGlobals(tc.globals)
 			}
+			pl.CreateGuestInBindingGuestPool(tc.pod.UID)
 
 			// Because postBind doesn't return any values, we use klog's error for testing.
 			klogErr, err := captureStderr(func() {
