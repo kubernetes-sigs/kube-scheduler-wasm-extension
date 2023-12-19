@@ -28,6 +28,6 @@
     (unreachable)
   )
 
-  ;; We require exporting reserewith reserve
+  ;; We require exporting unresere with reserve
   (func (export "unreserve") (unreachable))    
 )

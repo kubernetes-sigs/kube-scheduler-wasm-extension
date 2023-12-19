@@ -232,8 +232,9 @@ func (g *guest) unreserve(ctx context.Context) {
 	defer g.out.Reset()
 	callStack := g.callStack
 
+	logger := klog.FromContext(ctx)
 	if err := g.unreserveFn.CallWithStack(ctx, callStack); err != nil {
-		klog.Error(decorateError(g.out, guestExportUnreserve, err))
+		logger.Error(decorateError(g.out, guestExportUnreserve, err), "failed unreserve")
 	}
 }
 

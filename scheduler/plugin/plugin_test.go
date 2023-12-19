@@ -1060,6 +1060,7 @@ func TestReserve(t *testing.T) {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
 			}
 			if !status.IsSuccess() {
+				// If Reserve failed, Unreserve is not valuable to test.
 				return
 			}
 

@@ -179,7 +179,7 @@ func (statePlugin) NormalizeScore(state api.CycleState, pod proto.Pod, _ api.Nod
 }
 
 func (statePlugin) Reserve(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
-	mustFilterState(state)
+	// Actually, it is not called from the cycle test, but it needs for Reserve plugin.
 	return
 }
 
