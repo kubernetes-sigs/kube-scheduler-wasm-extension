@@ -31,6 +31,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1017,12 +1018,16 @@ func TestReserve(t *testing.T) {
 			globals:  map[string]int32{"flag": 0},
 		},
 		{
-			name:                   "unreachable: flag is 1",
-			guestURL:               test.URLTestReserveFromGlobal,
-			pod:                    test.PodSmall,
-			nodeName:               test.NodeSmall.Name,
-			globals:                map[string]int32{"flag": 1},
-			expectedUnreserveError: "wasm: unreserve error: wasm error: unreachable\nwasm stack trace:\n\treserve_from_global.$1()",
+			name:     "unreachable: flag is 1",
+			guestURL: test.URLTestReserveFromGlobal,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			globals:  map[string]int32{"flag": 1},
+			expectedUnreserveError: `"failed unreserve" err=<
+	wasm: unreserve error: wasm error: unreachable
+	wasm stack trace:
+		reserve_from_global.$1()
+ >`,
 		},
 		{
 			name:                  "panic",
@@ -1071,8 +1076,9 @@ func TestReserve(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if want, have := tc.expectedUnreserveError, extractMessage(klogErr); want != have {
-				t.Fatalf("unexpected log: want \n%v\n have \n%v\n", want, have)
+			// if want, have := tc.expectedUnreserveError, extractMessage(klogErr); cmp.Diff(x, y, opts) != have {
+			if diff := cmp.Diff(tc.expectedUnreserveError, extractMessage(klogErr)); diff != "" {
+				t.Fatalf("unexpected unreserve error: %s", diff)
 			}
 		})
 	}
