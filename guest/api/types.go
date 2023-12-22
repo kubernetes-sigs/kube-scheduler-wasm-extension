@@ -114,6 +114,14 @@ type ScoreExtensions interface {
 	NormalizeScore(state CycleState, pod proto.Pod, scores NodeScore) (map[string]int, *Status)
 }
 
+// ReservePlugin is a WebAssembly implementation of framework.ReservePlugin.
+type ReservePlugin interface {
+	Plugin
+
+	Reserve(state CycleState, p proto.Pod, nodeName string) *Status
+	Unreserve(state CycleState, p proto.Pod, nodeName string)
+}
+
 // PreBindPlugin is a WebAssembly implementation of framework.PreBindPlugin.
 type PreBindPlugin interface {
 	Plugin

@@ -37,6 +37,8 @@ const (
 	guestExportPreScore       = "prescore"
 	guestExportScore          = "score"
 	guestExportNormalizeScore = "normalizescore"
+	guestExportReserve        = "reserve"
+	guestExportUnreserve      = "unreserve"
 	guestExportPreBind        = "prebind"
 	guestExportBind           = "bind"
 	guestExportPostBind       = "postbind"
@@ -52,6 +54,8 @@ type guest struct {
 	prescoreFn       wazeroapi.Function
 	scoreFn          wazeroapi.Function
 	normalizescoreFn wazeroapi.Function
+	reserveFn        wazeroapi.Function
+	unreserveFn      wazeroapi.Function
 	prebindFn        wazeroapi.Function
 	bindFn           wazeroapi.Function
 	postbindFn       wazeroapi.Function
@@ -102,6 +106,8 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 		prescoreFn:       g.ExportedFunction(guestExportPreScore),
 		scoreFn:          g.ExportedFunction(guestExportScore),
 		normalizescoreFn: g.ExportedFunction(guestExportNormalizeScore),
+		reserveFn:        g.ExportedFunction(guestExportReserve),
+		unreserveFn:      g.ExportedFunction(guestExportUnreserve),
 		prebindFn:        g.ExportedFunction(guestExportPreBind),
 		bindFn:           g.ExportedFunction(guestExportBind),
 		postbindFn:       g.ExportedFunction(guestExportPostBind),
@@ -207,6 +213,31 @@ func (g *guest) normalizeScore(ctx context.Context) (framework.NodeScoreList, *f
 	return normalizedScoreList, framework.NewStatus(framework.Code(statusCode), statusReason)
 }
 
+// reserve calls guestExportReserve.
+func (g *guest) reserve(ctx context.Context) *framework.Status {
+	defer g.out.Reset()
+	callStack := g.callStack
+
+	if err := g.reserveFn.CallWithStack(ctx, callStack); err != nil {
+		return framework.AsStatus(decorateError(g.out, guestExportReserve, err))
+	}
+
+	statusCode := int32(callStack[0])
+	statusReason := paramsFromContext(ctx).resultStatusReason
+	return framework.NewStatus(framework.Code(statusCode), statusReason)
+}
+
+// unreserve calls guestExportUnreserve.
+func (g *guest) unreserve(ctx context.Context) {
+	defer g.out.Reset()
+	callStack := g.callStack
+
+	logger := klog.FromContext(ctx)
+	if err := g.unreserveFn.CallWithStack(ctx, callStack); err != nil {
+		logger.Error(decorateError(g.out, guestExportUnreserve, err), "failed unreserve")
+	}
+}
+
 // preBind calls guestExportPreBind.
 func (g *guest) preBind(ctx context.Context) *framework.Status {
 	defer g.out.Reset()
@@ -294,6 +325,16 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
 			}
 			e |= iScoreExtensions
+		case guestExportReserve:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
+			}
+			e |= iReservePlugin
+		case guestExportUnreserve:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
+			}
+			e |= iReservePlugin
 		case guestExportPreBind:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)

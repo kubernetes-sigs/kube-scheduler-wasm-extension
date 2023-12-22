@@ -31,6 +31,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -979,6 +980,105 @@ wasm stack trace:
 					// This test is just for "normalizescore: multiply nodeScore by 100" case.
 					t.Fatalf("unexpected nodeScoreList: want %v, have %v", tc.expectedNodeScoreList[0], tc.nodeScoreList[0])
 				}
+			}
+		})
+	}
+}
+
+func TestReserve(t *testing.T) {
+	tests := []struct {
+		name                   string
+		guestURL               string
+		args                   []string
+		globals                map[string]int32
+		pod                    *v1.Pod
+		nodeName               string
+		expectedStatusCode     framework.Code
+		expectedStatusMessage  string
+		expectedUnreserveError string
+	}{
+		{
+			name:               "Success",
+			pod:                test.PodSmall,
+			nodeName:           "good",
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:                  "Error",
+			pod:                   test.PodSmall,
+			nodeName:              "bad",
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "name is bad",
+		},
+		{
+			name:     "reachable: flag is 0",
+			guestURL: test.URLTestReserveFromGlobal,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			globals:  map[string]int32{"flag": 0},
+		},
+		{
+			name:     "unreachable: flag is 1",
+			guestURL: test.URLTestReserveFromGlobal,
+			pod:      test.PodSmall,
+			nodeName: test.NodeSmall.Name,
+			globals:  map[string]int32{"flag": 1},
+			expectedUnreserveError: `"failed unreserve" err=<
+	wasm: unreserve error: wasm error: unreachable
+	wasm stack trace:
+		reserve_from_global.$1()
+ >`,
+		},
+		{
+			name:                  "panic",
+			guestURL:              test.URLErrorPanicOnReserve,
+			pod:                   test.PodSmall,
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "wasm: reserve error: panic!\nwasm error: unreachable\nwasm stack trace:\n\tpanic_on_reserve.$1() i32",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestReserve
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			cycleState := framework.NewCycleState()
+			status := p.(framework.ReservePlugin).Reserve(ctx, cycleState, tc.pod, tc.nodeName)
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+			if !status.IsSuccess() {
+				// If Reserve failed, Unreserve is not valuable to test.
+				return
+			}
+
+			// Because Unreserve doesn't return any values, we use klog's error for testing.
+			klogErr, err := captureStderr(func() {
+				p.(framework.ReservePlugin).Unreserve(ctx, cycleState, tc.pod, tc.nodeName)
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			// if want, have := tc.expectedUnreserveError, extractMessage(klogErr); cmp.Diff(x, y, opts) != have {
+			if diff := cmp.Diff(tc.expectedUnreserveError, extractMessage(klogErr)); diff != "" {
+				t.Fatalf("unexpected unreserve error: %s", diff)
 			}
 		})
 	}

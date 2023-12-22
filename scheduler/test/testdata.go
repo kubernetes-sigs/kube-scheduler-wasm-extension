@@ -34,6 +34,8 @@ var URLErrorPreScoreWithoutScore = localURL(pathWatError("prescore_without_score
 
 var URLErrorPanicOnScore = localURL(pathWatError("panic_on_score"))
 
+var URLErrorPanicOnReserve = localURL(pathWatError("panic_on_reserve"))
+
 var URLErrorPanicOnPreBind = localURL(pathWatError("panic_on_prebind"))
 
 var URLErrorPanicOnBind = localURL(pathWatError("panic_on_bind"))
@@ -67,6 +69,10 @@ var URLTestPreScoreFromGlobal = localURL(pathWatTest("prescore_from_global"))
 var URLTestScore = localURL(pathTinyGoTest("score"))
 
 var URLTestScoreFromGlobal = localURL(pathWatTest("score_from_global"))
+
+var URLTestReserve = localURL(pathTinyGoTest("reserve"))
+
+var URLTestReserveFromGlobal = localURL(pathWatTest("reserve_from_global"))
 
 var URLTestPreBindFromGlobal = localURL(pathWatTest("prebind_from_global"))
 

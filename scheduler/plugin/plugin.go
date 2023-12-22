@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
 )
@@ -356,8 +357,10 @@ var _ framework.ReservePlugin = (*wasmPlugin)(nil)
 
 // Reserve implements the same method as documented on framework.ReservePlugin.
 func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
+	params := &stack{pod: pod, nodeName: nodeName}
+	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
-		// TODO: partially implemented for testing
+		status = g.reserve(ctx)
 	}); err != nil {
 		status = framework.AsStatus(err)
 	}
@@ -366,13 +369,16 @@ func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, 
 
 // Unreserve implements the same method as documented on framework.ReservePlugin.
 func (pl *wasmPlugin) Unreserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) {
-	// Note: Unlike the below diagram, this is not a part of the scheduling
-	// cycle, rather the binding on error.
-	// https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/#extension-points
-
 	defer pl.pool.freeFromBinding(pod.UID) // the cycle is over, put it back into the pool.
 
-	// TODO: partially implemented for testing
+	params := &stack{pod: pod, nodeName: nodeName}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	logger := klog.FromContext(ctx)
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
+		g.unreserve(ctx)
+	}); err != nil {
+		logger.Error(err, "doWithSchedulingGuest Failed")
+	}
 }
 
 var _ framework.PreBindPlugin = (*wasmPlugin)(nil)

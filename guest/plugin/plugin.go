@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/reserve"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/scoreextensions"
 )
@@ -67,6 +68,9 @@ func Set(plugin api.Plugin) {
 	}
 	if plugin, ok := plugin.(api.ScoreExtensions); ok {
 		scoreextensions.SetPlugin(plugin)
+	}
+	if plugin, ok := plugin.(api.ReservePlugin); ok {
+		reserve.SetPlugin(plugin)
 	}
 	if plugin, ok := plugin.(api.PreBindPlugin); ok {
 		prebind.SetPlugin(plugin)

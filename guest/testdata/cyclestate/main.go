@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/reserve"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/scoreextensions"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
@@ -65,6 +66,7 @@ func main() {
 	prescore.SetPlugin(plugin)
 	score.SetPlugin(plugin)
 	scoreextensions.SetPlugin(plugin)
+	reserve.SetPlugin(plugin)
 	prebind.SetPlugin(plugin)
 	bind.SetPlugin(plugin)
 	postbind.SetPlugin(plugin)
@@ -174,6 +176,15 @@ func (statePlugin) NormalizeScore(state api.CycleState, pod proto.Pod, _ api.Nod
 		val.(preScoreStateVal)["scoreextensions"] = struct{}{}
 	}
 	return
+}
+
+func (statePlugin) Reserve(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
+	// Actually, it is not called from the cycle test, but it needs for Reserve plugin.
+	return
+}
+
+func (statePlugin) Unreserve(state api.CycleState, pod proto.Pod, nodeName string) {
+	mustFilterState(state)
 }
 
 func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) (status *api.Status) {
