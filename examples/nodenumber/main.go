@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"
 )
 
@@ -40,7 +41,9 @@ func main() {
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	plugin.Set(func(h handleapi.Handle) api.Plugin { return &NodeNumber{reverse: args.Reverse, handle: h} })
+	plugin.Set(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.Plugin {
+		return &NodeNumber{reverse: args.Reverse, handle: h}
+	})
 }
 
 // NodeNumber is an example plugin that favors nodes that share a numerical

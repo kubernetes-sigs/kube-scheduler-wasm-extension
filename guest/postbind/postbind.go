@@ -16,11 +16,14 @@ package postbind
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // postbind is the current plugin assigned with SetPlugin.
@@ -34,7 +37,7 @@ var postbind api.PostBindPlugin
 //	func main() {
 //		plugin := bindPlugin{}
 //		bind.SetPlugin(func(h handleapi.Handle) api.BindPlugin { return plugin })
-//		postbind.SetPlugin(func(h handleapi.Handle) api.PostBindPlugin { return plugin })
+//		postbind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin { return plugin })
 //	}
 //
 //	type bindPlugin struct{}
@@ -46,9 +49,9 @@ var postbind api.PostBindPlugin
 //	func (bindPlugin) PostBind(state api.CycleState, pod proto.Pod, nodeName string) {
 //		// Write state you need on PostBind
 //	}
-func SetPlugin(pluginInitializer func(h handleapi.Handle) api.PostBindPlugin) {
+func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin) {
 	handle := handle.NewFrameworkHandle()
-	postbind = pluginInitializer(handle)
+	postbind = pluginInitializer(klog.Get(), config.Get(), handle)
 	if postbind == nil {
 		panic("nil postbindPlugin")
 	}

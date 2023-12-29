@@ -24,12 +24,15 @@ import (
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // scoreextensions is the current plugin assigned with SetPlugin.
@@ -41,7 +44,7 @@ var scoreextensions api.ScoreExtensions
 //
 //	func main() {
 //		scoreextensions.SetPlugin(scoreExtensionsPlugin{})
-//		scoreextensions.SetPlugin(func(h handleapi.Handle) api.ScoreExtensions { return plugin })
+//		scoreextensions.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ScoreExtensions { return plugin })
 //	}
 //
 //	type scoreExtensionsPlugin struct{}
@@ -49,9 +52,9 @@ var scoreextensions api.ScoreExtensions
 //	func (scoreExtensionsPlugin) NormalizeScore(state api.CycleState, pod api.Pod, nodeScoreList map[string]int) (map[string]int, *api.Status) {
 //		panic("implement me")
 //	}
-func SetPlugin(pluginInitializer func(h handleapi.Handle) api.ScoreExtensions) {
+func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ScoreExtensions) {
 	handle := handle.NewFrameworkHandle()
-	scoreextensions = pluginInitializer(handle)
+	scoreextensions = pluginInitializer(klog.Get(), config.Get(), handle)
 	if scoreextensions == nil {
 		panic("nil scoreExtensions")
 	}

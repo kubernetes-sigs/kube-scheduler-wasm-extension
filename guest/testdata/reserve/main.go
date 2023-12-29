@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
+	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/reserve"
 )
 
@@ -29,7 +30,7 @@ type extensionPoints interface {
 
 func main() {
 	var plugin extensionPoints = reservePlugin{}
-	reserve.SetPlugin(func(h handleapi.Handle) api.ReservePlugin { return plugin })
+	reserve.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ReservePlugin { return plugin })
 }
 
 type reservePlugin struct{}

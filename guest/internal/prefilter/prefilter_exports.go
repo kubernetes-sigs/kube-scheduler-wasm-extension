@@ -27,15 +27,16 @@ import (
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // prefilter is the current plugin assigned with SetPlugin.
 var prefilter api.PreFilterPlugin
 
 // SetPlugin is exposed to prevent package cycles.
-func SetPlugin(pluginInitializer func(h handleapi.Handle) api.PreFilterPlugin) {
+func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin, klog klogapi.Klog, jsonConfig []byte) {
 	handle := handle.NewFrameworkHandle()
-	prefilter = pluginInitializer(handle)
+	prefilter = pluginInitializer(klog, jsonConfig, handle)
 	if prefilter == nil {
 		panic("nil prefilterPlugin")
 	}

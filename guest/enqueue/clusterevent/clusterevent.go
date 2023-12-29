@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package enqueue
+package clusterevent
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 
@@ -22,7 +22,7 @@ import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 // framework.ClusterEvent with 32-bit little endian gvk and ActionType
 const sizeEncodedClusterEvent = 4 + 4
 
-func encodeClusterEvents(input []api.ClusterEvent) []byte {
+func EncodeClusterEvents(input []api.ClusterEvent) []byte {
 	size := len(input) * sizeEncodedClusterEvent
 	if size == 0 {
 		return nil // don't allocate an empty slice

@@ -21,12 +21,15 @@ package filter
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
@@ -38,7 +41,7 @@ var filter api.FilterPlugin
 // For example:
 //
 //	func main() {
-//		filter.SetPlugin(func(h handleapi.Handle) api.FilterPlugin { return plugin })
+//		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin { return plugin })
 //	}
 //
 //	type filterPlugin struct{}
@@ -48,9 +51,9 @@ var filter api.FilterPlugin
 //	}
 //
 // Note: If you need state, you can assign it with prefilter.SetPlugin.
-func SetPlugin(pluginInitializer func(h handleapi.Handle) api.FilterPlugin) {
+func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin) {
 	handle := handle.NewFrameworkHandle()
-	filter = pluginInitializer(handle)
+	filter = pluginInitializer(klog.Get(), config.Get(), handle)
 	if filter == nil {
 		panic("nil filterPlugin")
 	}

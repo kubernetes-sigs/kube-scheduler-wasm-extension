@@ -21,12 +21,15 @@ import (
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // postfilter is the current plugin assigned with SetPlugin.
@@ -39,8 +42,8 @@ var postfilter api.PostFilterPlugin
 //
 //	func main() {
 //		plugin := filterPlugin{}
-//		postfilter.SetPlugin(func(h handleapi.Handle) api.PostFilterPlugin { return plugin })
-//		filter.SetPlugin(func(h handleapi.Handle) api.FilterPlugin { return plugin })
+//		postfilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PostFilterPlugin { return plugin })
+//		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin { return plugin })
 //	}
 //
 //	type filterPlugin struct{}
@@ -54,9 +57,9 @@ var postfilter api.PostFilterPlugin
 //		// Derive Filter for the node name using state set on PreFilter!
 //		return Filter, nil
 //	}
-func SetPlugin(pluginInitializer func(h handleapi.Handle) api.PostFilterPlugin) {
+func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PostFilterPlugin) {
 	handle := handle.NewFrameworkHandle()
-	postfilter = pluginInitializer(handle)
+	postfilter = pluginInitializer(klog.Get(), config.Get(), handle)
 	if postfilter == nil {
 		panic("nil postfilterPlugin")
 	}

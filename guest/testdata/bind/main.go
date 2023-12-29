@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/bind"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
+	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postbind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 )
@@ -47,9 +48,9 @@ func main() {
 			plugin = postBindPlugin{}
 		}
 	}
-	prebind.SetPlugin(func(h handleapi.Handle) api.PreBindPlugin { return plugin })
-	bind.SetPlugin(func(h handleapi.Handle) api.BindPlugin { return plugin })
-	postbind.SetPlugin(func(h handleapi.Handle) api.PostBindPlugin { return plugin })
+	prebind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreBindPlugin { return plugin })
+	bind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.BindPlugin { return plugin })
+	postbind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin { return plugin })
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.

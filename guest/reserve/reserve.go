@@ -19,11 +19,14 @@ package reserve
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // reserve is the current plugin assigned with SetPlugin.
@@ -35,7 +38,7 @@ var reserve api.ReservePlugin
 //
 //		func main() {
 //			plugin := reservePlugin{}
-//	        reserve.SetPlugin(func(h handleapi.Handle) api.ReservePlugin { return plugin })
+//	        reserve.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ReservePlugin { return plugin })
 //		}
 //
 //		type reservePlugin struct{}
@@ -47,9 +50,9 @@ var reserve api.ReservePlugin
 //		func (reservePlugin) Unreserve(state api.CycleState, pod proto.Pod, nodeName string) {
 //			// Write state you need on Unreserve
 //		}
-func SetPlugin(pluginInitializer func(h handleapi.Handle) api.ReservePlugin) {
+func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ReservePlugin) {
 	handle := handle.NewFrameworkHandle()
-	reserve = pluginInitializer(handle)
+	reserve = pluginInitializer(klog.Get(), config.Get(), handle)
 	if reserve == nil {
 		panic("nil reservePlugin")
 	}

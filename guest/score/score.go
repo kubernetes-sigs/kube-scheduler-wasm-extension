@@ -20,11 +20,14 @@ package score
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // score is the current plugin assigned with SetPlugin.
@@ -35,7 +38,7 @@ var score api.ScorePlugin
 // For example:
 //
 //	func main() {
-//		score.SetPlugin(func(h handleapi.Handle) api.ScorePlugin { return plugin })
+//		score.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ScorePlugin { return plugin })
 //	}
 //
 //	type scorePlugin struct{}
@@ -45,9 +48,9 @@ var score api.ScorePlugin
 //	}
 //
 // Note: If you need state, you can assign it with prescore.SetPlugin.
-func SetPlugin(pluginInitializer func(h handleapi.Handle) api.ScorePlugin) {
+func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ScorePlugin) {
 	handle := handle.NewFrameworkHandle()
-	score = pluginInitializer(handle)
+	score = pluginInitializer(klog.Get(), config.Get(), handle)
 	if score == nil {
 		panic("nil scorePlugin")
 	}

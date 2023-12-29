@@ -23,18 +23,22 @@ import (
 	"unsafe"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue/clusterevent"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // enqueue is the current plugin assigned with SetPlugin.
 var enqueue api.EnqueueExtensions
 
 // SetPlugin is exposed to prevent package cycles.
-func SetPlugin(pluginInitializer func(h handleapi.Handle) api.EnqueueExtensions) {
+func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.EnqueueExtensions) {
 	handle := handle.NewFrameworkHandle()
-	enqueue = pluginInitializer(handle)
+	enqueue = pluginInitializer(klog.Get(), config.Get(), handle)
 	if enqueue == nil {
 		panic("nil enqueueExtensions")
 	}
@@ -58,7 +62,7 @@ func _enqueue() {
 
 	// If plugin returned clusterEvents, encode them and call the host with the
 	// count and memory region.
-	encoded := encodeClusterEvents(clusterEvents)
+	encoded := clusterevent.EncodeClusterEvents(clusterEvents)
 	if encoded != nil {
 		ptr := uint32(uintptr(unsafe.Pointer(&encoded[0])))
 		size := uint32(len(encoded))

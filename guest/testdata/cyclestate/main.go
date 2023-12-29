@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
+	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postbind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
@@ -60,17 +61,17 @@ func main() {
 	}
 
 	plugin := statePlugin{}
-	enqueue.SetPlugin(func(h handleapi.Handle) api.EnqueueExtensions { return plugin })
-	prefilter.SetPlugin(func(h handleapi.Handle) api.PreFilterPlugin { return plugin })
-	filter.SetPlugin(func(h handleapi.Handle) api.FilterPlugin { return plugin })
-	postfilter.SetPlugin(func(h handleapi.Handle) api.PostFilterPlugin { return plugin })
-	prescore.SetPlugin(func(h handleapi.Handle) api.PreScorePlugin { return plugin })
-	score.SetPlugin(func(h handleapi.Handle) api.ScorePlugin { return plugin })
-	scoreextensions.SetPlugin(func(h handleapi.Handle) api.ScoreExtensions { return plugin })
-	reserve.SetPlugin(func(h handleapi.Handle) api.ReservePlugin { return plugin })
-	prebind.SetPlugin(func(h handleapi.Handle) api.PreBindPlugin { return plugin })
-	bind.SetPlugin(func(h handleapi.Handle) api.BindPlugin { return plugin })
-	postbind.SetPlugin(func(h handleapi.Handle) api.PostBindPlugin { return plugin })
+	enqueue.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.EnqueueExtensions { return plugin })
+	prefilter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin { return plugin })
+	filter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin { return plugin })
+	postfilter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PostFilterPlugin { return plugin })
+	prescore.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreScorePlugin { return plugin })
+	score.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ScorePlugin { return plugin })
+	scoreextensions.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ScoreExtensions { return plugin })
+	reserve.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ReservePlugin { return plugin })
+	prebind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreBindPlugin { return plugin })
+	bind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.BindPlugin { return plugin })
+	postbind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin { return plugin })
 }
 
 const (

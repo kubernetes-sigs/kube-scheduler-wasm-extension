@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package enqueue
+package clusterevent
 
 import (
 	"bytes"
@@ -72,7 +72,7 @@ func TestEncodeClusterEvents(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			encoded := encodeClusterEvents(tc.input)
+			encoded := EncodeClusterEvents(tc.input)
 			if want, have := tc.expected, encoded; (want == nil && have != nil) || !bytes.Equal(want, have) {
 				t.Fatalf("unexpected value: %v != %v", want, have)
 			}
