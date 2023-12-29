@@ -40,13 +40,13 @@ func EventfFn(msg EventMessage) {
 	}
 	jsonStr := string(jsonByte)
 	ptr, size := mem.StringToPtr(jsonStr)
-	event(ptr, size)
+	eventf(ptr, size)
 	runtime.KeepAlive(jsonStr)
 }
 
 func (e *eventRecorder) Eventf(regarding internalproto.KObject, related internalproto.KObject, eventtype, reason, action, note string) {
-	reg := ConvertToObjRef(regarding)
-	rel := ConvertToObjRef(related)
+	reg := convertToObjRef(regarding)
+	rel := convertToObjRef(related)
 
 	msg := EventMessage{
 		RegardingReference: reg,
@@ -59,7 +59,7 @@ func (e *eventRecorder) Eventf(regarding internalproto.KObject, related internal
 	e.EventfFn(msg)
 }
 
-func ConvertToObjRef(obj internalproto.KObject) ObjectReference {
+func convertToObjRef(obj internalproto.KObject) ObjectReference {
 	if obj == nil {
 		return ObjectReference{}
 	}

@@ -18,5 +18,5 @@
 
 package handle
 
-//go:wasmimport k8s.io/handle eventrecorder.event
-func event(ptr, size uint32)
+//go:wasmimport k8s.io/handle eventrecorder.eventf
+func eventf(ptr, size uint32)

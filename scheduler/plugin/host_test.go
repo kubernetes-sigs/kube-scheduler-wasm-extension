@@ -118,7 +118,7 @@ func Test_k8sHandleEventRecorderEventFn(t *testing.T) {
 	copy(mem.Bytes, jsonmsg)
 
 	// Invoke the host function in the same way the guest would have.
-	h.k8sHandleEventRecorderEventFn(context.Background(), mod, []uint64{
+	h.k8sHandleEventRecorderEventfFn(context.Background(), mod, []uint64{
 		0,
 		uint64(len(jsonmsg)),
 	})

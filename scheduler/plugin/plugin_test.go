@@ -212,11 +212,12 @@ func TestNew_maskInterfaces(t *testing.T) {
 			expectedScore: true,
 		},
 		{
-			name:           "all",
-			guestURL:       test.URLExampleNodeNumber,
-			expectedFilter: true,
-			expectedScore:  true,
-			expectedBind:   true,
+			name:            "all",
+			guestURL:        test.URLExampleNodeNumber,
+			expectedFilter:  true,
+			expectedScore:   true,
+			expectedReserve: true,
+			expectedBind:    true,
 		},
 	}
 
@@ -1046,7 +1047,7 @@ func TestReserve(t *testing.T) {
 				guestURL = test.URLTestReserve
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

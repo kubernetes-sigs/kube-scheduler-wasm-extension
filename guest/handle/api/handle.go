@@ -29,6 +29,19 @@ type Handle interface {
 }
 
 type EventRecorder interface {
-	// Eventf calls framework.Handle.Event.
+	// Eventf calls EventRecorder.Eventf.
 	Eventf(regarding internalproto.KObject, related internalproto.KObject, eventtype, reason, action, note string)
+}
+
+type UnimplementedHandle struct{}
+
+// EventRecorder implements framework.EventRecorder()
+func (UnimplementedHandle) EventRecorder() EventRecorder {
+	return UnimplementedEventRecorder{}
+}
+
+type UnimplementedEventRecorder struct{}
+
+// Eventf implements events.EventRecorder.Eventf()
+func (UnimplementedEventRecorder) Eventf(regarding internalproto.KObject, related internalproto.KObject, eventtype, reason, action, note string) {
 }

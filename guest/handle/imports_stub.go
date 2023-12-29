@@ -18,5 +18,5 @@
 
 package handle
 
-// event is stubbed for compilation outside TinyGo.
-func event(uint32, uint32) {}
+// eventf is stubbed for compilation outside TinyGo.
+func eventf(uint32, uint32) {}

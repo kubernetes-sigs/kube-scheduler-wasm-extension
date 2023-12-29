@@ -43,27 +43,15 @@ func main() {
 	// so this prevents additional overhead.
 	enqueue.SetPlugin(func(h handleapi.Handle) api.EnqueueExtensions {
 		p := pluginInitializer(h)
-		plugin, ok := p.(api.EnqueueExtensions)
-		if ok {
-			return plugin
-		}
-		panic("pluginInitializer did not return an api.EnqueueExtensions")
+		return p.(api.EnqueueExtensions)
 	})
 	prescore.SetPlugin(func(h handleapi.Handle) api.PreScorePlugin {
 		p := pluginInitializer(h)
-		plugin, ok := p.(api.PreScorePlugin)
-		if ok {
-			return plugin
-		}
-		panic("pluginInitializer did not return an api.PreScorePlugin")
+		return p.(api.PreScorePlugin)
 	})
 	score.SetPlugin(func(h handleapi.Handle) api.ScorePlugin {
 		p := pluginInitializer(h)
-		plugin, ok := p.(api.ScorePlugin)
-		if ok {
-			return plugin
-		}
-		panic("pluginInitializer did not return an api.ScorePlugin")
+		return p.(api.ScorePlugin)
 	})
 }
 

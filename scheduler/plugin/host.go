@@ -50,7 +50,7 @@ const (
 	k8sSchedulerResultStatusReason        = "result.status_reason"
 	k8sSchedulerResultNormalizedScoreList = "result.normalized_score_list"
 	k8sHandle                             = "k8s.io/handle"
-	k8sHandleEventRecorderEvent           = "eventrecorder.event"
+	k8sHandleEventRecorderEventf          = "eventrecorder.eventf"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
@@ -119,8 +119,8 @@ func instantiateHostHandle(ctx context.Context, runtime wazero.Runtime, handle f
 	host := &host{handle: handle}
 	return runtime.NewHostModuleBuilder(k8sHandle).
 		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleEventRecorderEventFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
-		WithParameterNames("buf", "buf_len").Export(k8sHandleEventRecorderEvent).
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleEventRecorderEventfFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sHandleEventRecorderEventf).
 		Instantiate(ctx)
 }
 
@@ -453,8 +453,8 @@ func MapToNodeScoreList(scoreMap map[string]int) []framework.NodeScore {
 	return nodeScoreList
 }
 
-// k8sHandleEventRecorderEventFn is a function used by the wasm guest to call EventRecorder.Eventf
-func (h host) k8sHandleEventRecorderEventFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+// k8sHandleEventRecorderEventfFn is a function used by the wasm guest to call EventRecorder.Eventf
+func (h host) k8sHandleEventRecorderEventfFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLen := uint32(stack[1])
 

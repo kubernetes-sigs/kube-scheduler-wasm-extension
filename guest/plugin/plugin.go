@@ -75,7 +75,7 @@ func Set(pluginInitializer func(h handleapi.Handle) api.Plugin) {
 		scoreextensions.SetPlugin(func(h handleapi.Handle) api.ScoreExtensions { return plugin })
 	}
 	if plugin, ok := plugin.(api.ReservePlugin); ok {
-		reserve.SetPlugin(plugin)
+		reserve.SetPlugin(func(h handleapi.Handle) api.ReservePlugin { return plugin })
 	}
 	if plugin, ok := plugin.(api.PreBindPlugin); ok {
 		prebind.SetPlugin(func(h handleapi.Handle) api.PreBindPlugin { return plugin })
