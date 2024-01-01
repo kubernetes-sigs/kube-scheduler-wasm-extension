@@ -28,6 +28,16 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 		RequireSuccess(t, s)
 	}
 
+	if prefilterEx, ok := plugin.(framework.PreFilterExtensions); ok {
+		s = prefilterEx.AddPod(ctx, nil, pod, nil)
+		RequireSuccess(t, s)
+	}
+
+	if prefilterEx, ok := plugin.(framework.PreFilterExtensions); ok {
+		s = prefilterEx.RemovePod(ctx, nil, pod, nil)
+		RequireSuccess(t, s)
+	}
+
 	if prescoreP, ok := plugin.(framework.PreScorePlugin); ok {
 		s = prescoreP.PreScore(ctx, nil, pod, []*v1.Node{ni.Node()})
 		RequireSuccess(t, s)

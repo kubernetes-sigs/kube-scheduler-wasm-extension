@@ -16,7 +16,9 @@
 
 package api
 
-import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+import (
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+)
 
 // CycleState is a WebAssembly implementation of framework.CycleState.
 //
@@ -55,6 +57,12 @@ type PreFilterPlugin interface {
 	Plugin
 
 	PreFilter(state CycleState, pod proto.Pod) (nodeNames []string, status *Status)
+}
+
+// PreFilterExtension is a WebAssembly implementation of framework.PrefFilterExtensions.
+type PreFilterExtensions interface {
+	AddPod(state CycleState, podToSchedule proto.Pod, podInfoToAdd proto.Pod, nodeInfo NodeInfo) *Status
+	RemovePod(state CycleState, podToSchedule proto.Pod, podInfoToRemove proto.Pod, nodeInfo NodeInfo) *Status
 }
 
 // FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
