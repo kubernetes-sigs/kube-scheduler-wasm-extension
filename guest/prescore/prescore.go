@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
-	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
@@ -44,8 +43,8 @@ var prescore api.PreScorePlugin
 //
 //	func main() {
 //		plugin := scorePlugin{}
-//		prescore.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreScorePlugin { return plugin })
-//		score.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ScorePlugin { return plugin })
+//		prescore.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
+//		score.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
 //	}
 //
 //	type scorePlugin struct{}
@@ -62,11 +61,16 @@ var prescore api.PreScorePlugin
 //	}
 //
 // Note: This should only be set when score.SetPlugin also is.
-func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreScorePlugin) {
+func SetPlugin(pluginFactory handleapi.PluginFactory) {
 	handle := handle.NewFrameworkHandle()
-	prescore = pluginInitializer(klog.Get(), config.Get(), handle)
-	if prescore == nil {
-		panic("nil prescorePlugin")
+	p, err := pluginFactory(klog.Get(), config.Get(), handle)
+	if err != nil {
+		panic(err)
+	}
+	var ok bool
+	prescore, ok = p.(api.PreScorePlugin)
+	if !ok || prescore == nil {
+		panic("nil PreScorePlugin or a plugin is not compatible with PreScorePlugin type")
 	}
 	plugin.MustSet(prescore)
 }

@@ -18,12 +18,10 @@
 package prefilter
 
 import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	internalprefilter "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
-	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // SetPlugin should be called in `main` to assign an api.PreFilterPlugin
@@ -33,8 +31,8 @@ import (
 //
 //	func main() {
 //		plugin := filterPlugin{}
-//		prefilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin { return plugin })
-//		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin { return plugin })
+//		prefilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
+//		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
 //	}
 //
 //	type filterPlugin struct{}
@@ -51,6 +49,6 @@ import (
 //
 // Note: This may be set without filter.SetPlugin, if the pre-filter plugin has
 // the only filtering logic, or only used to configure api.CycleState.
-func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin) {
-	internalprefilter.SetPlugin(pluginInitializer, klog.Get(), config.Get())
+func SetPlugin(pluginFactory handleapi.PluginFactory) {
+	internalprefilter.SetPlugin(pluginFactory, klog.Get(), config.Get())
 }

@@ -49,44 +49,49 @@ import (
 //
 //	func main() {
 //		plugin := myPlugin{}
-//		prefilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin { return plugin })
-//		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin { return plugin })
+//		prefilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
+//		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
 //	}
-func Set(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.Plugin) {
+func Set(pluginFactory handleapi.PluginFactory) {
 	handle := handle.NewFrameworkHandle()
-	plugin := pluginInitializer(klog.Get(), config.Get(), handle)
-
-	if plugin, ok := plugin.(api.EnqueueExtensions); ok {
-		enqueue.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.EnqueueExtensions { return plugin })
+	plugin, err := pluginFactory(klog.Get(), config.Get(), handle)
+	if err != nil {
+		panic(err)
 	}
-	if plugin, ok := plugin.(api.PreFilterPlugin); ok {
-		prefilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin { return plugin })
+	pf := func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) {
+		return plugin, nil
 	}
-	if plugin, ok := plugin.(api.FilterPlugin); ok {
-		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin { return plugin })
+	if _, ok := plugin.(api.EnqueueExtensions); ok {
+		enqueue.SetPlugin(pf)
 	}
-	if plugin, ok := plugin.(api.PostFilterPlugin); ok {
-		postfilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PostFilterPlugin { return plugin })
+	if _, ok := plugin.(api.PreFilterPlugin); ok {
+		prefilter.SetPlugin(pf)
 	}
-	if plugin, ok := plugin.(api.PreScorePlugin); ok {
-		prescore.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreScorePlugin { return plugin })
+	if _, ok := plugin.(api.FilterPlugin); ok {
+		filter.SetPlugin(pf)
 	}
-	if plugin, ok := plugin.(api.ScorePlugin); ok {
-		score.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ScorePlugin { return plugin })
+	if _, ok := plugin.(api.PostFilterPlugin); ok {
+		postfilter.SetPlugin(pf)
 	}
-	if plugin, ok := plugin.(api.ScoreExtensions); ok {
-		scoreextensions.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ScoreExtensions { return plugin })
+	if _, ok := plugin.(api.PreScorePlugin); ok {
+		prescore.SetPlugin(pf)
 	}
-	if plugin, ok := plugin.(api.ReservePlugin); ok {
-		reserve.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.ReservePlugin { return plugin })
+	if _, ok := plugin.(api.ScorePlugin); ok {
+		score.SetPlugin(pf)
 	}
-	if plugin, ok := plugin.(api.PreBindPlugin); ok {
-		prebind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreBindPlugin { return plugin })
+	if _, ok := plugin.(api.ScoreExtensions); ok {
+		scoreextensions.SetPlugin(pf)
 	}
-	if plugin, ok := plugin.(api.BindPlugin); ok {
-		bind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.BindPlugin { return plugin })
+	if _, ok := plugin.(api.ReservePlugin); ok {
+		reserve.SetPlugin(pf)
 	}
-	if plugin, ok := plugin.(api.PostBindPlugin); ok {
-		postbind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin { return plugin })
+	if _, ok := plugin.(api.PreBindPlugin); ok {
+		prebind.SetPlugin(pf)
+	}
+	if _, ok := plugin.(api.BindPlugin); ok {
+		bind.SetPlugin(pf)
+	}
+	if _, ok := plugin.(api.PostBindPlugin); ok {
+		postbind.SetPlugin(pf)
 	}
 }

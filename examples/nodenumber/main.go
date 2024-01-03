@@ -41,8 +41,8 @@ func main() {
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	plugin.Set(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.Plugin {
-		return &NodeNumber{reverse: args.Reverse, handle: h}
+	plugin.Set(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) {
+		return &NodeNumber{reverse: args.Reverse, handle: h}, nil
 	})
 }
 
@@ -95,9 +95,7 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.Node
 
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
-		if recorder != nil {
-			recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
-		}
+		recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
 		return nil // return success even if its suffix is non-number.
 	}
 

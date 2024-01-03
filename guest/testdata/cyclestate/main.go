@@ -61,17 +61,18 @@ func main() {
 	}
 
 	plugin := statePlugin{}
-	enqueue.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.EnqueueExtensions { return plugin })
-	prefilter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin { return plugin })
-	filter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin { return plugin })
-	postfilter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PostFilterPlugin { return plugin })
-	prescore.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreScorePlugin { return plugin })
-	score.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ScorePlugin { return plugin })
-	scoreextensions.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ScoreExtensions { return plugin })
-	reserve.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ReservePlugin { return plugin })
-	prebind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreBindPlugin { return plugin })
-	bind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.BindPlugin { return plugin })
-	postbind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin { return plugin })
+	var pluginFactory = func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil }
+	enqueue.SetPlugin(pluginFactory)
+	prefilter.SetPlugin(pluginFactory)
+	filter.SetPlugin(pluginFactory)
+	postfilter.SetPlugin(pluginFactory)
+	prescore.SetPlugin(pluginFactory)
+	score.SetPlugin(pluginFactory)
+	scoreextensions.SetPlugin(pluginFactory)
+	reserve.SetPlugin(pluginFactory)
+	prebind.SetPlugin(pluginFactory)
+	bind.SetPlugin(pluginFactory)
+	postbind.SetPlugin(pluginFactory)
 }
 
 const (

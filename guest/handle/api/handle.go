@@ -17,7 +17,9 @@
 package api
 
 import (
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // Handle provides data and some tools that plugins can use.
@@ -45,3 +47,6 @@ type UnimplementedEventRecorder struct{}
 // Eventf implements events.EventRecorder.Eventf()
 func (UnimplementedEventRecorder) Eventf(regarding internalproto.KObject, related internalproto.KObject, eventtype, reason, action, note string) {
 }
+
+// PluginFactory is a type of function like runtime.PluginFactory
+type PluginFactory = func(klog klogapi.Klog, jsonConfig []byte, h Handle) (api.Plugin, error)

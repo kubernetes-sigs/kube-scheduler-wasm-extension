@@ -48,9 +48,10 @@ func main() {
 			plugin = scoreExtensions{}
 		}
 	}
-	prescore.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreScorePlugin { return plugin })
-	score.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ScorePlugin { return plugin })
-	scoreextensions.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ScoreExtensions { return plugin })
+	pluginFactory := func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil }
+	prescore.SetPlugin(pluginFactory)
+	score.SetPlugin(pluginFactory)
+	scoreextensions.SetPlugin(pluginFactory)
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.

@@ -26,10 +26,7 @@ import (
 	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/advanced/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
-	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
@@ -37,29 +34,7 @@ import (
 // main is compiled to an exported Wasm function named "_start", called by the
 // Wasm scheduler plugin during initialization.
 func main() {
-	enqueue.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.EnqueueExtensions {
-		p := pluginInitializer(klog, jsonConfig, h)
-		return p.(api.EnqueueExtensions)
-	})
-	prescore.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreScorePlugin {
-		p := pluginInitializer(klog, jsonConfig, h)
-		return p.(api.PreScorePlugin)
-	})
-	score.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ScorePlugin {
-		p := pluginInitializer(klog, jsonConfig, h)
-		return p.(api.ScorePlugin)
-	})
-}
-
-func pluginInitializer(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.Plugin {
-	// The plugin package uses only normal Go code, which allows it to be
-	// unit testable via `tinygo test -target=wasi` as well normal `go test`.
-	//
-	// The real implementations use Wasm host functions
-	// (go:wasmimport), which cannot be tested with `tinygo test -target=wasi`.
-	plugin, err := plugin.New(klog, jsonConfig, h)
-	if err != nil {
-		panic(err)
-	}
-	return plugin
+	enqueue.SetPlugin(plugin.New)
+	prescore.SetPlugin(plugin.New)
+	score.SetPlugin(plugin.New)
 }

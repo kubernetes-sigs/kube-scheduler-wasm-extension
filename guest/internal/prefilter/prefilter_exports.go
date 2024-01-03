@@ -34,11 +34,16 @@ import (
 var prefilter api.PreFilterPlugin
 
 // SetPlugin is exposed to prevent package cycles.
-func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin, klog klogapi.Klog, jsonConfig []byte) {
+func SetPlugin(pluginFactory handleapi.PluginFactory, klog klogapi.Klog, jsonConfig []byte) {
 	handle := handle.NewFrameworkHandle()
-	prefilter = pluginInitializer(klog, jsonConfig, handle)
-	if prefilter == nil {
-		panic("nil prefilterPlugin")
+	p, err := pluginFactory(klog, jsonConfig, handle)
+	if err != nil {
+		panic(err)
+	}
+	var ok bool
+	prefilter, ok = p.(api.PreFilterPlugin)
+	if !ok || prefilter == nil {
+		panic("nil PreFilterPlugin or a plugin is not compatible with PreFilterPlugin type")
 	}
 	plugin.MustSet(prefilter)
 }

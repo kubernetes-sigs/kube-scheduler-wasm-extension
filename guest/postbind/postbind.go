@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
-	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // postbind is the current plugin assigned with SetPlugin.
@@ -36,8 +35,8 @@ var postbind api.PostBindPlugin
 //
 //	func main() {
 //		plugin := bindPlugin{}
-//		bind.SetPlugin(func(h handleapi.Handle) api.BindPlugin { return plugin })
-//		postbind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin { return plugin })
+//		bind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
+//		postbind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
 //	}
 //
 //	type bindPlugin struct{}
@@ -49,11 +48,16 @@ var postbind api.PostBindPlugin
 //	func (bindPlugin) PostBind(state api.CycleState, pod proto.Pod, nodeName string) {
 //		// Write state you need on PostBind
 //	}
-func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin) {
+func SetPlugin(pluginFactory handleapi.PluginFactory) {
 	handle := handle.NewFrameworkHandle()
-	postbind = pluginInitializer(klog.Get(), config.Get(), handle)
-	if postbind == nil {
-		panic("nil postbindPlugin")
+	p, err := pluginFactory(klog.Get(), config.Get(), handle)
+	if err != nil {
+		panic(err)
+	}
+	var ok bool
+	postbind, ok = p.(api.PostBindPlugin)
+	if !ok || postbind == nil {
+		panic("nil PostBindPlugin or a plugin is not compatible with PostBindPlugin type")
 	}
 	plugin.MustSet(postbind)
 }

@@ -30,7 +30,7 @@ type extensionPoints interface {
 
 func main() {
 	var plugin extensionPoints = reservePlugin{}
-	reserve.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.ReservePlugin { return plugin })
+	reserve.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
 }
 
 type reservePlugin struct{}

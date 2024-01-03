@@ -82,9 +82,7 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.Node
 
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
-		if recorder != nil {
-			recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
-		}
+		recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
 		return nil // return success even if its suffix is non-number.
 	}
 
@@ -135,7 +133,7 @@ func lastNumber(str string) (uint8, bool) {
 //
 // Note: This accepts config instead of implicitly calling config.Get for
 // testing.
-func New(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (*NodeNumber, error) {
+func New(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) {
 	var args nodeNumberArgs
 	if jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {

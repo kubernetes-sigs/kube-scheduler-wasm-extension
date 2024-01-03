@@ -48,9 +48,10 @@ func main() {
 			plugin = postFilterPlugin{}
 		}
 	}
-	prefilter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreFilterPlugin { return plugin })
-	filter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.FilterPlugin { return plugin })
-	postfilter.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PostFilterPlugin { return plugin })
+	pluginFactory := func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil }
+	prefilter.SetPlugin(pluginFactory)
+	filter.SetPlugin(pluginFactory)
+	postfilter.SetPlugin(pluginFactory)
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.

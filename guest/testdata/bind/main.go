@@ -48,9 +48,11 @@ func main() {
 			plugin = postBindPlugin{}
 		}
 	}
-	prebind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PreBindPlugin { return plugin })
-	bind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.BindPlugin { return plugin })
-	postbind.SetPlugin(func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) api.PostBindPlugin { return plugin })
+
+	pluginFactory := func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil }
+	prebind.SetPlugin(pluginFactory)
+	bind.SetPlugin(pluginFactory)
+	postbind.SetPlugin(pluginFactory)
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.

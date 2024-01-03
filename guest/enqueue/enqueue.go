@@ -29,18 +29,22 @@ import (
 	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
-	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // enqueue is the current plugin assigned with SetPlugin.
 var enqueue api.EnqueueExtensions
 
 // SetPlugin is exposed to prevent package cycles.
-func SetPlugin(pluginInitializer func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.EnqueueExtensions) {
+func SetPlugin(pluginFactory handleapi.PluginFactory) {
 	handle := handle.NewFrameworkHandle()
-	enqueue = pluginInitializer(klog.Get(), config.Get(), handle)
-	if enqueue == nil {
-		panic("nil enqueueExtensions")
+	p, err := pluginFactory(klog.Get(), config.Get(), handle)
+	if err != nil {
+		panic(err)
+	}
+	var ok bool
+	enqueue, ok = p.(api.EnqueueExtensions)
+	if !ok || enqueue == nil {
+		panic("nil EnqueueExtensions or a plugin is not compatible with EnqueueExtensions type")
 	}
 	plugin.MustSet(enqueue)
 }
