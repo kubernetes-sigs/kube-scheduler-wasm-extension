@@ -18,5 +18,5 @@
 
 package handle
 
-//go:wasmimport k8s.io/handle eventrecorder.eventf
+//go:wasmimport k8s.io/scheduler handle.eventrecorder.eventf
 func eventf(ptr, size uint32)

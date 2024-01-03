@@ -69,14 +69,8 @@ func prepareRuntime(ctx context.Context, guestBin []byte, logSeverity int32, gue
 		}
 	}
 	if imports&importK8sScheduler != 0 {
-		if _, err = instantiateHostScheduler(ctx, runtime, guestConfig); err != nil {
+		if _, err = instantiateHostScheduler(ctx, runtime, guestConfig, handle); err != nil {
 			err = fmt.Errorf("wasm: error instantiating scheduler host functions: %w", err)
-			return
-		}
-	}
-	if imports&importK8sHandle != 0 {
-		if _, err = instantiateHostHandle(ctx, runtime, handle); err != nil {
-			err = fmt.Errorf("wasm: error instantiating handle host functions: %w", err)
 			return
 		}
 	}
@@ -90,7 +84,6 @@ const (
 	importK8sApi
 	importK8sKlog
 	importK8sScheduler
-	importK8sHandle
 )
 
 func detectImports(importedFns []api.FunctionDefinition) imports {
@@ -104,8 +97,6 @@ func detectImports(importedFns []api.FunctionDefinition) imports {
 			imports |= importK8sKlog
 		case k8sScheduler:
 			imports |= importK8sScheduler
-		case k8sHandle:
-			imports |= importK8sHandle
 		case wasi_snapshot_preview1.ModuleName:
 			imports |= importWasiP1
 		}

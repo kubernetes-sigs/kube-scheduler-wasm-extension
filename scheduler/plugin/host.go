@@ -49,8 +49,7 @@ const (
 	k8sSchedulerResultNominatedNodeName   = "result.nominated_node_name"
 	k8sSchedulerResultStatusReason        = "result.status_reason"
 	k8sSchedulerResultNormalizedScoreList = "result.normalized_score_list"
-	k8sHandle                             = "k8s.io/handle"
-	k8sHandleEventRecorderEventf          = "eventrecorder.eventf"
+	k8sSchedulerHandleEventRecorderEventf = "handle.eventrecorder.eventf"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
@@ -85,8 +84,8 @@ func instantiateHostKlog(ctx context.Context, runtime wazero.Runtime, logSeverit
 		Instantiate(ctx)
 }
 
-func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guestConfig string) (wazeroapi.Module, error) {
-	host := &host{guestConfig: guestConfig}
+func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guestConfig string, handle framework.Handle) (wazeroapi.Module, error) {
+	host := &host{guestConfig: guestConfig, handle: handle}
 	return runtime.NewHostModuleBuilder(k8sScheduler).
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sSchedulerGetConfigFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
@@ -112,15 +111,9 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerNodeScoreListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerNodeScoreList).
-		Instantiate(ctx)
-}
-
-func instantiateHostHandle(ctx context.Context, runtime wazero.Runtime, handle framework.Handle) (wazeroapi.Module, error) {
-	host := &host{handle: handle}
-	return runtime.NewHostModuleBuilder(k8sHandle).
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleEventRecorderEventfFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
-		WithParameterNames("buf", "buf_len").Export(k8sHandleEventRecorderEventf).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleEventRecorderEventf).
 		Instantiate(ctx)
 }
 

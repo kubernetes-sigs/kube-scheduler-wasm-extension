@@ -31,19 +31,22 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"
 )
 
+var args nodeNumberArgs
+
 // main is compiled to a WebAssembly function named "_start", called by the
 // wasm scheduler plugin during initialization.
 func main() {
-	var args nodeNumberArgs
 	if jsonConfig := config.Get(); jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
 			panic(fmt.Errorf("decode arg into NodeNumberArgs: %w", err))
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	plugin.Set(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) {
-		return &NodeNumber{reverse: args.Reverse, handle: h}, nil
-	})
+	plugin.Set(New)
+}
+
+func New(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) {
+	return &NodeNumber{reverse: args.Reverse, handle: h}, nil
 }
 
 // NodeNumber is an example plugin that favors nodes that share a numerical
@@ -87,9 +90,8 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
-	var recorder handleapi.EventRecorder
 	h := pl.handle
-	recorder = h.EventRecorder()
+	recorder := h.EventRecorder()
 
 	klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
 

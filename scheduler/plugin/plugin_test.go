@@ -1361,13 +1361,13 @@ func TestEventf(t *testing.T) {
 		expectedMsg string
 	}{
 		{
-			name:        "call plugin.Set",
+			name:        "Test for skipping preScore using URLExampleNodeNumber with handle set via plugin.Set)",
 			guestURL:    test.URLExampleNodeNumber,
 			pod:         test.PodSmall,
 			expectedMsg: "PreScore not match lastNumber Skip ",
 		},
 		{
-			name:        "call each plugin's Set",
+			name:        "Test for skipping preScore using URLExampleAdvanced with handle set via prescore.SetPlugin)",
 			guestURL:    test.URLExampleAdvanced,
 			pod:         test.PodSmall,
 			expectedMsg: "PreScore not match lastNumber Skip ",
