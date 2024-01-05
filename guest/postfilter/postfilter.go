@@ -21,14 +21,10 @@ import (
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 )
 
 // postfilter is the current plugin assigned with SetPlugin.
@@ -41,8 +37,8 @@ var postfilter api.PostFilterPlugin
 //
 //	func main() {
 //		plugin := filterPlugin{}
-//		postfilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
-//		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
+//		postfilter.SetPlugin(plugin)
+//		filter.SetPlugin(plugin)
 //	}
 //
 //	type filterPlugin struct{}
@@ -56,17 +52,11 @@ var postfilter api.PostFilterPlugin
 //		// Derive Filter for the node name using state set on PreFilter!
 //		return Filter, nil
 //	}
-func SetPlugin(pluginFactory handleapi.PluginFactory) {
-	handle := handle.NewFrameworkHandle()
-	p, err := pluginFactory(klog.Get(), config.Get(), handle)
-	if err != nil {
-		panic(err)
+func SetPlugin(postfilterPlugin api.PostFilterPlugin) {
+	if postfilterPlugin == nil {
+		panic("nil postfilterPlugin")
 	}
-	var ok bool
-	postfilter, ok = p.(api.PostFilterPlugin)
-	if !ok || postfilter == nil {
-		panic("nil PostFilterPlugin or a plugin is not compatible with PostFilterPlugin type")
-	}
+	postfilter = postfilterPlugin
 	plugin.MustSet(postfilter)
 }
 

@@ -19,13 +19,9 @@ package reserve
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 )
 
 // reserve is the current plugin assigned with SetPlugin.
@@ -35,31 +31,25 @@ var reserve api.ReservePlugin
 //
 // For example:
 //
-//		func main() {
-//			plugin := reservePlugin{}
-//	        reserve.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
-//		}
+//	func main() {
+//		plugin := reservePlugin{}
+//		reserve.SetPlugin(plugin)
+//	}
 //
-//		type reservePlugin struct{}
+//	type reservePlugin struct{}
 //
-//		func (reservePlugin) Reserve(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
-//			// Write state you need on Reserve
-//		}
+//	func (reservePlugin) Reserve(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
+//		// Write state you need on Reserve
+//	}
 //
-//		func (reservePlugin) Unreserve(state api.CycleState, pod proto.Pod, nodeName string) {
-//			// Write state you need on Unreserve
-//		}
-func SetPlugin(pluginFactory handleapi.PluginFactory) {
-	handle := handle.NewFrameworkHandle()
-	p, err := pluginFactory(klog.Get(), config.Get(), handle)
-	if err != nil {
-		panic(err)
+//	func (reservePlugin) Unreserve(state api.CycleState, pod proto.Pod, nodeName string) {
+//		// Write state you need on Unreserve
+//	}
+func SetPlugin(reservePlugin api.ReservePlugin) {
+	if reservePlugin == nil {
+		panic("nil reservePlugin")
 	}
-	var ok bool
-	reserve, ok = p.(api.ReservePlugin)
-	if !ok || reserve == nil {
-		panic("nil ReservePlugin or a plugin is not compatible with ReservePlugin type")
-	}
+	reserve = reservePlugin
 	plugin.MustSet(reserve)
 }
 

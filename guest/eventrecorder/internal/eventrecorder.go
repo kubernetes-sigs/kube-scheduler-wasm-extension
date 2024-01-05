@@ -14,37 +14,21 @@
    limitations under the License.
 */
 
-package handle
+// Package internal allows unit testing without requiring wasm imports.
+package internal
 
 import (
-	"encoding/json"
-	"runtime"
-
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
-	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder/api"
 )
 
-type eventRecorder struct {
+type EventRecorder struct {
+	api.UnimplementedEventRecorder
+
 	EventfFn func(msg EventMessage)
 }
 
-var eventRecorderInstance api.EventRecorder = &eventRecorder{
-	EventfFn: EventfFn,
-}
-
-func EventfFn(msg EventMessage) {
-	jsonByte, err := json.Marshal(msg)
-	if err != nil {
-		panic(err)
-	}
-	jsonStr := string(jsonByte)
-	ptr, size := mem.StringToPtr(jsonStr)
-	eventf(ptr, size)
-	runtime.KeepAlive(jsonStr)
-}
-
-func (e *eventRecorder) Eventf(regarding internalproto.KObject, related internalproto.KObject, eventtype, reason, action, note string) {
+func (e *EventRecorder) Eventf(regarding proto.KObject, related proto.KObject, eventtype, reason, action, note string) {
 	reg := convertToObjRef(regarding)
 	rel := convertToObjRef(related)
 
@@ -59,7 +43,7 @@ func (e *eventRecorder) Eventf(regarding internalproto.KObject, related internal
 	e.EventfFn(msg)
 }
 
-func convertToObjRef(obj internalproto.KObject) ObjectReference {
+func convertToObjRef(obj proto.KObject) ObjectReference {
 	if obj == nil {
 		return ObjectReference{}
 	}

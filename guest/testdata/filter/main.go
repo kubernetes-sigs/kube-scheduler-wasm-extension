@@ -22,8 +22,6 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
-	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
 )
@@ -48,10 +46,9 @@ func main() {
 			plugin = postFilterPlugin{}
 		}
 	}
-	pluginFactory := func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil }
-	prefilter.SetPlugin(pluginFactory)
-	filter.SetPlugin(pluginFactory)
-	postfilter.SetPlugin(pluginFactory)
+	prefilter.SetPlugin(plugin)
+	filter.SetPlugin(plugin)
+	postfilter.SetPlugin(plugin)
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.

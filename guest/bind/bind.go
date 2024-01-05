@@ -16,13 +16,9 @@ package bind
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 )
 
 // bind is the current plugin assigned with SetPlugin.
@@ -35,7 +31,7 @@ var bind api.BindPlugin
 //
 //	func main() {
 //		plugin := bindPlugin{}
-//		bind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
+//		bind.SetPlugin(plugin)
 //	}
 //
 //	type bindPlugin struct{}
@@ -43,17 +39,11 @@ var bind api.BindPlugin
 //	func (bindPlugin) Bind(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
 //		// Write state you need on Bind
 //	}
-func SetPlugin(pluginFactory handleapi.PluginFactory) {
-	handle := handle.NewFrameworkHandle()
-	p, err := pluginFactory(klog.Get(), config.Get(), handle)
-	if err != nil {
-		panic(err)
+func SetPlugin(bindPlugin api.BindPlugin) {
+	if bindPlugin == nil {
+		panic("nil bindPlugin")
 	}
-	var ok bool
-	bind, ok = p.(api.BindPlugin)
-	if !ok || bind == nil {
-		panic("nil BindPlugin or a plugin is not compatible with BindPlugin type")
-	}
+	bind = bindPlugin
 	plugin.MustSet(bind)
 }
 

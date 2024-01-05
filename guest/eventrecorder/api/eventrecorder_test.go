@@ -14,20 +14,25 @@
    limitations under the License.
 */
 
-package handle
+package api_test
 
 import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder/api"
 )
 
-type handle struct{}
+var (
+	eventrecorder api.EventRecorder = api.UnimplementedEventRecorder{}
+	pod           proto.Pod
+	node          proto.Node
+)
 
-func NewFrameworkHandle() api.Handle {
-	return handleInstance
-}
+func ExampleEventRecorder() {
+	//
+	eventrecorder.Eventf(pod, pod, "event", "reason", "action", "note")
 
-var handleInstance api.Handle = &handle{}
+	eventrecorder.Eventf(node, node, "event", "reason", "action", "note")
 
-func (h handle) EventRecorder() api.EventRecorder {
-	return eventRecorderInstance
+	// Output:
+	//
 }

@@ -1,5 +1,3 @@
-//go:build !tinygo.wasm
-
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -16,7 +14,20 @@
    limitations under the License.
 */
 
-package handle
+package api
 
-// eventf is stubbed for compilation outside TinyGo.
-func eventf(uint32, uint32) {}
+import (
+	proto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+)
+
+// EventRecorder is a recorder that sends events to the host environment via eventrecorder.eventf.
+type EventRecorder interface {
+	// Eventf calls EventRecorder.Eventf.
+	Eventf(regarding proto.KObject, related proto.KObject, eventtype, reason, action, note string)
+}
+
+type UnimplementedEventRecorder struct{}
+
+// Eventf implements events.EventRecorder.Eventf()
+func (UnimplementedEventRecorder) Eventf(regarding proto.KObject, related proto.KObject, eventtype, reason, action, note string) {
+}

@@ -1,4 +1,4 @@
-//go:build tinygo.wasm
+//go:build !tinygo.wasm
 
 /*
    Copyright 2023 The Kubernetes Authors.
@@ -16,7 +16,7 @@
    limitations under the License.
 */
 
-package handle
+package eventrecorder
 
-//go:wasmimport k8s.io/scheduler handle.eventrecorder.eventf
-func eventf(ptr, size uint32)
+// eventf is stubbed for compilation outside TinyGo.
+func eventf(uint32, uint32) {}

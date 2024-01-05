@@ -21,7 +21,6 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
@@ -52,8 +51,7 @@ func Test_NodeNumber(t *testing.T) {
 				expectedMatch = !expectedMatch
 			}
 			t.Run(name, func(t *testing.T) {
-				handle := handle.NewFrameworkHandle()
-				plugin := &NodeNumber{reverse: reverse, handle: handle}
+				plugin := &NodeNumber{reverse: reverse}
 				state := testCycleState{}
 				status := plugin.PreScore(state, tc.pod, nil)
 				if status != nil {

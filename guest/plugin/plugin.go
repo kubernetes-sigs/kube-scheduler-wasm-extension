@@ -19,13 +19,8 @@ package plugin
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/bind"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
-	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postbind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
@@ -40,7 +35,7 @@ import (
 // interfaces `plugin` defines.
 //
 //	func main() {
-//		plugin.Set(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) api.Plugin {return myPlugin{} })
+//		plugin.Set(myPlugin{})
 //	}
 //
 // Note: Using this results in the host call this plugin for every hook, even
@@ -49,49 +44,41 @@ import (
 //
 //	func main() {
 //		plugin := myPlugin{}
-//		prefilter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
-//		filter.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
+//		prefilter.SetPlugin(plugin)
+//		filter.SetPlugin(plugin)
 //	}
-func Set(pluginFactory handleapi.PluginFactory) {
-	handle := handle.NewFrameworkHandle()
-	plugin, err := pluginFactory(klog.Get(), config.Get(), handle)
-	if err != nil {
-		panic(err)
+func Set(plugin api.Plugin) {
+	if plugin, ok := plugin.(api.EnqueueExtensions); ok {
+		enqueue.SetPlugin(plugin)
 	}
-	pf := func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) {
-		return plugin, nil
+	if plugin, ok := plugin.(api.PreFilterPlugin); ok {
+		prefilter.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.EnqueueExtensions); ok {
-		enqueue.SetPlugin(pf)
+	if plugin, ok := plugin.(api.FilterPlugin); ok {
+		filter.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.PreFilterPlugin); ok {
-		prefilter.SetPlugin(pf)
+	if plugin, ok := plugin.(api.PostFilterPlugin); ok {
+		postfilter.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.FilterPlugin); ok {
-		filter.SetPlugin(pf)
+	if plugin, ok := plugin.(api.PreScorePlugin); ok {
+		prescore.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.PostFilterPlugin); ok {
-		postfilter.SetPlugin(pf)
+	if plugin, ok := plugin.(api.ScorePlugin); ok {
+		score.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.PreScorePlugin); ok {
-		prescore.SetPlugin(pf)
+	if plugin, ok := plugin.(api.ScoreExtensions); ok {
+		scoreextensions.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.ScorePlugin); ok {
-		score.SetPlugin(pf)
+	if plugin, ok := plugin.(api.ReservePlugin); ok {
+		reserve.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.ScoreExtensions); ok {
-		scoreextensions.SetPlugin(pf)
+	if plugin, ok := plugin.(api.PreBindPlugin); ok {
+		prebind.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.ReservePlugin); ok {
-		reserve.SetPlugin(pf)
+	if plugin, ok := plugin.(api.BindPlugin); ok {
+		bind.SetPlugin(plugin)
 	}
-	if _, ok := plugin.(api.PreBindPlugin); ok {
-		prebind.SetPlugin(pf)
-	}
-	if _, ok := plugin.(api.BindPlugin); ok {
-		bind.SetPlugin(pf)
-	}
-	if _, ok := plugin.(api.PostBindPlugin); ok {
-		postbind.SetPlugin(pf)
+	if plugin, ok := plugin.(api.PostBindPlugin); ok {
+		postbind.SetPlugin(plugin)
 	}
 }

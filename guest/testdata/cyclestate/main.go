@@ -27,8 +27,6 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/bind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
-	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postbind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
@@ -61,18 +59,17 @@ func main() {
 	}
 
 	plugin := statePlugin{}
-	var pluginFactory = func(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil }
-	enqueue.SetPlugin(pluginFactory)
-	prefilter.SetPlugin(pluginFactory)
-	filter.SetPlugin(pluginFactory)
-	postfilter.SetPlugin(pluginFactory)
-	prescore.SetPlugin(pluginFactory)
-	score.SetPlugin(pluginFactory)
-	scoreextensions.SetPlugin(pluginFactory)
-	reserve.SetPlugin(pluginFactory)
-	prebind.SetPlugin(pluginFactory)
-	bind.SetPlugin(pluginFactory)
-	postbind.SetPlugin(pluginFactory)
+	enqueue.SetPlugin(plugin)
+	prefilter.SetPlugin(plugin)
+	filter.SetPlugin(plugin)
+	postfilter.SetPlugin(plugin)
+	prescore.SetPlugin(plugin)
+	score.SetPlugin(plugin)
+	scoreextensions.SetPlugin(plugin)
+	reserve.SetPlugin(plugin)
+	prebind.SetPlugin(plugin)
+	bind.SetPlugin(plugin)
+	postbind.SetPlugin(plugin)
 }
 
 const (

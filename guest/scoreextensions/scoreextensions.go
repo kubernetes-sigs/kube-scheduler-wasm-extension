@@ -24,14 +24,10 @@ import (
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 )
 
 // scoreextensions is the current plugin assigned with SetPlugin.
@@ -42,7 +38,7 @@ var scoreextensions api.ScoreExtensions
 // For example:
 //
 //	func main() {
-//		scoreextensions.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return scoreExtensionsPlugin, nil })
+//		scoreextensions.SetPlugin(scoreExtensionsPlugin{})
 //	}
 //
 //	type scoreExtensionsPlugin struct{}
@@ -50,17 +46,11 @@ var scoreextensions api.ScoreExtensions
 //	func (scoreExtensionsPlugin) NormalizeScore(state api.CycleState, pod api.Pod, nodeScoreList map[string]int) (map[string]int, *api.Status) {
 //		panic("implement me")
 //	}
-func SetPlugin(pluginFactory handleapi.PluginFactory) {
-	handle := handle.NewFrameworkHandle()
-	p, err := pluginFactory(klog.Get(), config.Get(), handle)
-	if err != nil {
-		panic(err)
+func SetPlugin(scoreExtensions api.ScoreExtensions) {
+	if scoreExtensions == nil {
+		panic("nil scoreExtensions")
 	}
-	var ok bool
-	scoreextensions, ok = p.(api.ScoreExtensions)
-	if !ok || scoreextensions == nil {
-		panic("nil ScoreExtensions or a plugin is not compatible with ScoreExtensions type")
-	}
+	scoreextensions = scoreExtensions
 	plugin.MustSet(scoreextensions)
 }
 

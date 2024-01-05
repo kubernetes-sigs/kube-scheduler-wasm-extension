@@ -131,14 +131,6 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 		wantLog := `NodeNumberArgs is successfully applied
 "execute PreScore on NodeNumber plugin" pod="happy8-meta"
 "execute Score on NodeNumber plugin" pod="happy8-meta"`
-		if advanced {
-			// Advanced calls plugin.New three times
-			wantLog = `NodeNumberArgs is successfully applied
-NodeNumberArgs is successfully applied
-NodeNumberArgs is successfully applied
-"execute PreScore on NodeNumber plugin" pod="happy8-meta"
-"execute Score on NodeNumber plugin" pod="happy8-meta"`
-		}
 		if wantLog != strings.TrimSpace(buf.String()) {
 			t.Fatalf("unexpected log: want %v, have %v", wantLog, buf.String())
 		}

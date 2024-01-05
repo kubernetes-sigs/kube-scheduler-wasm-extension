@@ -23,30 +23,19 @@ import (
 	"unsafe"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue/clusterevent"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 )
 
 // enqueue is the current plugin assigned with SetPlugin.
 var enqueue api.EnqueueExtensions
 
 // SetPlugin is exposed to prevent package cycles.
-func SetPlugin(pluginFactory handleapi.PluginFactory) {
-	handle := handle.NewFrameworkHandle()
-	p, err := pluginFactory(klog.Get(), config.Get(), handle)
-	if err != nil {
-		panic(err)
+func SetPlugin(enqueueExtensions api.EnqueueExtensions) {
+	if enqueueExtensions == nil {
+		panic("nil enqueueExtensions")
 	}
-	var ok bool
-	enqueue, ok = p.(api.EnqueueExtensions)
-	if !ok || enqueue == nil {
-		panic("nil EnqueueExtensions or a plugin is not compatible with EnqueueExtensions type")
-	}
-	plugin.MustSet(enqueue)
+	enqueue = enqueueExtensions
+	plugin.MustSet(enqueueExtensions)
 }
 
 // prevent unused lint errors (lint is run with normal go).
@@ -66,7 +55,7 @@ func _enqueue() {
 
 	// If plugin returned clusterEvents, encode them and call the host with the
 	// count and memory region.
-	encoded := clusterevent.EncodeClusterEvents(clusterEvents)
+	encoded := encodeClusterEvents(clusterEvents)
 	if encoded != nil {
 		ptr := uint32(uintptr(unsafe.Pointer(&encoded[0])))
 		size := uint32(len(encoded))

@@ -22,13 +22,6 @@ import (
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
-type KObject interface {
-	proto.Metadata
-
-	GetKind() string
-	GetApiVersion() string
-}
-
 type object interface {
 	GetMetadata() *meta.ObjectMeta
 }

@@ -23,29 +23,20 @@ import (
 	"unsafe"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
 // prefilter is the current plugin assigned with SetPlugin.
 var prefilter api.PreFilterPlugin
 
 // SetPlugin is exposed to prevent package cycles.
-func SetPlugin(pluginFactory handleapi.PluginFactory, klog klogapi.Klog, jsonConfig []byte) {
-	handle := handle.NewFrameworkHandle()
-	p, err := pluginFactory(klog, jsonConfig, handle)
-	if err != nil {
-		panic(err)
+func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
+	if prefilterPlugin == nil {
+		panic("nil prefilterPlugin")
 	}
-	var ok bool
-	prefilter, ok = p.(api.PreFilterPlugin)
-	if !ok || prefilter == nil {
-		panic("nil PreFilterPlugin or a plugin is not compatible with PreFilterPlugin type")
-	}
-	plugin.MustSet(prefilter)
+	prefilter = prefilterPlugin
+	plugin.MustSet(prefilterPlugin)
 }
 
 // prevent unused lint errors (lint is run with normal go).

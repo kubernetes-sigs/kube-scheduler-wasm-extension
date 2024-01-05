@@ -19,6 +19,13 @@ package proto
 
 import api "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 
+type KObject interface {
+	Metadata
+
+	GetKind() string
+	GetApiVersion() string
+}
+
 // Metadata are fields on top-level types, used for logging and metrics.
 type Metadata interface {
 	GetUid() string

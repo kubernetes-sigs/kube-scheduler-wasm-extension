@@ -16,13 +16,9 @@ package prebind
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 )
 
 // prebind is the current plugin assigned with SetPlugin.
@@ -35,8 +31,8 @@ var prebind api.PreBindPlugin
 //
 //	func main() {
 //		plugin := bindPlugin{}
-//		bind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
-//		prebind.SetPlugin(func(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) { return plugin, nil })
+//		bind.SetPlugin(plugin)
+//		prebind.SetPlugin(plugin)
 //	}
 //
 //	type bindPlugin struct{}
@@ -48,17 +44,11 @@ var prebind api.PreBindPlugin
 //	func (bindPlugin) PreBind(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status) {
 //		// Write state you need on Bind
 //	}
-func SetPlugin(pluginFactory handleapi.PluginFactory) {
-	handle := handle.NewFrameworkHandle()
-	p, err := pluginFactory(klog.Get(), config.Get(), handle)
-	if err != nil {
-		panic(err)
+func SetPlugin(prebindPlugin api.PreBindPlugin) {
+	if prebindPlugin == nil {
+		panic("nil prebindPlugin")
 	}
-	var ok bool
-	prebind, ok = p.(api.PreBindPlugin)
-	if !ok || prebind == nil {
-		panic("nil PreBindPlugin or a plugin is not compatible with PreBindPlugin type")
-	}
+	prebind = prebindPlugin
 	plugin.MustSet(prebind)
 }
 

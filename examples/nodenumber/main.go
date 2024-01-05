@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"
@@ -36,17 +36,21 @@ var args nodeNumberArgs
 // main is compiled to a WebAssembly function named "_start", called by the
 // wasm scheduler plugin during initialization.
 func main() {
-	if jsonConfig := config.Get(); jsonConfig != nil {
+	p, err := New(klog.Get(), config.Get())
+	if err != nil {
+		panic(err)
+	}
+	plugin.Set(p)
+}
+
+func New(klog klogapi.Klog, jsonConfig []byte) (api.Plugin, error) {
+	if jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
 			panic(fmt.Errorf("decode arg into NodeNumberArgs: %w", err))
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	plugin.Set(New)
-}
-
-func New(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) {
-	return &NodeNumber{reverse: args.Reverse, handle: h}, nil
+	return &NodeNumber{reverse: args.Reverse}, nil
 }
 
 // NodeNumber is an example plugin that favors nodes that share a numerical
@@ -63,7 +67,6 @@ func New(klog klogapi.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, 
 //     a numeric match gets a results in a lower score than a match.
 type NodeNumber struct {
 	reverse bool
-	handle  handleapi.Handle
 }
 
 type nodeNumberArgs struct {
@@ -90,8 +93,7 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
-	h := pl.handle
-	recorder := h.EventRecorder()
+	recorder := eventrecorder.Get()
 
 	klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
 

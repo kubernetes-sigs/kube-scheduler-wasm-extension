@@ -33,7 +33,7 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	handleapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/api"
+	eventrecorder "sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder/api"
 	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
@@ -50,9 +50,9 @@ import (
 //   - The reverse field inverts the score. For example, when `reverse == true`
 //     a numeric match gets a results in a lower score than a match.
 type NodeNumber struct {
-	reverse bool
-	klog    klog.Klog
-	handle  handleapi.Handle
+	reverse       bool
+	klog          klog.Klog
+	eventrecorder eventrecorder.EventRecorder
 }
 
 const (
@@ -75,13 +75,11 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
-	h := pl.handle
-	recorder := h.EventRecorder()
 	pl.klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
 
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
-		recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
+		pl.eventrecorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
 		return nil // return success even if its suffix is non-number.
 	}
 
@@ -132,7 +130,7 @@ func lastNumber(str string) (uint8, bool) {
 //
 // Note: This accepts config instead of implicitly calling config.Get for
 // testing.
-func New(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, error) {
+func New(klog klog.Klog, jsonConfig []byte, eventrecorder eventrecorder.EventRecorder) (*NodeNumber, error) {
 	var args nodeNumberArgs
 	if jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
@@ -140,7 +138,7 @@ func New(klog klog.Klog, jsonConfig []byte, h handleapi.Handle) (api.Plugin, err
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	return &NodeNumber{klog: klog, reverse: args.Reverse, handle: h}, nil
+	return &NodeNumber{klog: klog, reverse: args.Reverse, eventrecorder: eventrecorder}, nil
 }
 
 type nodeNumberArgs struct {
