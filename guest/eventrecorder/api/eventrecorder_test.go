@@ -28,9 +28,7 @@ var (
 )
 
 func ExampleEventRecorder() {
-	//
 	eventrecorder.Eventf(pod, pod, "event", "reason", "action", "note")
-
 	eventrecorder.Eventf(node, node, "event", "reason", "action", "note")
 
 	// Output:

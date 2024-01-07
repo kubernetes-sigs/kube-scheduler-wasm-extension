@@ -20,7 +20,12 @@ type FakeRecorder struct {
 }
 
 func (f *FakeRecorder) Eventf(regarding runtime.Object, related runtime.Object, eventtype, reason, action, note string, args ...interface{}) {
-	f.EventMsg = fmt.Sprintf(eventtype + " " + reason + " " + action + " " + note)
+	obj, ok := regarding.(*v1.ObjectReference)
+	if !ok || obj.Name == "" {
+		f.EventMsg = fmt.Sprintf(eventtype + " " + reason + " " + action + " " + note)
+	} else {
+		f.EventMsg = fmt.Sprintf(obj.Name + " " + eventtype + " " + reason + " " + action + " " + note)
+	}
 }
 
 type FakeHandle struct {

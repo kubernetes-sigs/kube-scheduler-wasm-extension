@@ -83,6 +83,7 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.Node
 		return nil // return success even if its suffix is non-number.
 	}
 
+	pl.eventrecorder.Eventf(pod, nil, "PreScore", "match lastNumber", "Continue", "")
 	state.Write(preScoreStateKey, &preScoreState{podSuffixNumber: podnum})
 	return nil
 }

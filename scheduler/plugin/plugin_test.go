@@ -1364,13 +1364,13 @@ func TestEventf(t *testing.T) {
 			name:        "Test for skipping preScore using URLExampleNodeNumber with handle set via plugin.Set)",
 			guestURL:    test.URLExampleNodeNumber,
 			pod:         test.PodSmall,
-			expectedMsg: "PreScore not match lastNumber Skip ",
+			expectedMsg: "good-pod PreScore not match lastNumber Skip ",
 		},
 		{
 			name:        "Test for skipping preScore using URLExampleAdvanced with handle set via prescore.SetPlugin)",
 			guestURL:    test.URLExampleAdvanced,
 			pod:         test.PodSmall,
-			expectedMsg: "PreScore not match lastNumber Skip ",
+			expectedMsg: "good-pod PreScore not match lastNumber Skip ",
 		},
 	}
 

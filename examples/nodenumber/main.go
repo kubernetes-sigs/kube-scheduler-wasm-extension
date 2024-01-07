@@ -31,8 +31,6 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"
 )
 
-var args nodeNumberArgs
-
 // main is compiled to a WebAssembly function named "_start", called by the
 // wasm scheduler plugin during initialization.
 func main() {
@@ -44,6 +42,7 @@ func main() {
 }
 
 func New(klog klogapi.Klog, jsonConfig []byte) (api.Plugin, error) {
+	var args nodeNumberArgs
 	if jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
 			panic(fmt.Errorf("decode arg into NodeNumberArgs: %w", err))
@@ -102,7 +101,7 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.Node
 		recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
 		return nil // return success even if its suffix is non-number.
 	}
-
+	recorder.Eventf(pod, nil, "PreScore", "match lastNumber", "Continue", "")
 	state.Write(preScoreStateKey, &preScoreState{podSuffixNumber: podnum})
 	return nil
 }
