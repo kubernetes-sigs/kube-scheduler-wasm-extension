@@ -49,6 +49,11 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 		reserveP.Unreserve(ctx, nil, pod, ni.Node().Name)
 	}
 
+	if permitP, ok := plugin.(framework.PermitPlugin); ok {
+		s, _ = permitP.Permit(ctx, nil, pod, ni.Node().Name)
+		RequireSuccess(t, s)
+	}
+
 	if prebindP, ok := plugin.(framework.PreBindPlugin); ok {
 		s = prebindP.PreBind(ctx, nil, pod, "")
 		RequireSuccess(t, s)

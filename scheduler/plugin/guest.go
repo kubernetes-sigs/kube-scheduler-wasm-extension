@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
@@ -39,6 +40,7 @@ const (
 	guestExportNormalizeScore = "normalizescore"
 	guestExportReserve        = "reserve"
 	guestExportUnreserve      = "unreserve"
+	guestExportPermit         = "permit"
 	guestExportPreBind        = "prebind"
 	guestExportBind           = "bind"
 	guestExportPostBind       = "postbind"
@@ -56,6 +58,7 @@ type guest struct {
 	normalizescoreFn wazeroapi.Function
 	reserveFn        wazeroapi.Function
 	unreserveFn      wazeroapi.Function
+	permitFn         wazeroapi.Function
 	prebindFn        wazeroapi.Function
 	bindFn           wazeroapi.Function
 	postbindFn       wazeroapi.Function
@@ -108,6 +111,7 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 		normalizescoreFn: g.ExportedFunction(guestExportNormalizeScore),
 		reserveFn:        g.ExportedFunction(guestExportReserve),
 		unreserveFn:      g.ExportedFunction(guestExportUnreserve),
+		permitFn:         g.ExportedFunction(guestExportPermit),
 		prebindFn:        g.ExportedFunction(guestExportPreBind),
 		bindFn:           g.ExportedFunction(guestExportBind),
 		postbindFn:       g.ExportedFunction(guestExportPostBind),
@@ -238,6 +242,21 @@ func (g *guest) unreserve(ctx context.Context) {
 	}
 }
 
+// permit calls guestExportPermit.
+func (g *guest) permit(ctx context.Context) (*framework.Status, time.Duration) {
+	defer g.out.Reset()
+	callStack := g.callStack
+
+	if err := g.permitFn.CallWithStack(ctx, callStack); err != nil {
+		return framework.AsStatus(decorateError(g.out, guestExportPermit, err)), 0
+	}
+
+	timeout := paramsFromContext(ctx).resultTimeout
+	statusCode := int32(callStack[0])
+	statusReason := paramsFromContext(ctx).resultStatusReason
+	return framework.NewStatus(framework.Code(statusCode), statusReason), timeout
+}
+
 // preBind calls guestExportPreBind.
 func (g *guest) preBind(ctx context.Context) *framework.Status {
 	defer g.out.Reset()
@@ -335,6 +354,11 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
 			}
 			e |= iReservePlugin
+		case guestExportPermit:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
+			}
+			e |= iPermitPlugin
 		case guestExportPreBind:
 			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)

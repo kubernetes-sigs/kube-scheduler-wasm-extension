@@ -16,7 +16,11 @@
 
 package api
 
-import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+import (
+	"time"
+
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+)
 
 // CycleState is a WebAssembly implementation of framework.CycleState.
 //
@@ -120,6 +124,13 @@ type ReservePlugin interface {
 
 	Reserve(state CycleState, p proto.Pod, nodeName string) *Status
 	Unreserve(state CycleState, p proto.Pod, nodeName string)
+}
+
+// PermitPlugin is a WebAssembly implementation of framework.PermitPlugin.
+type PermitPlugin interface {
+	Plugin
+
+	Permit(state CycleState, p proto.Pod, nodeName string) (*Status, time.Duration)
 }
 
 // PreBindPlugin is a WebAssembly implementation of framework.PreBindPlugin.
