@@ -282,7 +282,7 @@ func (g *guest) postBind(ctx context.Context) {
 	}
 }
 
-// addPost calls guestExportAddPod.
+// addPod calls guestExportAddPod.
 func (g *guest) addPod(ctx context.Context) *framework.Status {
 	defer g.out.Reset()
 	callStack := g.callStack
@@ -296,7 +296,7 @@ func (g *guest) addPod(ctx context.Context) *framework.Status {
 	return framework.NewStatus(framework.Code(statusCode), statusReason)
 }
 
-// removePost calls guestExportRemovePod.
+// removePod calls guestExportRemovePod.
 func (g *guest) removePod(ctx context.Context) *framework.Status {
 	defer g.out.Reset()
 	callStack := g.callStack

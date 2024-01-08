@@ -31,9 +31,6 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 	if prefilterEx, ok := plugin.(framework.PreFilterExtensions); ok {
 		s = prefilterEx.AddPod(ctx, nil, pod, nil)
 		RequireSuccess(t, s)
-	}
-
-	if prefilterEx, ok := plugin.(framework.PreFilterExtensions); ok {
 		s = prefilterEx.RemovePod(ctx, nil, pod, nil)
 		RequireSuccess(t, s)
 	}
