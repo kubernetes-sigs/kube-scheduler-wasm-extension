@@ -19,6 +19,7 @@ package wasm
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
@@ -48,6 +49,7 @@ const (
 	k8sSchedulerResultNominatedNodeName   = "result.nominated_node_name"
 	k8sSchedulerResultStatusReason        = "result.status_reason"
 	k8sSchedulerResultNormalizedScoreList = "result.normalized_score_list"
+	k8sSchedulerResultTimeout             = "result.timeout"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
@@ -109,6 +111,9 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerNodeScoreListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerNodeScoreList).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultTimeoutFn), []wazeroapi.ValueType{i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("ptr").Export(k8sSchedulerResultTimeout).
 		Instantiate(ctx)
 }
 
@@ -163,6 +168,9 @@ type stack struct {
 
 	// resultNormalizedScoreList is returned by guest.normalizedscoreFn
 	resultNormalizedScoreList framework.NodeScoreList
+
+	// resultTimeout is returned by guest.permitFn
+	resultTimeout time.Duration
 }
 
 func paramsFromContext(ctx context.Context) *stack {
@@ -417,6 +425,18 @@ func k8sSchedulerResultNormalizedScoreListFn(ctx context.Context, mod wazeroapi.
 		panic(err)
 	}
 	paramsFromContext(ctx).resultNormalizedScoreList = MapToNodeScoreList(nodeScoreList)
+}
+
+// k8sSchedulerResultTimeoutFn is a function used by the wasm guest to set the
+// timeout result from guestExportPermit.
+func k8sSchedulerResultTimeoutFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	ptr := uint32(stack[0])
+
+	n, ok := mod.Memory().ReadUint64Le(ptr)
+	if !ok {
+		panic("out of memory reading timeout")
+	}
+	paramsFromContext(ctx).resultTimeout = time.Duration(int64(n))
 }
 
 // Converts a list of framework.NodeScore to a map with node names as keys and their scores as integer values.
