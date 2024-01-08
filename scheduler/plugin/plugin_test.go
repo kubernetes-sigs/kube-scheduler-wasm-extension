@@ -1463,14 +1463,14 @@ func TestAddPod(t *testing.T) {
 	}{
 		{
 			name:               "Success",
-			args:               []string{"test", "addPod"},
+			args:               []string{"test", "preFilterExtensions"},
 			pod:                test.PodSmall,
 			nodeName:           "good",
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:                  "Error",
-			args:                  []string{"test", "addPod"},
+			args:                  []string{"test", "preFilterExtensions"},
 			pod:                   test.PodSmall,
 			nodeName:              "bad",
 			expectedStatusCode:    framework.Error,
@@ -1548,14 +1548,14 @@ func TestRemovePod(t *testing.T) {
 	}{
 		{
 			name:               "Success",
-			args:               []string{"test", "removePod"},
+			args:               []string{"test", "preFilterExtensions"},
 			pod:                test.PodSmall,
 			nodeName:           "good",
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:                  "Error",
-			args:                  []string{"test", "removePod"},
+			args:                  []string{"test", "preFilterExtensions"},
 			pod:                   test.PodSmall,
 			nodeName:              "bad",
 			expectedStatusCode:    framework.Error,
