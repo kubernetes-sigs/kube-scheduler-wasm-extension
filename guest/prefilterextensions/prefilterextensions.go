@@ -41,14 +41,14 @@ func SetPlugin(preFilterExtensions api.PreFilterExtensions) {
 
 // prevent unused lint errors (lint is run with normal go).
 var (
-	_ func() uint32 = _addPod
-	_ func() uint32 = _removePod
+	_ func() uint32 = _addpod
+	_ func() uint32 = _removepod
 )
 
 // _addPod is only exported to the host.
 //
-// export addPod
-func _addPod() uint32 { //nolint
+// export addpod
+func _addpod() uint32 { //nolint
 	if prefilterextensions == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export reserve so that we can reset
 		// the cycle state: return success to avoid no-op overhead.
@@ -62,8 +62,8 @@ func _addPod() uint32 { //nolint
 
 // _removePod is only exported to the host.
 //
-// export removePod
-func _removePod() uint32 { //nolint
+// export removepod
+func _removepod() uint32 { //nolint
 	if prefilterextensions == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export unreserve so that we can reset
 		// the cycle state: return success to avoid no-op overhead.
