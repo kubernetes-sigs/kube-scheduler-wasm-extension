@@ -67,43 +67,43 @@ func _filter() uint32 { //nolint
 		return 0
 	}
 
-	s := filter.Filter(cyclestate.Values, cyclestate.Pod, &nodeInfo{})
+	s := filter.Filter(cyclestate.Values, cyclestate.Pod, &NodeInfo{})
 
 	return imports.StatusToCode(s)
 }
 
-var _ api.NodeInfo = (*nodeInfo)(nil)
+var _ api.NodeInfo = (*NodeInfo)(nil)
 
 // nodeInfo is lazy so that a plugin which doesn't read fields avoids a
 // relatively expensive unmarshal penalty.
 //
 // Note: Unlike proto.Pod, this is not special cased for the scheduling cycle.
-type nodeInfo struct {
+type NodeInfo struct {
 	node proto.Node
 }
 
-func (n *nodeInfo) GetUid() string {
+func (n *NodeInfo) GetUid() string {
 	return n.lazyNode().GetUid()
 }
 
-func (n *nodeInfo) GetName() string {
+func (n *NodeInfo) GetName() string {
 	return n.lazyNode().GetName()
 }
 
-func (n *nodeInfo) GetNamespace() string {
+func (n *NodeInfo) GetNamespace() string {
 	return n.lazyNode().GetNamespace()
 }
 
-func (n *nodeInfo) GetResourceVersion() string {
+func (n *NodeInfo) GetResourceVersion() string {
 	return n.lazyNode().GetResourceVersion()
 }
 
-func (n *nodeInfo) Node() proto.Node {
+func (n *NodeInfo) Node() proto.Node {
 	return n.lazyNode()
 }
 
 // lazyNode lazy initializes node from imports.Node.
-func (n *nodeInfo) lazyNode() proto.Node {
+func (n *NodeInfo) lazyNode() proto.Node {
 	if node := n.node; node != nil {
 		return node
 	}

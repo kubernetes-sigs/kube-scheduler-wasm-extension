@@ -21,12 +21,10 @@ package prefilterextensions
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
-	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 // prefilterextensions is the current plugin assigned with SetPlugin.
@@ -57,7 +55,7 @@ func _addPod() uint32 { //nolint
 		return 0
 	}
 
-	status := prefilterextensions.AddPod(cyclestate.Values, cyclestate.Pod, cyclestate.Pod, &nodeInfo{})
+	status := prefilterextensions.AddPod(cyclestate.Values, cyclestate.Pod, cyclestate.Pod, &filter.NodeInfo{})
 
 	return imports.StatusToCode(status)
 }
@@ -72,45 +70,7 @@ func _removePod() uint32 { //nolint
 		return 0
 	}
 
-	status := prefilterextensions.RemovePod(cyclestate.Values, cyclestate.Pod, cyclestate.Pod, &nodeInfo{})
+	status := prefilterextensions.RemovePod(cyclestate.Values, cyclestate.Pod, cyclestate.Pod, &filter.NodeInfo{})
 
 	return imports.StatusToCode(status)
-}
-
-// nodeInfo is lazy so that a plugin which doesn't read fields avoids a
-// relatively expensive unmarshal penalty.
-//
-// Note: Unlike proto.Pod, this is not special cased for the scheduling cycle.
-type nodeInfo struct {
-	node proto.Node
-}
-
-func (n *nodeInfo) GetUid() string {
-	return n.lazyNode().GetUid()
-}
-
-func (n *nodeInfo) GetName() string {
-	return n.lazyNode().GetName()
-}
-
-func (n *nodeInfo) GetNamespace() string {
-	return n.lazyNode().GetNamespace()
-}
-
-func (n *nodeInfo) Node() proto.Node {
-	return n.lazyNode()
-}
-
-// lazyNode lazy initializes node from imports.Node.
-func (n *nodeInfo) lazyNode() proto.Node {
-	if node := n.node; node != nil {
-		return node
-	}
-
-	var msg protoapi.Node
-	if err := imports.Node(msg.UnmarshalVT); err != nil {
-		panic(err.Error())
-	}
-	n.node = &internalproto.Node{Msg: &msg}
-	return n.node
 }
