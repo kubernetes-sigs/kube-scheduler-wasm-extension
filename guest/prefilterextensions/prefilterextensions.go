@@ -35,7 +35,7 @@ func SetPlugin(preFilterExtensions api.PreFilterExtensions) {
 	if preFilterExtensions == nil {
 		panic("nil preFilterExtensions")
 	}
-	preFilterExtensions = preFilterExtensions
+
 	plugin.MustSet(preFilterExtensions)
 }
 

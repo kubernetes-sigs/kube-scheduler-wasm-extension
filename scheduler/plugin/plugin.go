@@ -201,15 +201,15 @@ func (pl *wasmPlugin) AddPod(ctx context.Context, state *framework.CycleState, p
 	// can look them up.
 	params := &stack{pod: podToSchedule}
 	ctx = context.WithValue(ctx, stackKey{}, params)
-	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
-		result, status = g.addPod(ctx)
+	status := &framework.Status{}
+	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
+		g.addPod(ctx)
 	}); err != nil {
 		status = framework.AsStatus(err)
 	}
-	return
+	return status
 }
 
-// RemovePod implements the same method as documented on framework.PreFilterExtensions.
 func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToRemove *framework.PodInfo, nodeInfo *framework.NodeInfo) *framework.Status {
 	// We implement PreFilterExtensions with FilterPlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPreFilterExtensions == 0 {
@@ -220,12 +220,13 @@ func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState
 	// can look them up.
 	params := &stack{pod: podToSchedule}
 	ctx = context.WithValue(ctx, stackKey{}, params)
-	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
-		result, status = g.removePod(ctx)
+	status := &framework.Status{}
+	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
+		g.removePod(ctx)
 	}); err != nil {
 		status = framework.AsStatus(err)
 	}
-	return
+	return status
 }
 
 var _ framework.PreFilterPlugin = (*wasmPlugin)(nil)
