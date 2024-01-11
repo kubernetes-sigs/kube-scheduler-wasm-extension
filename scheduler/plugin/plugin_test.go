@@ -213,10 +213,13 @@ func TestNew_maskInterfaces(t *testing.T) {
 			expectedScore: true,
 		},
 		{
-			name:           "all",
-			guestURL:       test.URLExampleNodeNumber,
-			expectedFilter: true,
-			expectedScore:  true,
+			name:            "all",
+			guestURL:        test.URLExampleNodeNumber,
+			expectedFilter:  true,
+			expectedScore:   true,
+			expectedReserve: true,
+			expectedPermit:  true,
+			expectedBind:    true,
 		},
 	}
 
