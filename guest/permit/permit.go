@@ -60,7 +60,6 @@ var _ func() uint32 = _permit
 //
 //export permit
 func _permit() uint32 {
-
 	if permit == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export permit so that we can reset
 		// the cycle state: return success to avoid no-op overhead.
