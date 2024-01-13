@@ -418,12 +418,16 @@ func (pl *wasmPlugin) PostBind(ctx context.Context, state *framework.CycleState,
 var _ framework.PermitPlugin = (*wasmPlugin)(nil)
 
 // Permit implements the same method as documented on framework.PermitPlugin.
-func (pl *wasmPlugin) Permit(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (*framework.Status, time.Duration) {
+func (pl *wasmPlugin) Permit(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status, timeout time.Duration) {
+	params := &stack{pod: pod, nodeName: nodeName}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
+		status, timeout = g.permit(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
 	_ = pl.pool.getForBinding(pod.UID)
-
-	// TODO: partially implemented for testing
-
-	return nil, 0
+	return
 }
 
 var _ framework.BindPlugin = (*wasmPlugin)(nil)

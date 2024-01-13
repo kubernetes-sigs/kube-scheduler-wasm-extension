@@ -9,7 +9,7 @@ examples/advanced/main.wasm: examples/advanced/main.go
 	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi .)
 
 .PHONY: build-tinygo
-build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm guest/testdata/bind/main.wasm guest/testdata/reserve/main.wasm
+build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm guest/testdata/bind/main.wasm guest/testdata/reserve/main.wasm guest/testdata/permit/main.wasm
 
 %/main-debug.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi .)
