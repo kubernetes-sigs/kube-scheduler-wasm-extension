@@ -23,6 +23,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
@@ -48,6 +49,7 @@ const (
 	k8sSchedulerResultNominatedNodeName   = "result.nominated_node_name"
 	k8sSchedulerResultStatusReason        = "result.status_reason"
 	k8sSchedulerResultNormalizedScoreList = "result.normalized_score_list"
+	k8sSchedulerHandleEventRecorderEventf = "handle.eventrecorder.eventf"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
@@ -82,8 +84,8 @@ func instantiateHostKlog(ctx context.Context, runtime wazero.Runtime, logSeverit
 		Instantiate(ctx)
 }
 
-func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guestConfig string) (wazeroapi.Module, error) {
-	host := &host{guestConfig: guestConfig}
+func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guestConfig string, handle framework.Handle) (wazeroapi.Module, error) {
+	host := &host{guestConfig: guestConfig, handle: handle}
 	return runtime.NewHostModuleBuilder(k8sScheduler).
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sSchedulerGetConfigFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
@@ -109,6 +111,9 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerNodeScoreListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerNodeScoreList).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleEventRecorderEventfFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleEventRecorderEventf).
 		Instantiate(ctx)
 }
 
@@ -225,6 +230,7 @@ func k8sSchedulerNodeToStatusMapFn(ctx context.Context, mod wazeroapi.Module, st
 type host struct {
 	guestConfig string
 	logSeverity int32
+	handle      framework.Handle
 }
 
 func (h host) k8sSchedulerGetConfigFn(_ context.Context, mod wazeroapi.Module, stack []uint64) {
@@ -438,4 +444,52 @@ func MapToNodeScoreList(scoreMap map[string]int) []framework.NodeScore {
 		})
 	}
 	return nodeScoreList
+}
+
+// k8sHandleEventRecorderEventfFn is a function used by the wasm guest to call EventRecorder.Eventf
+func (h host) k8sHandleEventRecorderEventfFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLen := uint32(stack[1])
+
+	var msg EventMessage
+	b, ok := mod.Memory().Read(buf, bufLen)
+	if !ok {
+		panic("out of memory reading eventrecorder event")
+	}
+	if err := json.Unmarshal(b, &msg); err != nil {
+		panic(err)
+	}
+	regardingObj := convertToObjectReference(&msg.RegardingReference)
+	relatedObj := convertToObjectReference(&msg.RelatedReference)
+	evt := h.handle.EventRecorder()
+	evt.Eventf(regardingObj, relatedObj, msg.Eventtype, msg.Reason, msg.Action, msg.Note, nil)
+}
+
+type ObjectReference struct {
+	Kind            string
+	APIVersion      string
+	Name            string
+	Namespace       string
+	UID             string
+	ResourceVersion string
+}
+
+type EventMessage struct {
+	RegardingReference ObjectReference
+	RelatedReference   ObjectReference
+	Eventtype          string
+	Reason             string
+	Action             string
+	Note               string
+}
+
+func convertToObjectReference(objRef *ObjectReference) *v1.ObjectReference {
+	return &v1.ObjectReference{
+		Kind:            objRef.Kind,
+		APIVersion:      objRef.APIVersion,
+		Name:            objRef.Name,
+		Namespace:       objRef.Namespace,
+		UID:             types.UID(objRef.UID),
+		ResourceVersion: objRef.ResourceVersion,
+	}
 }

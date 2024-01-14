@@ -44,7 +44,7 @@ var podSmall = &protoapi.Pod{
 var _ proto.Metadata = &testMetadata{}
 
 type testMetadata struct {
-	Name, Namespace, UID string
+	Name, Namespace, UID, ResourceVersion string
 }
 
 func (t *testMetadata) GetName() string {
@@ -57,6 +57,10 @@ func (t *testMetadata) GetNamespace() string {
 
 func (t *testMetadata) GetUid() string {
 	return t.UID
+}
+
+func (t *testMetadata) GetResourceVersion() string {
+	return t.ResourceVersion
 }
 
 type stringerFunc func() string

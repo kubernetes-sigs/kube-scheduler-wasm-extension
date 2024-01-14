@@ -27,7 +27,7 @@ import (
 var _ proto.Metadata = &testMetadata{}
 
 type testMetadata struct {
-	Name, Namespace, UID string
+	Name, Namespace, UID, ResourceVersion string
 }
 
 func (t *testMetadata) GetName() string {
@@ -42,10 +42,14 @@ func (t *testMetadata) GetUid() string {
 	return t.UID
 }
 
+func (t *testMetadata) GetResourceVersion() string {
+	return t.ResourceVersion
+}
+
 var _ proto.Metadata = &panicMetadata{}
 
 type panicMetadata struct {
-	Name, Namespace, UID string
+	Name, Namespace, UID, ResourceVersion string
 }
 
 func (panicMetadata) GetName() string {
@@ -57,6 +61,10 @@ func (panicMetadata) GetNamespace() string {
 }
 
 func (panicMetadata) GetUid() string {
+	panic("unexpected")
+}
+
+func (panicMetadata) GetResourceVersion() string {
 	panic("unexpected")
 }
 

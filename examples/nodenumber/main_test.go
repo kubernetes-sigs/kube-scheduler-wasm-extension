@@ -53,7 +53,6 @@ func Test_NodeNumber(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				plugin := &NodeNumber{reverse: reverse}
 				state := testCycleState{}
-
 				status := plugin.PreScore(state, tc.pod, nil)
 				if status != nil {
 					t.Fatalf("unexpected status: %v", status)
@@ -141,6 +140,18 @@ func (t testPod) GetName() string {
 
 func (t testPod) GetNamespace() string {
 	return ""
+}
+
+func (t testPod) GetApiVersion() string {
+	return ""
+}
+
+func (t testPod) GetKind() string {
+	return "pod"
+}
+
+func (t testPod) GetResourceVersion() string {
+	return "v1"
 }
 
 func (t testPod) Spec() *protoapi.PodSpec {

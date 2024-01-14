@@ -25,21 +25,31 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
+	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"
 )
 
 // main is compiled to a WebAssembly function named "_start", called by the
 // wasm scheduler plugin during initialization.
 func main() {
+	p, err := New(klog.Get(), config.Get())
+	if err != nil {
+		panic(err)
+	}
+	plugin.Set(p)
+}
+
+func New(klog klogapi.Klog, jsonConfig []byte) (api.Plugin, error) {
 	var args nodeNumberArgs
-	if jsonConfig := config.Get(); jsonConfig != nil {
+	if jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
 			panic(fmt.Errorf("decode arg into NodeNumberArgs: %w", err))
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	plugin.Set(&NodeNumber{reverse: args.Reverse})
+	return &NodeNumber{reverse: args.Reverse}, nil
 }
 
 // NodeNumber is an example plugin that favors nodes that share a numerical
@@ -82,13 +92,16 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+	recorder := eventrecorder.Get()
+
 	klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
 
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
+		recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
 		return nil // return success even if its suffix is non-number.
 	}
-
+	recorder.Eventf(pod, nil, "PreScore", "match lastNumber", "Continue", "")
 	state.Write(preScoreStateKey, &preScoreState{podSuffixNumber: podnum})
 	return nil
 }

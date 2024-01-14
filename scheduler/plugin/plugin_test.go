@@ -48,7 +48,7 @@ var ctx = context.Background()
 
 // Test_guestPool_bindingCycles tests that the bindingCycles field is set correctly.
 func Test_guestPool_bindingCycles(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState})
+	p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState}, nil)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -138,7 +138,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 // Test_guestPool_assignedToSchedulingPod tests that the scheduledPodUID is assigned during PreFilter expectedly.
 func Test_guestPool_assignedToSchedulingPod(t *testing.T) {
-	p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState})
+	p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState}, nil)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -212,10 +212,12 @@ func TestNew_maskInterfaces(t *testing.T) {
 			expectedScore: true,
 		},
 		{
-			name:           "all",
-			guestURL:       test.URLExampleNodeNumber,
-			expectedFilter: true,
-			expectedScore:  true,
+			name:            "all",
+			guestURL:        test.URLExampleNodeNumber,
+			expectedFilter:  true,
+			expectedScore:   true,
+			expectedReserve: true,
+			expectedBind:    true,
 		},
 	}
 
@@ -307,7 +309,7 @@ wasm stack trace:
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: tc.guestURL})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: tc.guestURL}, nil)
 			if err != nil {
 				if want, have := tc.expectedError, err.Error(); want != have {
 					t.Fatalf("unexpected error: want %v, have %v", want, have)
@@ -357,7 +359,7 @@ func TestEnqueue(t *testing.T) {
 				guestURL = test.URLTestCycleState
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -373,7 +375,7 @@ func TestEnqueue(t *testing.T) {
 	t.Run("panic", func(t *testing.T) {
 		guestURL := test.URLErrorPanicOnEnqueue
 
-		p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL})
+		p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -465,7 +467,7 @@ wasm stack trace:
 				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args, GuestConfig: tc.guestConfig})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args, GuestConfig: tc.guestConfig}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -552,7 +554,7 @@ wasm stack trace:
 				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -656,7 +658,7 @@ wasm stack trace:
 				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -753,7 +755,7 @@ wasm stack trace:
 				guestURL = test.URLTestScore
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if tc.expectedError != "" {
 				requireError(t, err, tc.expectedError)
 				return
@@ -863,7 +865,7 @@ wasm stack trace:
 				guestURL = test.URLTestScore
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -953,7 +955,7 @@ wasm stack trace:
 				guestURL = test.URLTestScore
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if tc.expectedError != "" {
 				requireError(t, err, tc.expectedError)
 				return
@@ -1045,7 +1047,7 @@ func TestReserve(t *testing.T) {
 				guestURL = test.URLTestReserve
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1146,7 +1148,7 @@ wasm stack trace:
 				guestURL = test.URLTestBind
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1231,7 +1233,7 @@ wasm stack trace:
 				guestURL = test.URLTestBind
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1324,7 +1326,7 @@ func TestPostBind(t *testing.T) {
 				guestURL = test.URLTestBind
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args})
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1345,6 +1347,52 @@ func TestPostBind(t *testing.T) {
 			}
 			if want, have := tc.expectedError, extractMessage(klogErr); want != have {
 				t.Fatalf("unexpected log: want%v, have%v", want, have)
+			}
+		})
+	}
+}
+
+// This test checks whether framework.handle.EventRecorder.Eventf can be called within wasm file.
+func TestEventf(t *testing.T) {
+	tests := []struct {
+		name        string
+		guestURL    string
+		pod         *v1.Pod
+		expectedMsg string
+	}{
+		{
+			name:        "Test for skipping preScore using URLExampleNodeNumber with handle set via plugin.Set)",
+			guestURL:    test.URLExampleNodeNumber,
+			pod:         test.PodSmall,
+			expectedMsg: "good-pod PreScore not match lastNumber Skip ",
+		},
+		{
+			name:        "Test for skipping preScore using URLExampleAdvanced with handle set via prescore.SetPlugin)",
+			guestURL:    test.URLExampleAdvanced,
+			pod:         test.PodSmall,
+			expectedMsg: "good-pod PreScore not match lastNumber Skip ",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestScore
+			}
+			recorder := &test.FakeRecorder{EventMsg: ""}
+			handle := &test.FakeHandle{Recorder: recorder}
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL}, handle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			// Not use status for this test.
+			_ = p.(framework.PreScorePlugin).PreScore(ctx, nil, tc.pod, nil)
+
+			if want, have := tc.expectedMsg, recorder.EventMsg; want != have {
+				t.Fatalf("unexpected Event Msg: %v != %v", want, have)
 			}
 		})
 	}

@@ -26,6 +26,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
 	k8stest "k8s.io/klog/v2/test"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
@@ -40,7 +41,7 @@ import (
 func TestCycleStateCoherence(t *testing.T) {
 	ctx := context.Background()
 
-	plugin, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState})
+	plugin, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: test.URLTestCycleState}, nil)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}
@@ -73,7 +74,8 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 	fs.Set("skip_headers", "true") //nolint
 
 	ctx := context.Background()
-	plugin := newNodeNumberPlugin(ctx, t, advanced, false, 0)
+	recorder := &test.FakeRecorder{EventMsg: ""}
+	plugin := newNodeNumberPlugin(ctx, t, advanced, false, 0, recorder)
 	defer plugin.(io.Closer).Close()
 
 	pod := &v1.Pod{ObjectMeta: v1meta.ObjectMeta{Name: "happy8-meta"}, Spec: v1.PodSpec{NodeName: "happy8"}}
@@ -95,6 +97,10 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 		if have := buf.String(); want != have {
 			t.Fatalf("unexpected log: want %v, have %v", want, have)
 		}
+		// Test eventRecorder
+		if want, have := "happy8-meta PreScore match lastNumber Continue ", recorder.EventMsg; want != have {
+			t.Fatalf("unexpected event: want %v, have %v:", want, have)
+		}
 	})
 
 	t.Run("Score ten on match", func(t *testing.T) {
@@ -113,6 +119,10 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 		if wantLog != strings.TrimSpace(buf.String()) {
 			t.Fatalf("unexpected log: want %v, have %v", wantLog, buf.String())
 		}
+		// Test eventRecorder
+		if want, have := "happy8-meta PreScore match lastNumber Continue ", recorder.EventMsg; want != have {
+			t.Fatalf("unexpected event: want %v, have %v:", want, have)
+		}
 	})
 
 	t.Run("Reverse means score zero on match", func(t *testing.T) {
@@ -120,7 +130,7 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 		var buf bytes.Buffer
 		klog.SetOutput(&buf)
 
-		reversed := newNodeNumberPlugin(ctx, t, advanced, true, 0)
+		reversed := newNodeNumberPlugin(ctx, t, advanced, true, 0, recorder)
 		defer reversed.(io.Closer).Close()
 
 		score := e2e.RunAll(ctx, t, reversed, pod, nodeInfoWithName("glad8"))
@@ -133,6 +143,10 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 "execute Score on NodeNumber plugin" pod="happy8-meta"`
 		if wantLog != strings.TrimSpace(buf.String()) {
 			t.Fatalf("unexpected log: want %v, have %v", wantLog, buf.String())
+		}
+		// Test eventRecorder
+		if want, have := "happy8-meta PreScore match lastNumber Continue ", recorder.EventMsg; want != have {
+			t.Fatalf("unexpected event: want %v, have %v:", want, have)
 		}
 	})
 }
@@ -160,17 +174,18 @@ func benchmarkExample_NodeNumber(b *testing.B, advanced bool, logSeverity int32)
 	fs.Set("skip_headers", "true") //nolint
 
 	klog.SetOutput(io.Discard)
+	recorder := &test.FakeRecorder{EventMsg: ""}
 
 	ctx := context.Background()
 
 	b.Run("New", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			newNodeNumberPlugin(ctx, b, advanced, false, logSeverity).(io.Closer).Close()
+			newNodeNumberPlugin(ctx, b, advanced, false, logSeverity, recorder).(io.Closer).Close()
 		}
 	})
 
-	plugin := newNodeNumberPlugin(ctx, b, advanced, false, logSeverity)
+	plugin := newNodeNumberPlugin(ctx, b, advanced, false, logSeverity, recorder)
 	defer plugin.(io.Closer).Close()
 
 	pod := *test.PodReal // copy
@@ -187,17 +202,19 @@ func benchmarkExample_NodeNumber(b *testing.B, advanced bool, logSeverity int32)
 	})
 }
 
-func newNodeNumberPlugin(ctx context.Context, t e2e.Testing, advanced, reverse bool, logSeverity int32) framework.Plugin {
+func newNodeNumberPlugin(ctx context.Context, t e2e.Testing, advanced, reverse bool, logSeverity int32, recorder events.EventRecorder) framework.Plugin {
 	t.Helper()
 	guestURL := test.URLExampleNodeNumber
 	if advanced {
 		guestURL = test.URLExampleAdvanced
 	}
+	handle := &test.FakeHandle{Recorder: recorder}
+
 	plugin, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{
 		GuestURL:    guestURL,
 		LogSeverity: logSeverity,
 		GuestConfig: fmt.Sprintf(`{"reverse": %v}`, reverse),
-	})
+	}, handle)
 	if err != nil {
 		t.Fatalf("failed to create plugin: %v", err)
 	}

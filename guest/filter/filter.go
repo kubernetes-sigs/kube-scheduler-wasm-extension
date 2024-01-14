@@ -94,6 +94,10 @@ func (n *nodeInfo) GetNamespace() string {
 	return n.lazyNode().GetNamespace()
 }
 
+func (n *nodeInfo) GetResourceVersion() string {
+	return n.lazyNode().GetResourceVersion()
+}
+
 func (n *nodeInfo) Node() proto.Node {
 	return n.lazyNode()
 }

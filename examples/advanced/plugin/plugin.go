@@ -33,6 +33,7 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	eventrecorder "sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder/api"
 	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 
@@ -49,8 +50,9 @@ import (
 //   - The reverse field inverts the score. For example, when `reverse == true`
 //     a numeric match gets a results in a lower score than a match.
 type NodeNumber struct {
-	reverse bool
-	klog    klog.Klog
+	reverse       bool
+	klog          klog.Klog
+	eventrecorder eventrecorder.EventRecorder
 }
 
 const (
@@ -77,9 +79,11 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.Node
 
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
+		pl.eventrecorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
 		return nil // return success even if its suffix is non-number.
 	}
 
+	pl.eventrecorder.Eventf(pod, nil, "PreScore", "match lastNumber", "Continue", "")
 	state.Write(preScoreStateKey, &preScoreState{podSuffixNumber: podnum})
 	return nil
 }
@@ -127,7 +131,7 @@ func lastNumber(str string) (uint8, bool) {
 //
 // Note: This accepts config instead of implicitly calling config.Get for
 // testing.
-func New(klog klog.Klog, jsonConfig []byte) (*NodeNumber, error) {
+func New(klog klog.Klog, jsonConfig []byte, eventrecorder eventrecorder.EventRecorder) (*NodeNumber, error) {
 	var args nodeNumberArgs
 	if jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
@@ -135,7 +139,7 @@ func New(klog klog.Klog, jsonConfig []byte) (*NodeNumber, error) {
 		}
 		klog.Info("NodeNumberArgs is successfully applied")
 	}
-	return &NodeNumber{klog: klog, reverse: args.Reverse}, nil
+	return &NodeNumber{klog: klog, reverse: args.Reverse, eventrecorder: eventrecorder}, nil
 }
 
 type nodeNumberArgs struct {
