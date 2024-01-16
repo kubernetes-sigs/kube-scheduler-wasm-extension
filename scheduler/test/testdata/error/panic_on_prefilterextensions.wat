@@ -13,8 +13,8 @@
   (data (i32.const 4) "\06")    ;; iovs[0].length
   (data (i32.const 8) "panic!") ;; iovs[0]
 
-  ;; On normalizescore, write "panic!" to stdout and crash.
-  (func (export "normalizescore") (result i32)
+  ;; On addpod, write "panic!" to stdout and crash.
+  (func (export "addpod") (result i32)
     ;; Write the panic to stdout via its iovec [offset, len].
     (call $wasi.fd_write
       (i32.const 1) ;; stdout
@@ -26,4 +26,7 @@
 
     ;; Issue the unreachable instruction instead of returning a code
     (unreachable))
+
+  ;; We require exporting filter
+  (func (export "filter") (result i32) (unreachable))
 )

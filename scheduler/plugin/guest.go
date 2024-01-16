@@ -307,7 +307,7 @@ func (g *guest) addPod(ctx context.Context) *framework.Status {
 	callStack := g.callStack
 
 	if err := g.addpodFn.CallWithStack(ctx, callStack); err != nil {
-		return framework.AsStatus(decorateError(g.out, guestExportBind, err))
+		return framework.AsStatus(decorateError(g.out, guestExportAddPod, err))
 	}
 
 	statusCode := int32(callStack[0])
@@ -321,7 +321,7 @@ func (g *guest) removePod(ctx context.Context) *framework.Status {
 	callStack := g.callStack
 
 	if err := g.removepodFn.CallWithStack(ctx, callStack); err != nil {
-		return framework.AsStatus(decorateError(g.out, guestExportBind, err))
+		return framework.AsStatus(decorateError(g.out, guestExportRemovePod, err))
 	}
 
 	statusCode := int32(callStack[0])
@@ -408,6 +408,16 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
 			}
 			e |= iPostBindPlugin
+		case guestExportAddPod:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
+			}
+			e |= iPreFilterExtensions
+		case guestExportRemovePod:
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
+			}
+			e |= iPreFilterExtensions
 		}
 	}
 	if e == 0 {
