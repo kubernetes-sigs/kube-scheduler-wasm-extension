@@ -12,6 +12,10 @@ This project contains everything needed to extend the scheduler:
 - Language SDKs used to build scheduler plugins, compiled to wasm.
 - The scheduler plugin which loads and runs wasm plugins
 
+## Example
+
+You can learn how you build your wasm plugins by trying [./examples](./examples/).
+
 ## Motivation
 
 Today, you can extend the kube-scheduler with [Scheduling Framework](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/), 
