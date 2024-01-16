@@ -1465,6 +1465,85 @@ func TestAddPod(t *testing.T) {
 			name:               "Success",
 			args:               []string{"test", "preFilterExtensions"},
 			pod:                test.PodSmall,
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:                  "Error",
+			args:                  []string{"test", "preFilterExtensions"},
+			pod:                   test.PodSmall,
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "name is bad",
+		},
+		{
+			name:               "min statusCode",
+			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"status_code": math.MinInt32},
+			expectedStatusCode: math.MinInt32,
+		},
+		{
+			name:               "max statusCode",
+			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
+			pod:                test.PodSmall,
+			globals:            map[string]int32{"status_code": math.MaxInt32},
+			expectedStatusCode: math.MaxInt32,
+		},
+		{
+			name:               "panic",
+			guestURL:           test.URLErrorPanicOnPreFilterExtensions,
+			pod:                test.PodSmall,
+			expectedStatusCode: framework.Error,
+			expectedStatusMessage: `wasm: prefilterextensions error: panic!
+wasm error: unreachable
+wasm stack trace:
+	panic_on_prefilterextensions.$1() i32`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestPreFilterxtensions
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, nil, nil)
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
+func TestRemovePod(t *testing.T) {
+	tests := []struct {
+		name                  string
+		guestURL              string
+		args                  []string
+		globals               map[string]int32
+		pod                   *v1.Pod
+		nodeName              string
+		expectedStatusCode    framework.Code
+		expectedStatusMessage string
+	}{
+		{
+			name:               "Success",
+			args:               []string{"test", "preFilterExtensions"},
+			pod:                test.PodSmall,
 			nodeName:           "good",
 			expectedStatusCode: framework.Success,
 		},
@@ -1509,7 +1588,7 @@ wasm stack trace:
 		t.Run(tc.name, func(t *testing.T) {
 			guestURL := tc.guestURL
 			if guestURL == "" {
-				guestURL = test.URLTestPreFilterxtensions
+				guestURL = test.URLTestBind
 			}
 
 			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
@@ -1534,91 +1613,6 @@ wasm stack trace:
 		})
 	}
 }
-
-//func TestRemovePod(t *testing.T) {
-//	tests := []struct {
-//		name                  string
-//		guestURL              string
-//		args                  []string
-//		globals               map[string]int32
-//		pod                   *v1.Pod
-//		nodeName              string
-//		expectedStatusCode    framework.Code
-//		expectedStatusMessage string
-//	}{
-//		{
-//			name:               "Success",
-//			args:               []string{"test", "preFilterExtensions"},
-//			pod:                test.PodSmall,
-//			nodeName:           "good",
-//			expectedStatusCode: framework.Success,
-//		},
-//		{
-//			name:                  "Error",
-//			args:                  []string{"test", "preFilterExtensions"},
-//			pod:                   test.PodSmall,
-//			nodeName:              "bad",
-//			expectedStatusCode:    framework.Error,
-//			expectedStatusMessage: "name is bad",
-//		},
-//		{
-//			name:               "min statusCode",
-//			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
-//			pod:                test.PodSmall,
-//			nodeName:           test.NodeSmall.Name,
-//			globals:            map[string]int32{"status_code": math.MinInt32},
-//			expectedStatusCode: math.MinInt32,
-//		},
-//		{
-//			name:               "max statusCode",
-//			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
-//			pod:                test.PodSmall,
-//			nodeName:           test.NodeSmall.Name,
-//			globals:            map[string]int32{"status_code": math.MaxInt32},
-//			expectedStatusCode: math.MaxInt32,
-//		},
-//		{
-//			name:               "panic",
-//			guestURL:           test.URLErrorPanicOnPreFilterExtensions,
-//			pod:                test.PodSmall,
-//			nodeName:           test.NodeSmall.Name,
-//			expectedStatusCode: framework.Error,
-//			expectedStatusMessage: `wasm: prefilterextensions error: panic!
-//wasm error: unreachable
-//wasm stack trace:
-//	panic_on_prefilterextensions.$1() i32`,
-//		},
-//	}
-//
-//	for _, tc := range tests {
-//		t.Run(tc.name, func(t *testing.T) {
-//			guestURL := tc.guestURL
-//			if guestURL == "" {
-//				guestURL = test.URLTestBind
-//			}
-//
-//			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
-//			if err != nil {
-//				t.Fatal(err)
-//			}
-//			defer p.(io.Closer).Close()
-//
-//			pl := wasm.NewTestWasmPlugin(p)
-//			if len(tc.globals) > 0 {
-//				pl.SetGlobals(tc.globals)
-//			}
-//			pl.CreateGuestInBindingGuestPool(tc.pod.UID)
-//
-//			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, nil, nil)
-//			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-//				t.Fatalf("unexpected status code: want %v, have %v", want, have)
-//			}
-//			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
-//				t.Fatalf("unexpected status message: want %v, have %v", want, have)
-//			}
-//		})
-//	}
-//}
 
 // This test checks whether framework.handle.EventRecorder.Eventf can be called within wasm file.
 func TestEventf(t *testing.T) {

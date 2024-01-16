@@ -409,12 +409,12 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 			}
 			e |= iPostBindPlugin
 		case guestExportAddPod:
-			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{}) {
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
 			}
 			e |= iPreFilterExtensions
 		case guestExportRemovePod:
-			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{}) {
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
 				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> ()", name)
 			}
 			e |= iPreFilterExtensions

@@ -158,15 +158,15 @@ type preFilterExtensions struct{ noopPlugin }
 func (preFilterExtensions) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
-	_ = podInfoToAdd
-	_ = nodeInfo
+	_ = podInfoToAdd.Spec()
+	_ = nodeInfo.Node().Spec()
 	return
 }
 
 func (preFilterExtensions) RemovePod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
-	_ = podInfoToAdd
-	_ = nodeInfo
+	_ = podInfoToAdd.Spec()
+	_ = nodeInfo.Node().Spec()
 	return
 }
