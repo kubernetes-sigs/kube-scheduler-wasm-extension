@@ -225,6 +225,8 @@ func maskInterfaces(plugin *wasmPlugin) (framework.Plugin, error) {
 	switch plugin.guestInterfaces {
 	case iPreFilterPlugin: // Special-cased form of filter.
 		return struct{ basePlugin }{plugin}, nil
+	case iPreFilterExtensions: // Special-cased form of filter.
+		return struct{ basePlugin }{plugin}, nil
 	default:
 		return nil, errors.New("wasm: filter, score, reserve, permit or bind must be exported")
 	}
@@ -233,6 +235,7 @@ func maskInterfaces(plugin *wasmPlugin) (framework.Plugin, error) {
 type basePlugin interface {
 	framework.EnqueueExtensions
 	framework.PreFilterPlugin // to implement cycle state reset
+	framework.PreFilterExtensions
 	io.Closer
 	ProfilerSupport
 }
