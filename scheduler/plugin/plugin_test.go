@@ -483,7 +483,7 @@ wasm stack trace:
 				t.Fatalf("unexpected node names: want %v, have %v", want, have)
 			}
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
@@ -569,7 +569,7 @@ wasm stack trace:
 			ni.SetNode(tc.node)
 			s := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
 			if want, have := tc.expectedStatusCode, s.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, s.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
@@ -677,7 +677,7 @@ wasm stack trace:
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
 			}
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 		})
 	}
@@ -772,7 +772,7 @@ wasm stack trace:
 
 			status := p.(framework.PreScorePlugin).PreScore(ctx, nil, tc.pod, tc.nodes)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
@@ -881,7 +881,7 @@ wasm stack trace:
 				t.Fatalf("unexpected score: want %v, have %v", want, have)
 			}
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
@@ -975,7 +975,7 @@ wasm stack trace:
 				t.Fatalf("unexpected status message: want \n%v, have \n%v", want, have)
 			}
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if tc.expectedNodeScoreList != nil {
 				if tc.expectedNodeScoreList[0] != tc.nodeScoreList[0] {
@@ -1061,7 +1061,7 @@ func TestReserve(t *testing.T) {
 			cycleState := framework.NewCycleState()
 			status := p.(framework.ReservePlugin).Reserve(ctx, cycleState, tc.pod, tc.nodeName)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
@@ -1162,7 +1162,7 @@ wasm stack trace:
 
 			status := p.(framework.PreBindPlugin).PreBind(ctx, nil, tc.pod, tc.nodeName)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
@@ -1247,7 +1247,7 @@ wasm stack trace:
 
 			status := p.(framework.BindPlugin).Bind(ctx, nil, tc.pod, tc.nodeName)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
