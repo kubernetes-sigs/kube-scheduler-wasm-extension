@@ -155,18 +155,22 @@ func (postFilterPlugin) PostFilter(_ api.CycleState, pod proto.Pod, nodeMap api.
 
 type preFilterExtensions struct{ noopPlugin }
 
-func (preFilterExtensions) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
-	_, _ = state.Read("ok")
-	_ = pod.Spec()
-	_ = podInfoToAdd.Spec()
-	_ = nodeInfo.Node().Spec()
-	return
+func (preFilterExtensions) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) *api.Status {
+	nodeName := nodeInfo.Node().GetName()
+	state.Write(nodeName+pod.Spec().GetNodeName(), "ok")
+	status := 0
+	if nodeName == "bad" {
+		status = 1
+	}
+	return &api.Status{Code: api.StatusCode(status), Reason: "name is " + nodeName}
 }
 
-func (preFilterExtensions) RemovePod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
-	_, _ = state.Read("ok")
-	_ = pod.Spec()
-	_ = podInfoToAdd.Spec()
-	_ = nodeInfo.Node().Spec()
-	return
+func (preFilterExtensions) RemovePod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) *api.Status {
+	nodeName := nodeInfo.Node().GetName()
+	state.Write(nodeName+pod.Spec().GetNodeName(), "ok")
+	status := 0
+	if nodeName == "bad" {
+		status = 1
+	}
+	return &api.Status{Code: api.StatusCode(status), Reason: "name is " + nodeName}
 }

@@ -191,7 +191,7 @@ func (pl *wasmPlugin) EventsToRegister() (clusterEvents []framework.ClusterEvent
 var _ framework.PreFilterExtensions = (*wasmPlugin)(nil)
 
 // AddPod implements the same method as documented on framework.PreFilterExtensions.
-func (pl *wasmPlugin) AddPod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToAdd *framework.PodInfo, nodeInfo *framework.NodeInfo) *framework.Status {
+func (pl *wasmPlugin) AddPod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToAdd *framework.PodInfo, nodeInfo *framework.NodeInfo) (status *framework.Status) {
 	// We implement PreFilterExtensions with FilterPlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPreFilterExtensions == 0 {
 		return nil // unimplemented
@@ -201,16 +201,15 @@ func (pl *wasmPlugin) AddPod(ctx context.Context, state *framework.CycleState, p
 	// can look them up.
 	params := &stack{pod: podToSchedule}
 	ctx = context.WithValue(ctx, stackKey{}, params)
-	status := &framework.Status{}
 	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
-		g.addPod(ctx)
+		status = g.addPod(ctx)
 	}); err != nil {
 		status = framework.AsStatus(err)
 	}
 	return status
 }
 
-func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToRemove *framework.PodInfo, nodeInfo *framework.NodeInfo) *framework.Status {
+func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToRemove *framework.PodInfo, nodeInfo *framework.NodeInfo) (status *framework.Status) {
 	// We implement PreFilterExtensions with FilterPlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPreFilterExtensions == 0 {
 		return nil // unimplemented
@@ -220,9 +219,8 @@ func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState
 	// can look them up.
 	params := &stack{pod: podToSchedule}
 	ctx = context.WithValue(ctx, stackKey{}, params)
-	status := &framework.Status{}
 	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
-		g.removePod(ctx)
+		status = g.removePod(ctx)
 	}); err != nil {
 		status = framework.AsStatus(err)
 	}
