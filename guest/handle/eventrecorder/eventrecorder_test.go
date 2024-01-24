@@ -18,7 +18,7 @@ package eventrecorder_test
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/eventrecorder"
 )
 
 var pod proto.Pod

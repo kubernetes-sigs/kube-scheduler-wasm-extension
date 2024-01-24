@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/eventrecorder"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"

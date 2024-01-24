@@ -19,7 +19,7 @@ package internal
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/eventrecorder/api"
 )
 
 type EventRecorder struct {

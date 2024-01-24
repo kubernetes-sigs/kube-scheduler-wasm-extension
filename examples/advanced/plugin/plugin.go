@@ -33,7 +33,7 @@ import (
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	eventrecorder "sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder/api"
+	eventrecorder "sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/eventrecorder/api"
 	klog "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
 )
 

@@ -19,7 +19,7 @@ package internal
 import (
 	"testing"
 
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/eventrecorder/api"
 )
 
 func TestEventf(t *testing.T) {
