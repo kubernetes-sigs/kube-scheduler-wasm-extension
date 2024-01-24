@@ -27,6 +27,20 @@
     ;; Issue the unreachable instruction instead of returning a code
     (unreachable))
 
+  ;; On removepod, write "panic!" to stdout and crash.
+  (func (export "removepod") (result i32)
+    ;; Write the panic to stdout via its iovec [offset, len].
+    (call $wasi.fd_write
+      (i32.const 1) ;; stdout
+      (i32.const 0) ;; where's the iovec
+      (i32.const 1) ;; only one iovec
+      (i32.const 0) ;; overwrite the iovec with the ignored result.
+    )
+    drop ;; ignore the errno returned
+
+    ;; Issue the unreachable instruction instead of returning a code
+    (unreachable))
+
   ;; We require exporting filter
   (func (export "filter") (result i32) (unreachable))
 )

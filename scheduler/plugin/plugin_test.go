@@ -1359,7 +1359,7 @@ func TestAddPod(t *testing.T) {
 		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
-		nodeName              string
+		node                  *v1.Node
 		expectedStatusCode    framework.Code
 		expectedStatusMessage string
 	}{
@@ -1367,12 +1367,14 @@ func TestAddPod(t *testing.T) {
 			name:               "Success",
 			args:               []string{"test", "preFilterExtensions"},
 			pod:                test.PodSmall,
+			node:               test.NodeSmall,
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:                  "Error",
 			args:                  []string{"test", "preFilterExtensions"},
 			pod:                   test.PodSmall,
+			node:                  st.MakeNode().Name("bad").Obj(),
 			expectedStatusCode:    framework.Error,
 			expectedStatusMessage: "name is bad",
 		},
@@ -1380,6 +1382,7 @@ func TestAddPod(t *testing.T) {
 			name:               "min statusCode",
 			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
 			pod:                test.PodSmall,
+			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MinInt32},
 			expectedStatusCode: math.MinInt32,
 		},
@@ -1387,6 +1390,7 @@ func TestAddPod(t *testing.T) {
 			name:               "max statusCode",
 			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
 			pod:                test.PodSmall,
+			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
 			expectedStatusCode: math.MaxInt32,
 		},
@@ -1394,8 +1398,9 @@ func TestAddPod(t *testing.T) {
 			name:               "panic",
 			guestURL:           test.URLErrorPanicOnPreFilterExtensions,
 			pod:                test.PodSmall,
+			node:               test.NodeSmall,
 			expectedStatusCode: framework.Error,
-			expectedStatusMessage: `wasm: prefilterextensions error: panic!
+			expectedStatusMessage: `wasm: addpod error: panic!
 wasm error: unreachable
 wasm stack trace:
 	panic_on_prefilterextensions.$1() i32`,
@@ -1420,7 +1425,9 @@ wasm stack trace:
 				pl.SetGlobals(tc.globals)
 			}
 
-			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, nil, nil)
+			ni := framework.NewNodeInfo()
+			ni.SetNode(tc.node)
+			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, nil, ni)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %v, have %v", want, have)
 			}
@@ -1438,7 +1445,7 @@ func TestRemovePod(t *testing.T) {
 		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
-		nodeName              string
+		node                  *v1.Node
 		expectedStatusCode    framework.Code
 		expectedStatusMessage string
 	}{
@@ -1446,14 +1453,14 @@ func TestRemovePod(t *testing.T) {
 			name:               "Success",
 			args:               []string{"test", "preFilterExtensions"},
 			pod:                test.PodSmall,
-			nodeName:           "good",
+			node:               test.NodeSmall,
 			expectedStatusCode: framework.Success,
 		},
 		{
 			name:                  "Error",
 			args:                  []string{"test", "preFilterExtensions"},
 			pod:                   test.PodSmall,
-			nodeName:              "bad",
+			node:                  st.MakeNode().Name("bad").Obj(),
 			expectedStatusCode:    framework.Error,
 			expectedStatusMessage: "name is bad",
 		},
@@ -1461,7 +1468,7 @@ func TestRemovePod(t *testing.T) {
 			name:               "min statusCode",
 			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
 			pod:                test.PodSmall,
-			nodeName:           test.NodeSmall.Name,
+			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MinInt32},
 			expectedStatusCode: math.MinInt32,
 		},
@@ -1469,7 +1476,7 @@ func TestRemovePod(t *testing.T) {
 			name:               "max statusCode",
 			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
 			pod:                test.PodSmall,
-			nodeName:           test.NodeSmall.Name,
+			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
 			expectedStatusCode: math.MaxInt32,
 		},
@@ -1477,12 +1484,12 @@ func TestRemovePod(t *testing.T) {
 			name:               "panic",
 			guestURL:           test.URLErrorPanicOnPreFilterExtensions,
 			pod:                test.PodSmall,
-			nodeName:           test.NodeSmall.Name,
+			node:               test.NodeSmall,
 			expectedStatusCode: framework.Error,
-			expectedStatusMessage: `wasm: prefilterextensions error: panic!
+			expectedStatusMessage: `wasm: removepod error: panic!
 wasm error: unreachable
 wasm stack trace:
-	panic_on_prefilterextensions.$1() i32`,
+	panic_on_prefilterextensions.$2() i32`,
 		},
 	}
 
@@ -1499,13 +1506,14 @@ wasm stack trace:
 			}
 			defer p.(io.Closer).Close()
 
-			pl := wasm.NewTestWasmPlugin(p)
 			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
 				pl.SetGlobals(tc.globals)
 			}
-			pl.CreateGuestInBindingGuestPool(tc.pod.UID)
 
-			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, nil, nil)
+			ni := framework.NewNodeInfo()
+			ni.SetNode(tc.node)
+			status := p.(framework.PreFilterExtensions).RemovePod(ctx, nil, tc.pod, nil, ni)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %v, have %v", want, have)
 			}
