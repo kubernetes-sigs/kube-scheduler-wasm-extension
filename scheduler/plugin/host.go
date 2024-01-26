@@ -116,7 +116,7 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleEventRecorderEventfFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleEventRecorderEventf).
 		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleRejectWaitingPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleRejectWaitingPodFn), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleRejectWaitingPod).
 		Instantiate(ctx)
 }
@@ -498,7 +498,7 @@ func convertToObjectReference(objRef *ObjectReference) *v1.ObjectReference {
 	}
 }
 
-// TODO: add explanation
+// k8sHandleRejectWaitingPodFn is a function used by the wasm guest to call RejectWaitingPod
 func (h host) k8sHandleRejectWaitingPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	iBuf := uint32(stack[0])
 	iBufLen := uint32(stack[1])
@@ -515,5 +515,5 @@ func (h host) k8sHandleRejectWaitingPodFn(ctx context.Context, mod wazeroapi.Mod
 	if IsRejected {
 		wasmBool = uint64(1)
 	}
-	stack[0] = uint64(writeUint64(mod.Memory(), wasmBool, oBuf, oBufLimit))
+	writeUint64(mod.Memory(), wasmBool, oBuf, oBufLimit)
 }

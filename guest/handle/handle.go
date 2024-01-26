@@ -28,8 +28,8 @@ func RejectWaitingPod(uid string) bool {
 	ptr, size := mem.StringToPtr(uid)
 
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
-	wasmBool := mem.SendAndGetUint64(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) (len uint32) {
-		return rejectWaitingPod(input_ptr, input_size, ptr, limit)
+	wasmBool := mem.SendAndGetUint64(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
+		rejectWaitingPod(input_ptr, input_size, ptr, limit)
 	})
 	runtime.KeepAlive(uid)
 	return wasmBool == 1

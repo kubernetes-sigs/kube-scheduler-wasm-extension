@@ -74,8 +74,6 @@ func writeStringIfUnderLimit(mem wazeroapi.Memory, v string, buf uint32, bufLimi
 	return vLen
 }
 
-func writeUint64(mem wazeroapi.Memory, v uint64, buf uint32, bufLimit bufLimit) int {
-	size := 8
+func writeUint64(mem wazeroapi.Memory, v uint64, buf uint32, bufLimit bufLimit) {
 	mem.WriteUint64Le(buf, v)
-	return size
 }

@@ -99,10 +99,7 @@ func GetString(fn func(ptr uint32, limit BufLimit) (len uint32)) string {
 	return unsafe.String((*byte)(ptr), size /* unsafe.IntegerType */)
 }
 
-func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit) (len uint32)) uint64 {
-	size := fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
-	if size != 8 {
-		panic("readBuf doesn't match uint64")
-	}
+func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) uint64 {
+	fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
 	return binary.LittleEndian.Uint64(readBuf)
 }

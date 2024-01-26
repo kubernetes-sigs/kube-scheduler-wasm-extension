@@ -80,7 +80,7 @@ func (h *FakeHandle) NominatedPodsForNode(nodeName string) (f []*framework.PodIn
 
 func (h *FakeHandle) RejectWaitingPod(uid types.UID) (b bool) {
 	h.RejectWaitingPodValue = uid
-	return
+	return uid == types.UID("handle-test")
 }
 
 func (h *FakeHandle) RunPreScorePlugins(context.Context, *framework.CycleState, *v1.Pod, []*v1.Node) (s *framework.Status) {

@@ -84,6 +84,8 @@ var URLTestBind = localURL(pathTinyGoTest("bind"))
 
 var URLTestScoreExtensionsFromGlobal = localURL(pathWatTest("scoreextensions_from_global"))
 
+var URLTestHandle = localURL(pathTinyGoTest("handle"))
+
 //go:embed testdata/yaml/node.yaml
 var yamlNodeReal string
 
@@ -115,6 +117,16 @@ var PodSmall = &v1.Pod{
 		Name:      "good-pod",
 		Namespace: "test",
 		UID:       "384900cd-dc7b-41ec-837e-9c4c1762363e",
+	},
+	Spec: v1.PodSpec{NodeName: NodeSmall.Name},
+}
+
+// PodForHandleTest is the pod for testing handle.
+var PodForHandleTest = &v1.Pod{
+	ObjectMeta: apimeta.ObjectMeta{
+		Name:      "handle-pod",
+		Namespace: "test",
+		UID:       "handle-test",
 	},
 	Spec: v1.PodSpec{NodeName: NodeSmall.Name},
 }
