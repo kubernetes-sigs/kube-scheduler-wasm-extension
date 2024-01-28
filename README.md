@@ -9,12 +9,10 @@ scheduler, and loading custom scheduler plugin via configuration.
 
 This project contains everything needed to extend the scheduler:
 - Documentation describing what type of actions are possible, e.g. `Filter`.
-- Language SDKs used to build scheduler plugins, compiled to wasm.
-- The scheduler plugin which loads and runs wasm plugins
+- [Language SDKs](./guest/) used to build scheduler plugins, compiled to wasm.
+- [The scheduler plugin](./scheduler/) which loads and runs wasm plugins
 
-## Example
-
-You can learn how you build your wasm plugins by trying [./examples](./examples/).
+You can learn how you build your wasm plugins by referring to [the tutorial](./docs/tutorial.md).
 
 ## Motivation
 
