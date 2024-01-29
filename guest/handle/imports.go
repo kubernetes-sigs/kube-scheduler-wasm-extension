@@ -1,3 +1,5 @@
+//go:build tinygo.wasm
+
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -14,23 +16,9 @@
    limitations under the License.
 */
 
-package api_test
+package handle
 
-import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder/api"
-)
+import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
-var (
-	eventrecorder api.EventRecorder = api.UnimplementedEventRecorder{}
-	pod           proto.Pod
-	node          proto.Node
-)
-
-func ExampleEventRecorder() {
-	eventrecorder.Eventf(pod, pod, "event", "reason", "action", "note")
-	eventrecorder.Eventf(node, node, "event", "reason", "action", "note")
-
-	// Output:
-	//
-}
+//go:wasmimport k8s.io/scheduler handle.reject_waiting_pod
+func rejectWaitingPod(input_ptr, input_size, ptr uint32, limit mem.BufLimit)

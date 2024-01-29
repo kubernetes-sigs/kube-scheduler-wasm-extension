@@ -16,7 +16,10 @@
 
 package mem
 
-import "unsafe"
+import (
+	"encoding/binary"
+	"unsafe"
+)
 
 // BufLimit is the possibly zero maximum length of a result value to write in
 // bytes. If the actual value is larger than this, nothing is written to
@@ -94,4 +97,9 @@ func GetString(fn func(ptr uint32, limit BufLimit) (len uint32)) string {
 	ptr := unsafe.Pointer(&buf[0])
 	_ = fn(uint32(uintptr(ptr)), size)
 	return unsafe.String((*byte)(ptr), size /* unsafe.IntegerType */)
+}
+
+func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) uint64 {
+	fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
+	return binary.LittleEndian.Uint64(readBuf)
 }

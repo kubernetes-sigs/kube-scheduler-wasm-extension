@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/tetratelabs/wazero/experimental/wazerotest"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	k8stest "k8s.io/klog/v2/test"
 
@@ -128,5 +129,33 @@ func Test_k8sHandleEventRecorderEventFn(t *testing.T) {
 
 	if want != have {
 		t.Fatalf("unexpected event: %v != %v", want, have)
+	}
+}
+
+func Test_k8sHandleRejectWaitingPodFn(t *testing.T) {
+	recorder := &test.FakeRecorder{EventMsg: ""}
+	handle := &test.FakeHandle{Recorder: recorder}
+	h := host{handle: handle}
+
+	// Create a fake wasm module, which has data the guest should write.
+	mem := wazerotest.NewMemory(wazerotest.PageSize)
+	mod := wazerotest.NewModule(mem)
+	uid := types.UID("c6feae3a-7082-42a5-a5ec-6ae2e1603727")
+	copy(mem.Bytes, uid)
+
+	// Invoke the host function in the same way the guest would have.
+	h.k8sHandleRejectWaitingPodFn(context.Background(), mod, []uint64{
+		0,
+		uint64(len(uid)),
+		0, // Ideally we should define some value, but we don't define it for now.
+		0, // Ideally we should define some value, but we don't define it for now.
+	})
+
+	// Checking the value stored on handle
+	have := handle.RejectWaitingPodValue
+	want := uid
+
+	if want != have {
+		t.Fatalf("unexpected uid: %v != %v", want, have)
 	}
 }

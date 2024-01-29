@@ -1398,6 +1398,62 @@ func TestEventf(t *testing.T) {
 	}
 }
 
+// This test checks whether framework.handle.RejectWaitingPod can be called within wasm file.
+func TestRejectWaitingPod(t *testing.T) {
+	tests := []struct {
+		name               string
+		guestURL           string
+		pod                *v1.Pod
+		args               []string
+		expectedUID        types.UID
+		expectedStatusCode framework.Code
+		expectedStatusMsg  string
+	}{
+		{
+			name:               "Pod is not rejected",
+			guestURL:           test.URLTestHandle,
+			pod:                test.PodSmall,
+			args:               []string{"test", "rejectWaitingPod"},
+			expectedUID:        test.PodSmall.GetUID(),
+			expectedStatusCode: framework.Success,
+			expectedStatusMsg:  "",
+		},
+		{
+			name:               "Pod is rejected",
+			guestURL:           test.URLTestHandle,
+			pod:                test.PodForHandleTest,
+			args:               []string{"test", "rejectWaitingPod"},
+			expectedUID:        test.PodForHandleTest.GetUID(),
+			expectedStatusCode: framework.Skip,
+			expectedStatusMsg:  "UID is handle-test",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			recorder := &test.FakeRecorder{EventMsg: ""}
+			handle := &test.FakeHandle{Recorder: recorder}
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, handle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+			status := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, nil)
+			if want, have := tc.expectedUID, handle.RejectWaitingPodValue; want != have {
+				t.Fatalf("unexpected uid: %v != %v", want, have)
+			}
+			fmt.Println("error: " + status.Message())
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMsg, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
 // Extracts and trims the actual log message from a formatted klog string
 // (klog includes timestamp before actual log message)
 func extractMessage(log string) string {

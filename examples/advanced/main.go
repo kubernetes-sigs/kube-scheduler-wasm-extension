@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/advanced/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/eventrecorder"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"

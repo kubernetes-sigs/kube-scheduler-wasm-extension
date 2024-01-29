@@ -29,7 +29,8 @@ func (f *FakeRecorder) Eventf(regarding runtime.Object, related runtime.Object, 
 }
 
 type FakeHandle struct {
-	Recorder events.EventRecorder
+	Recorder              events.EventRecorder
+	RejectWaitingPodValue types.UID
 }
 
 func (h *FakeHandle) EventRecorder() events.EventRecorder {
@@ -78,7 +79,8 @@ func (h *FakeHandle) NominatedPodsForNode(nodeName string) (f []*framework.PodIn
 }
 
 func (h *FakeHandle) RejectWaitingPod(uid types.UID) (b bool) {
-	return
+	h.RejectWaitingPodValue = uid
+	return uid == types.UID("handle-test")
 }
 
 func (h *FakeHandle) RunPreScorePlugins(context.Context, *framework.CycleState, *v1.Pod, []*v1.Node) (s *framework.Status) {

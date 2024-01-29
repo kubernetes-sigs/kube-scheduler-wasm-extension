@@ -14,18 +14,23 @@
    limitations under the License.
 */
 
-package eventrecorder_test
+// Package prescore exports an api.PreScorePlugin to the host. Only import this
+// package when setting Plugin, as doing otherwise will cause overhead.
+package handle
 
 import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/eventrecorder"
+	"runtime"
+
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 )
 
-var pod proto.Pod
+func RejectWaitingPod(uid string) bool {
+	ptr, size := mem.StringToPtr(uid)
 
-func ExampleEventf() {
-	eventrecorder.Eventf(pod, pod, "event", "reason", "action", "note")
-
-	// Output:
-	//
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	wasmBool := mem.SendAndGetUint64(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
+		rejectWaitingPod(input_ptr, input_size, ptr, limit)
+	})
+	runtime.KeepAlive(uid)
+	return wasmBool == 1
 }
