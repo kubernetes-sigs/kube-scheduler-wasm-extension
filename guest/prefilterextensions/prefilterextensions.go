@@ -47,7 +47,7 @@ var (
 
 // _addPod is only exported to the host.
 //
-// export addpod
+//export addpod
 func _addpod() uint32 { //nolint
 	if prefilterextensions == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export reserve so that we can reset
@@ -62,7 +62,7 @@ func _addpod() uint32 { //nolint
 
 // _removePod is only exported to the host.
 //
-// export removepod
+//export removepod
 func _removepod() uint32 { //nolint
 	if prefilterextensions == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export unreserve so that we can reset
