@@ -1525,9 +1525,7 @@ wasm stack trace:
 
 			ni := framework.NewNodeInfo()
 			ni.SetNode(tc.node)
-			fmt.Println("NodeInfo: ", ni.Node().GetName())
 			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, nil, ni)
-			fmt.Println("status: ", status.Code())
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
