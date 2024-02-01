@@ -1525,9 +1525,11 @@ wasm stack trace:
 
 			ni := framework.NewNodeInfo()
 			ni.SetNode(tc.node)
+			fmt.Println("NodeInfo: ", ni.Node().GetName())
 			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, nil, ni)
+			fmt.Println("status: ", status.Code())
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
@@ -1613,7 +1615,7 @@ wasm stack trace:
 			ni.SetNode(tc.node)
 			status := p.(framework.PreFilterExtensions).RemovePod(ctx, nil, tc.pod, nil, ni)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
 			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
