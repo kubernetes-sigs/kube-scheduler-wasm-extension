@@ -59,7 +59,7 @@ type PreFilterPlugin interface {
 	PreFilter(state CycleState, pod proto.Pod) (nodeNames []string, status *Status)
 }
 
-// PreFilterExtension is a WebAssembly implementation of framework.PrefFilterExtensions.
+// PreFilterExtensions is a WebAssembly implementation of framework.PrefFilterExtensions.
 type PreFilterExtensions interface {
 	Plugin
 
