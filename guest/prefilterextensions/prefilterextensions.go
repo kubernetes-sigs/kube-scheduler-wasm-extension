@@ -35,8 +35,8 @@ func SetPlugin(preFilterExtensions api.PreFilterExtensions) {
 	if preFilterExtensions == nil {
 		panic("nil preFilterExtensions")
 	}
-
-	plugin.MustSet(preFilterExtensions)
+	prefilterextensions = preFilterExtensions
+	plugin.MustSet(prefilterextensions)
 }
 
 // prevent unused lint errors (lint is run with normal go).
