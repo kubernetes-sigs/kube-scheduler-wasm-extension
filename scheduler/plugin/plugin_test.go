@@ -1509,7 +1509,7 @@ wasm stack trace:
 		t.Run(tc.name, func(t *testing.T) {
 			guestURL := tc.guestURL
 			if guestURL == "" {
-				guestURL = test.URLTestPreFilterxtensions
+				guestURL = test.URLTestFilter
 			}
 
 			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
@@ -1595,7 +1595,7 @@ wasm stack trace:
 		t.Run(tc.name, func(t *testing.T) {
 			guestURL := tc.guestURL
 			if guestURL == "" {
-				guestURL = test.URLTestPreFilterxtensions
+				guestURL = test.URLTestFilter
 			}
 
 			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)

@@ -94,8 +94,6 @@ var URLTestScoreExtensionsFromGlobal = localURL(pathWatTest("scoreextensions_fro
 
 var URLTestHandle = localURL(pathTinyGoTest("handle"))
 
-var URLTestPreFilterxtensions = localURL(pathTinyGoTest("filter"))
-
 var URLTestPreFilterExtensionsFromGlobal = localURL(pathWatTest("prefilterextensions_from_global"))
 
 //go:embed testdata/yaml/node.yaml
