@@ -1443,7 +1443,6 @@ func TestRejectWaitingPod(t *testing.T) {
 			if want, have := tc.expectedUID, handle.RejectWaitingPodValue; want != have {
 				t.Fatalf("unexpected uid: %v != %v", want, have)
 			}
-			fmt.Println("error: " + status.Message())
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %v, have %v", want, have)
 			}
