@@ -199,7 +199,7 @@ func (pl *wasmPlugin) AddPod(ctx context.Context, state *framework.CycleState, p
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: podToSchedule, podInfoToAdd: podInfoToAdd, nodeInfo: nodeInfo}
+	params := &stack{pod: podToSchedule, podInfoToAdd: podInfoToAdd.Pod, nodeInfo: nodeInfo.Node()}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
 		status = g.addPod(ctx)
@@ -217,7 +217,7 @@ func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: podToSchedule, podInfoToRemove: podInfoToRemove, nodeInfo: nodeInfo}
+	params := &stack{pod: podToSchedule, podInfoToRemove: podInfoToRemove.Pod, nodeInfo: nodeInfo.Node()}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
 		status = g.removePod(ctx)
