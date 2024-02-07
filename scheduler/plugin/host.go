@@ -174,13 +174,13 @@ type stack struct {
 	resultNormalizedScoreList framework.NodeScoreList
 
 	// podInfoToAdd is used by guest.addpodFn
-	podInfoToAdd *framework.PodInfo
+	podInfoToAdd *v1.Pod
 
 	// podInfoToAdd is used by guest.addpodFn
-	podInfoToRemove *framework.PodInfo
+	podInfoToRemove *v1.Pod
 
 	// podInfoToRemove is used by guest addpodFn & guest.removepodFn
-	nodeInfo *framework.NodeInfo
+	nodeInfo *v1.Node
 }
 
 func paramsFromContext(ctx context.Context) *stack {
