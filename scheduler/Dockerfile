@@ -11,7 +11,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -v -o ./bin/kube-scheduler-wasm-extension kube-scheduler-wasm-extension.go
+RUN go build -v -o ./bin/kube-scheduler-wasm-extension ./cmd/scheduler
 
 FROM alpine:3.19.1
 
