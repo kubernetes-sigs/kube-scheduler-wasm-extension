@@ -19,10 +19,7 @@ package prefilter
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	internalprefilter "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
-	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 // SetPlugin should be called in `main` to assign an api.PreFilterPlugin
@@ -52,25 +49,4 @@ import (
 // the only filtering logic, or only used to configure api.CycleState.
 func SetPlugin(prefilterPlugin api.PreFilterPlugin) {
 	internalprefilter.SetPlugin(prefilterPlugin)
-}
-
-type podInfoToAdd struct {
-	pod proto.Pod
-}
-
-func (p *podInfoToAdd) Pod() proto.Pod {
-	return p.lazyPodMap()
-}
-
-func (p *podInfoToAdd) lazyPodMap() proto.Pod {
-	if pod := p.pod; pod != nil {
-		return pod
-	}
-
-	var msg protoapi.Pod
-	if err := imports.Pod(msg.UnmarshalVT); err != nil {
-		panic(err.Error())
-	}
-	p.pod = internalprefilter.Pod
-	return p.pod
 }
