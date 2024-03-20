@@ -95,11 +95,11 @@ func (h *FakeHandle) RunFilterPlugins(context.Context, *framework.CycleState, *v
 	return
 }
 
-func (h *FakeHandle) RunPreFilterExtensionAddPod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToAdd *framework.PodInfo, nodeInfo *framework.NodeInfo) (s *framework.Status) {
+func (h *FakeHandle) RunPreFilterExtensionAddPod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToAdd *v1.Pod, nodeInfo *framework.NodeInfo) (s *framework.Status) {
 	return
 }
 
-func (h *FakeHandle) RunPreFilterExtensionRemovePod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToRemove *framework.PodInfo, nodeInfo *framework.NodeInfo) (s *framework.Status) {
+func (h *FakeHandle) RunPreFilterExtensionRemovePod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToRemove *v1.Pod, nodeInfo *framework.NodeInfo) (s *framework.Status) {
 	return
 }
 

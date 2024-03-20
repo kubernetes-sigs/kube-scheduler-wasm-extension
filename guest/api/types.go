@@ -168,6 +168,13 @@ type NodeInfo interface {
 	Node() proto.Node
 }
 
+type PodInfo interface {
+	// Metadata is a convenience that triggers Get.
+	proto.Metadata
+
+	Node() proto.Pod
+}
+
 // NodeToStatus contains which Node got which status during the scheduling cycle.
 type NodeToStatus interface {
 	// NodeToStatus returns a map
