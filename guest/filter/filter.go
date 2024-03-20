@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	internalprefilter "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
@@ -114,4 +115,58 @@ func (n *NodeInfo) lazyNode() proto.Node {
 	}
 	n.node = &internalproto.Node{Msg: &msg}
 	return n.node
+}
+
+type PodInfo struct {
+	pod proto.Pod
+}
+
+func (p *PodInfo) GetApiVersion() string {
+	return p.lazyPod().GetApiVersion()
+}
+
+func (p *PodInfo) GetKind() string {
+	return p.lazyPod().GetKind()
+}
+
+func (p *PodInfo) GetName() string {
+	return p.lazyPod().GetName()
+}
+
+func (p *PodInfo) GetNamespace() string {
+	return p.lazyPod().GetNamespace()
+}
+
+func (p *PodInfo) GetResourceVersion() string {
+	return p.lazyPod().GetNamespace()
+}
+
+func (p *PodInfo) GetUid() string {
+	return p.lazyPod().GetUid()
+}
+
+func (p *PodInfo) Pod() proto.Pod {
+	return p.lazyPod()
+}
+
+func (p *PodInfo) Spec() *protoapi.PodSpec {
+	return p.lazyPod().Spec()
+}
+
+func (p *PodInfo) Status() *protoapi.PodStatus {
+	return p.lazyPod().Status()
+}
+
+// lazyNode lazy initializes node from imports.Node.
+func (p *PodInfo) lazyPod() proto.Pod {
+	if pod := p.pod; pod != nil {
+		return pod
+	}
+
+	var msg protoapi.Pod
+	if err := imports.Pod(msg.UnmarshalVT); err != nil {
+		panic(err.Error())
+	}
+	p.pod = internalprefilter.Pod
+	return p.pod
 }
