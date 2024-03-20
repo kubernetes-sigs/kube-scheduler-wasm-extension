@@ -55,7 +55,7 @@ func _addpod() uint32 { //nolint
 		return 0
 	}
 
-	status := prefilterextensions.AddPod(cyclestate.Values, cyclestate.Pod, cyclestate.Pod, &filter.NodeInfo{})
+	status := prefilterextensions.AddPod(cyclestate.Values, cyclestate.Pod, &filter.PodInfo{}, &filter.NodeInfo{})
 
 	return imports.StatusToCode(status)
 }
@@ -70,7 +70,7 @@ func _removepod() uint32 { //nolint
 		return 0
 	}
 
-	status := prefilterextensions.RemovePod(cyclestate.Values, cyclestate.Pod, cyclestate.Pod, &filter.NodeInfo{})
+	status := prefilterextensions.RemovePod(cyclestate.Values, cyclestate.Pod, &filter.PodInfo{}, &filter.NodeInfo{})
 
 	return imports.StatusToCode(status)
 }
