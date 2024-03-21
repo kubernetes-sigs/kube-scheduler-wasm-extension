@@ -231,11 +231,11 @@ func (statePlugin) PostBind(state api.CycleState, pod proto.Pod, _ string) {
 	}
 }
 
-func (statePlugin) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func (statePlugin) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd api.PodInfo, nodeInfo api.NodeInfo) (status *api.Status) {
 	return
 }
 
-func (statePlugin) RemovePod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func (statePlugin) RemovePod(state api.CycleState, pod proto.Pod, podInfoToAdd api.PodInfo, nodeInfo api.NodeInfo) (status *api.Status) {
 	return
 }
 
