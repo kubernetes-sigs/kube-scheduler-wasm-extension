@@ -79,14 +79,14 @@ func (noopPlugin) PostFilter(state api.CycleState, pod proto.Pod, nodeMap api.No
 	return
 }
 
-func (noopPlugin) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func (noopPlugin) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd api.PodInfo, nodeInfo api.NodeInfo) (status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeInfo.Node().Spec() // trigger lazy loading
 	return
 }
 
-func (noopPlugin) RemovePod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) (status *api.Status) {
+func (noopPlugin) RemovePod(state api.CycleState, pod proto.Pod, podInfoToRemove api.PodInfo, nodeInfo api.NodeInfo) (status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeInfo.Node().Spec() // trigger lazy loading
@@ -155,7 +155,7 @@ func (postFilterPlugin) PostFilter(_ api.CycleState, pod proto.Pod, nodeMap api.
 
 type preFilterExtensions struct{ noopPlugin }
 
-func (preFilterExtensions) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) *api.Status {
+func (preFilterExtensions) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd api.PodInfo, nodeInfo api.NodeInfo) *api.Status {
 	nodeName := nodeInfo.Node().GetName()
 	state.Write(nodeName+pod.Spec().GetNodeName(), "ok")
 	status := 0
@@ -165,7 +165,7 @@ func (preFilterExtensions) AddPod(state api.CycleState, pod proto.Pod, podInfoTo
 	return &api.Status{Code: api.StatusCode(status), Reason: "name is " + nodeName}
 }
 
-func (preFilterExtensions) RemovePod(state api.CycleState, pod proto.Pod, podInfoToAdd proto.Pod, nodeInfo api.NodeInfo) *api.Status {
+func (preFilterExtensions) RemovePod(state api.CycleState, pod proto.Pod, podInfoToRemove api.PodInfo, nodeInfo api.NodeInfo) *api.Status {
 	nodeName := nodeInfo.Node().GetName()
 	state.Write(nodeName+pod.Spec().GetNodeName(), "ok")
 	status := 0
