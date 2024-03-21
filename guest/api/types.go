@@ -172,7 +172,7 @@ type PodInfo interface {
 	// Metadata is a convenience that triggers Get.
 	proto.Metadata
 
-	Node() proto.Pod
+	Pod() proto.Pod
 }
 
 // NodeToStatus contains which Node got which status during the scheduling cycle.
