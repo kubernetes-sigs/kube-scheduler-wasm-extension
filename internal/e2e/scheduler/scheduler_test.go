@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 	"testing"
 
@@ -50,11 +51,15 @@ func TestCycleStateCoherence(t *testing.T) {
 	pod := test.PodReal
 	ni := framework.NewNodeInfo()
 	ni.SetNode(test.NodeReal)
+	pi, err := framework.NewPodInfo(pod)
+	if err != nil {
+		log.Panicln("error creating pod info:", err)
+	}
 
 	// run: the guest will crash if any of the callbacks see a different pod.
-	e2e.RunAll(ctx, t, plugin, pod, ni)
+	e2e.RunAll(ctx, t, plugin, pod, ni, pi)
 	// run again: the guest will crash if it sees the same pointer.
-	e2e.RunAll(ctx, t, plugin, pod, ni)
+	e2e.RunAll(ctx, t, plugin, pod, ni, pi)
 }
 
 func TestExample_NodeNumber(t *testing.T) {
@@ -79,6 +84,10 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 	defer plugin.(io.Closer).Close()
 
 	pod := &v1.Pod{ObjectMeta: v1meta.ObjectMeta{Name: "happy8-meta"}, Spec: v1.PodSpec{NodeName: "happy8"}}
+	pi, err := framework.NewPodInfo(pod)
+	if err != nil {
+		log.Panicln("error creating pod info:", err)
+	}
 
 	t.Run("Score zero on unmatch", func(t *testing.T) {
 		// The pod spec node name doesn't end with the same number as the node, so
@@ -86,7 +95,7 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 		var buf bytes.Buffer
 		klog.SetOutput(&buf)
 
-		score := e2e.RunAll(ctx, t, plugin, pod, nodeInfoWithName("glad9"))
+		score := e2e.RunAll(ctx, t, plugin, pod, nodeInfoWithName("glad9"), pi)
 		if want, have := int64(0), score; want != have {
 			t.Fatalf("unexpected score: want %v, have %v", want, have)
 		}
@@ -109,7 +118,7 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 		var buf bytes.Buffer
 		klog.SetOutput(&buf)
 
-		score := e2e.RunAll(ctx, t, plugin, pod, nodeInfoWithName("glad8"))
+		score := e2e.RunAll(ctx, t, plugin, pod, nodeInfoWithName("glad8"), pi)
 		if want, have := int64(10), score; want != have {
 			t.Fatalf("unexpected score: want %v, have %v", want, have)
 		}
@@ -133,7 +142,7 @@ func testExample_NodeNumber(t *testing.T, advanced bool) {
 		reversed := newNodeNumberPlugin(ctx, t, advanced, true, 0, recorder)
 		defer reversed.(io.Closer).Close()
 
-		score := e2e.RunAll(ctx, t, reversed, pod, nodeInfoWithName("glad8"))
+		score := e2e.RunAll(ctx, t, reversed, pod, nodeInfoWithName("glad8"), pi)
 		if want, have := int64(0), score; want != have {
 			t.Fatalf("unexpected score: want %v, have %v", want, have)
 		}
@@ -191,10 +200,16 @@ func benchmarkExample_NodeNumber(b *testing.B, advanced bool, logSeverity int32)
 	pod := *test.PodReal // copy
 	pod.Spec.NodeName = "happy8"
 
+	podobj := &v1.Pod{ObjectMeta: v1meta.ObjectMeta{Name: "happy8-meta"}, Spec: v1.PodSpec{NodeName: "happy8"}}
+	pi, err := framework.NewPodInfo(podobj)
+	if err != nil {
+		log.Panicln("error creating pod info:", err)
+	}
+
 	b.Run("Run", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			score := e2e.RunAll(ctx, b, plugin, &pod, nodeInfoWithName("glad8"))
+			score := e2e.RunAll(ctx, b, plugin, &pod, nodeInfoWithName("glad8"), pi)
 			if want, have := int64(10), score; want != have {
 				b.Fatalf("unexpected score: want %v, have %v", want, have)
 			}

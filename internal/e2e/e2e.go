@@ -12,7 +12,7 @@ type Testing interface {
 	Helper()
 }
 
-func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod, ni *framework.NodeInfo) (score int64) {
+func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod, ni *framework.NodeInfo, pi *framework.PodInfo) (score int64) {
 	t.Helper()
 
 	MaybeRunPreFilter(ctx, t, plugin, pod)
@@ -29,9 +29,9 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 	}
 
 	if prefilterEx, ok := plugin.(framework.PreFilterExtensions); ok {
-		s = prefilterEx.AddPod(ctx, nil, pod, nil, nil)
+		s = prefilterEx.AddPod(ctx, nil, pod, pi, ni)
 		RequireSuccess(t, s)
-		s = prefilterEx.RemovePod(ctx, nil, pod, nil, nil)
+		s = prefilterEx.RemovePod(ctx, nil, pod, pi, ni)
 		RequireSuccess(t, s)
 	}
 
@@ -73,6 +73,16 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 
 	if postbindP, ok := plugin.(framework.PostBindPlugin); ok {
 		postbindP.PostBind(ctx, nil, pod, "")
+	}
+
+	if preFilterE, ok := plugin.(framework.PreFilterExtensions); ok {
+		s = preFilterE.AddPod(ctx, nil, pod, pi, ni)
+		RequireSuccess(t, s)
+	}
+
+	if preFilterE, ok := plugin.(framework.PreFilterExtensions); ok {
+		s = preFilterE.RemovePod(ctx, nil, pod, pi, ni)
+		RequireSuccess(t, s)
 	}
 	return
 }

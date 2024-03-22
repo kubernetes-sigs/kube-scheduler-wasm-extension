@@ -177,7 +177,7 @@ type stack struct {
 	// resultNormalizedScoreList is returned by guest.normalizedscoreFn
 	resultNormalizedScoreList framework.NodeScoreList
 
-	// podInfo is used by guest.addpodFn and guest.removepodFn
+	// podInfo isAddPod( used by guest.addpodFn and guest.removepodFn
 	podInfo *v1.Pod
 }
 
