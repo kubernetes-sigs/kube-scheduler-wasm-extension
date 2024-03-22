@@ -1457,6 +1457,7 @@ func TestAddPod(t *testing.T) {
 		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
+		podInfo               framework.PodInfo
 		node                  *v1.Node
 		expectedStatusCode    framework.Code
 		expectedStatusMessage string
@@ -1465,6 +1466,7 @@ func TestAddPod(t *testing.T) {
 			name:               "Success",
 			args:               []string{"test", "preFilterExtensions"},
 			pod:                test.PodSmall,
+			podInfo:            framework.PodInfo{},
 			node:               test.NodeSmall,
 			expectedStatusCode: framework.Success,
 		},
@@ -1472,6 +1474,7 @@ func TestAddPod(t *testing.T) {
 			name:                  "Error",
 			args:                  []string{"test", "preFilterExtensions"},
 			pod:                   test.PodSmall,
+			podInfo:               framework.PodInfo{},
 			node:                  st.MakeNode().Name("bad").Obj(),
 			expectedStatusCode:    framework.Error,
 			expectedStatusMessage: "name is bad",
@@ -1480,6 +1483,7 @@ func TestAddPod(t *testing.T) {
 			name:               "min statusCode",
 			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
 			pod:                test.PodSmall,
+			podInfo:            framework.PodInfo{},
 			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MinInt32},
 			expectedStatusCode: math.MinInt32,
@@ -1488,6 +1492,7 @@ func TestAddPod(t *testing.T) {
 			name:               "max statusCode",
 			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
 			pod:                test.PodSmall,
+			podInfo:            framework.PodInfo{},
 			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
 			expectedStatusCode: math.MaxInt32,
@@ -1496,6 +1501,7 @@ func TestAddPod(t *testing.T) {
 			name:               "panic",
 			guestURL:           test.URLErrorPanicOnPreFilterExtensions,
 			pod:                test.PodSmall,
+			podInfo:            framework.PodInfo{},
 			node:               test.NodeSmall,
 			expectedStatusCode: framework.Error,
 			expectedStatusMessage: `wasm: addpod error: panic!
@@ -1525,7 +1531,8 @@ wasm stack trace:
 
 			ni := framework.NewNodeInfo()
 			ni.SetNode(tc.node)
-			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, nil, ni)
+			// Add PodInfo
+			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, &tc.podInfo, ni)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
@@ -1543,6 +1550,7 @@ func TestRemovePod(t *testing.T) {
 		args                  []string
 		globals               map[string]int32
 		pod                   *v1.Pod
+		podInfo               framework.PodInfo
 		node                  *v1.Node
 		expectedStatusCode    framework.Code
 		expectedStatusMessage string
@@ -1551,6 +1559,7 @@ func TestRemovePod(t *testing.T) {
 			name:               "Success",
 			args:               []string{"test", "preFilterExtensions"},
 			pod:                test.PodSmall,
+			podInfo:            framework.PodInfo{},
 			node:               test.NodeSmall,
 			expectedStatusCode: framework.Success,
 		},
@@ -1558,6 +1567,7 @@ func TestRemovePod(t *testing.T) {
 			name:                  "Error",
 			args:                  []string{"test", "preFilterExtensions"},
 			pod:                   test.PodSmall,
+			podInfo:               framework.PodInfo{},
 			node:                  st.MakeNode().Name("bad").Obj(),
 			expectedStatusCode:    framework.Error,
 			expectedStatusMessage: "name is bad",
@@ -1566,6 +1576,7 @@ func TestRemovePod(t *testing.T) {
 			name:               "min statusCode",
 			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
 			pod:                test.PodSmall,
+			podInfo:            framework.PodInfo{},
 			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MinInt32},
 			expectedStatusCode: math.MinInt32,
@@ -1574,6 +1585,7 @@ func TestRemovePod(t *testing.T) {
 			name:               "max statusCode",
 			guestURL:           test.URLTestPreFilterExtensionsFromGlobal,
 			pod:                test.PodSmall,
+			podInfo:            framework.PodInfo{},
 			node:               test.NodeSmall,
 			globals:            map[string]int32{"status_code": math.MaxInt32},
 			expectedStatusCode: math.MaxInt32,
@@ -1582,6 +1594,7 @@ func TestRemovePod(t *testing.T) {
 			name:               "panic",
 			guestURL:           test.URLErrorPanicOnPreFilterExtensions,
 			pod:                test.PodSmall,
+			podInfo:            framework.PodInfo{},
 			node:               test.NodeSmall,
 			expectedStatusCode: framework.Error,
 			expectedStatusMessage: `wasm: removepod error: panic!
@@ -1611,7 +1624,7 @@ wasm stack trace:
 
 			ni := framework.NewNodeInfo()
 			ni.SetNode(tc.node)
-			status := p.(framework.PreFilterExtensions).RemovePod(ctx, nil, tc.pod, nil, ni)
+			status := p.(framework.PreFilterExtensions).RemovePod(ctx, nil, tc.pod, &tc.podInfo, ni)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}
