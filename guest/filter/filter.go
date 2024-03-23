@@ -157,7 +157,7 @@ func (p *PodInfo) Status() *protoapi.PodStatus {
 	return p.lazyPod().Status()
 }
 
-// lazyNode lazy initializes node from imports.Node.
+// lazyPod lazy initializes pod from imports.Pod.
 func (p *PodInfo) lazyPod() proto.Pod {
 	if pod := p.pod; pod != nil {
 		return pod
