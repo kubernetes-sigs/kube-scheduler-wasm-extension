@@ -177,8 +177,11 @@ type stack struct {
 	// resultNormalizedScoreList is returned by guest.normalizedscoreFn
 	resultNormalizedScoreList framework.NodeScoreList
 
-	// podInfo is used by guest.addpodFn and guest.removepodFn
-	podInfo *v1.Pod
+	// podToAdd is used by guest.addpodFn
+	podToAdd *v1.Pod
+
+	// podToRemove is used by guest.removepodFn
+	podToRemove *v1.Pod
 }
 
 func paramsFromContext(ctx context.Context) *stack {
@@ -228,7 +231,7 @@ func k8sApiPodInfoFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) 
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	podInfo := paramsFromContext(ctx).podInfo
+	podInfo := paramsFromContext(ctx).podToAdd
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), podInfo, buf, bufLimit))
 }
 
