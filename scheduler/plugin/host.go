@@ -227,6 +227,7 @@ func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
 }
 
+// k8sApiPodInfoFn is a function used by the host to send the podInfo.
 func k8sApiPodInfoFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
