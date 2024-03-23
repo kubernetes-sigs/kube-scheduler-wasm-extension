@@ -56,6 +56,9 @@ func Set(plugin api.Plugin) {
 	if plugin, ok := plugin.(api.PreFilterPlugin); ok {
 		prefilter.SetPlugin(plugin)
 	}
+	if plugin, ok := plugin.(api.PreFilterExtensions); ok {
+		prefilterextensions.SetPlugin(plugin)
+	}
 	if plugin, ok := plugin.(api.FilterPlugin); ok {
 		filter.SetPlugin(plugin)
 	}
@@ -85,8 +88,5 @@ func Set(plugin api.Plugin) {
 	}
 	if plugin, ok := plugin.(api.PostBindPlugin); ok {
 		postbind.SetPlugin(plugin)
-	}
-	if plugin, ok := plugin.(api.PreFilterExtensions); ok {
-		prefilterextensions.SetPlugin(plugin)
 	}
 }
