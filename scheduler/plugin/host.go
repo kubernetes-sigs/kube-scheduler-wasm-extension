@@ -228,7 +228,7 @@ func k8sApiPodInfoFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) 
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	podInfo := paramsFromContext(ctx).pod
+	podInfo := paramsFromContext(ctx).podInfo
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), podInfo, buf, bufLimit))
 }
 
