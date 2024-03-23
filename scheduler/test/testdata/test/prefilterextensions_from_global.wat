@@ -9,4 +9,6 @@
 
   (func (export "addpod") (result i32) (return (global.get $status_code)))
   (func (export "removepod") (result i32) (return (global.get $status_code)))
+  ;; We require exporting filter
+  (func (export "filter") (result i32) (unreachable))
 )
