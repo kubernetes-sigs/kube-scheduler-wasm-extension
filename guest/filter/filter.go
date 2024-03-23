@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	internalprefilter "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
@@ -167,6 +166,6 @@ func (p *PodInfo) lazyPod() proto.Pod {
 	if err := imports.Pod(msg.UnmarshalVT); err != nil {
 		panic(err.Error())
 	}
-	p.pod = internalprefilter.Pod
+	p.pod = &internalproto.Pod{Msg: &msg}
 	return p.pod
 }
