@@ -115,7 +115,7 @@ func (o *Pod) GetResourceVersion() string {
 }
 
 func (o *Pod) GetKind() string {
-	return "Node"
+	return "Pod"
 }
 
 func (o *Pod) GetApiVersion() string {
