@@ -162,7 +162,7 @@ func (preFilterExtensions) AddPod(state api.CycleState, pod proto.Pod, podInfoTo
 	if nodeName == "bad" {
 		status = 1
 	}
-	return &api.Status{Code: api.StatusCode(status), Reason: "Node name is " + nodeName + "and PodInfo name is " + podInfoToAdd.Pod().GetName()}
+	return &api.Status{Code: api.StatusCode(status), Reason: "Node name is " + nodeName + " " + "and PodInfo name is " + podInfoToAdd.Pod().GetName()}
 }
 
 func (preFilterExtensions) RemovePod(state api.CycleState, pod proto.Pod, podInfoToRemove api.PodInfo, nodeInfo api.NodeInfo) *api.Status {
@@ -172,5 +172,5 @@ func (preFilterExtensions) RemovePod(state api.CycleState, pod proto.Pod, podInf
 	if nodeName == "bad" {
 		status = 1
 	}
-	return &api.Status{Code: api.StatusCode(status), Reason: "Node name is " + nodeName + "and PodInfo name is " + podInfoToRemove.Pod().GetName()}
+	return &api.Status{Code: api.StatusCode(status), Reason: "Node name is " + nodeName + " " + "and PodInfo name is " + podInfoToRemove.Pod().GetName()}
 }

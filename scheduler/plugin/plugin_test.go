@@ -1477,7 +1477,7 @@ func TestAddPod(t *testing.T) {
 			podInfo:               framework.PodInfo{},
 			node:                  st.MakeNode().Name("bad").Obj(),
 			expectedStatusCode:    framework.Error,
-			expectedStatusMessage: "name is bad",
+			expectedStatusMessage: "Node name is bad and PodInfo name is good-pod",
 		},
 		{
 			name:               "min statusCode",
@@ -1569,7 +1569,7 @@ func TestRemovePod(t *testing.T) {
 			podInfo:               framework.PodInfo{},
 			node:                  st.MakeNode().Name("bad").Obj(),
 			expectedStatusCode:    framework.Error,
-			expectedStatusMessage: "name is bad",
+			expectedStatusMessage: "Node name is bad and PodInfo name is good-pod",
 		},
 		{
 			name:               "min statusCode",
