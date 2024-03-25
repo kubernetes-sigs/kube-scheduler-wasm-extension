@@ -69,7 +69,7 @@ func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiPod).
 		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiPodInfoFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiTargetPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiPodInfo).
 		Instantiate(ctx)
 }
@@ -177,11 +177,9 @@ type stack struct {
 	// resultNormalizedScoreList is returned by guest.normalizedscoreFn
 	resultNormalizedScoreList framework.NodeScoreList
 
-	// podToAdd is used by guest.addpodFn
-	podToAdd *v1.Pod
-
-	// podToRemove is used by guest.removepodFn
-	podToRemove *v1.Pod
+	// targetPod is the target Pod for this operation,
+	// which is supposed to be used by AddPod/RemovePod in PreFilterExtension.
+	targetPod *v1.Pod
 }
 
 func paramsFromContext(ctx context.Context) *stack {
@@ -227,12 +225,12 @@ func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
 }
 
-// k8sApiPodInfoFn is a function used by the host to send the podInfo.
-func k8sApiPodInfoFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+// k8sApiTargetPodFn is a function used by the host to send the podInfo.
+func k8sApiTargetPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	podInfo := paramsFromContext(ctx).podToAdd
+	podInfo := paramsFromContext(ctx).targetPod
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), podInfo, buf, bufLimit))
 }
 
