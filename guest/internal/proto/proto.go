@@ -22,9 +22,6 @@ import (
 	meta "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/meta"
 )
 
-// Pod is exposed for the cyclestate package.
-var Pod proto.Pod = pod{}
-
 type object interface {
 	GetMetadata() *meta.ObjectMeta
 }
