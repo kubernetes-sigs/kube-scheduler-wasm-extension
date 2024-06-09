@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 )
 
 // score is the current plugin assigned with SetPlugin.
@@ -65,7 +66,7 @@ func _score() uint64 {
 	}
 
 	// Pod is lazy and the same value for all plugins in a scheduling cycle.
-	pod := cyclestate.Pod
+	pod := prefilter.Pod
 
 	// For ergonomics, we eagerly fetch the nodeName vs making a lazy string.
 	// This is less awkward than a lazy string. It is possible in a future

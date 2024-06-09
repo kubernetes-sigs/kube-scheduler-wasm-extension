@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 )
 
 // reserve is the current plugin assigned with SetPlugin.
@@ -70,7 +71,7 @@ func _reserve() uint32 { //nolint
 	}
 
 	nodeName := imports.NodeName()
-	status := reserve.Reserve(cyclestate.Values, cyclestate.Pod, nodeName)
+	status := reserve.Reserve(cyclestate.Values, prefilter.Pod, nodeName)
 
 	return imports.StatusToCode(status)
 }
@@ -86,5 +87,5 @@ func _unreserve() { //nolint
 	}
 
 	nodeName := imports.NodeName()
-	reserve.Unreserve(cyclestate.Values, cyclestate.Pod, nodeName)
+	reserve.Unreserve(cyclestate.Values, prefilter.Pod, nodeName)
 }

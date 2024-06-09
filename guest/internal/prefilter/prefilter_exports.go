@@ -15,7 +15,7 @@
 */
 
 // Package prefilter is defined internally so that it can export Pod as
-// cyclestate.Pod, without circular dependencies or exporting it publicly.
+// prefilter.Pod, without circular dependencies or exporting it publicly.
 package prefilter
 
 import (
@@ -23,12 +23,15 @@ import (
 	"unsafe"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 )
 
 // prefilter is the current plugin assigned with SetPlugin.
 var prefilter api.PreFilterPlugin
+
+var Pod proto.Pod
 
 // SetPlugin is exposed to prevent package cycles.
 func SetPlugin(prefilterPlugin api.PreFilterPlugin) {

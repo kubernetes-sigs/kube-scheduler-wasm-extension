@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 )
 
 // bind is the current plugin assigned with SetPlugin.
@@ -63,7 +64,7 @@ func _bind() uint32 { //nolint
 	nodeName := imports.NodeName()
 	// The parameters passed are lazy with regard to host functions. This means
 	// a no-op plugin should not have any unmarshal penalty.
-	s := bind.Bind(cyclestate.Values, cyclestate.Pod, nodeName)
+	s := bind.Bind(cyclestate.Values, prefilter.Pod, nodeName)
 
 	return imports.StatusToCode(s)
 }

@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 )
 
 // prefilterextensions is the current plugin assigned with SetPlugin.
@@ -55,7 +56,7 @@ func _addpod() uint32 { //nolint
 		return 0
 	}
 
-	status := prefilterextensions.AddPod(cyclestate.Values, cyclestate.Pod, &filter.PodInfo{}, &filter.NodeInfo{})
+	status := prefilterextensions.AddPod(cyclestate.Values, prefilter.Pod, &filter.PodInfo{}, &filter.NodeInfo{})
 
 	return imports.StatusToCode(status)
 }
@@ -70,7 +71,7 @@ func _removepod() uint32 { //nolint
 		return 0
 	}
 
-	status := prefilterextensions.RemovePod(cyclestate.Values, cyclestate.Pod, &filter.PodInfo{}, &filter.NodeInfo{})
+	status := prefilterextensions.RemovePod(cyclestate.Values, prefilter.Pod, &filter.PodInfo{}, &filter.NodeInfo{})
 
 	return imports.StatusToCode(status)
 }

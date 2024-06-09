@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
@@ -67,7 +68,7 @@ func _filter() uint32 { //nolint
 		return 0
 	}
 
-	s := filter.Filter(cyclestate.Values, cyclestate.Pod, &NodeInfo{})
+	s := filter.Filter(cyclestate.Values, prefilter.Pod, &NodeInfo{})
 
 	return imports.StatusToCode(s)
 }

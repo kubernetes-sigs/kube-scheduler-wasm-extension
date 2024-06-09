@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 )
 
 // scoreextensions is the current plugin assigned with SetPlugin.
@@ -68,7 +69,7 @@ func _normalizescore() uint32 {
 	}
 
 	// Pod is lazy and the same value for all plugins in a scheduling cycle.
-	pod := cyclestate.Pod
+	pod := prefilter.Pod
 	// For ergonomics, we eagerly fetch the nodeScoreList vs making a lazy string.
 	// This is less awkward than a lazy string.
 	updatedNodeScoreList, status := scoreextensions.NormalizeScore(cyclestate.Values, pod, &nodeScore{})
