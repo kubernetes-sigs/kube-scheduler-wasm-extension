@@ -21,7 +21,6 @@ package filter
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
@@ -68,7 +67,7 @@ func _filter() uint32 { //nolint
 		return 0
 	}
 
-	s := filter.Filter(cyclestate.Values, prefilter.Pod, &NodeInfo{})
+	s := filter.Filter(prefilter.CycleState, prefilter.Pod, &NodeInfo{})
 
 	return imports.StatusToCode(s)
 }
@@ -115,58 +114,4 @@ func (n *NodeInfo) lazyNode() proto.Node {
 	}
 	n.node = &internalproto.Node{Msg: &msg}
 	return n.node
-}
-
-type PodInfo struct {
-	pod proto.Pod
-}
-
-func (p *PodInfo) GetApiVersion() string {
-	return p.lazyPod().GetApiVersion()
-}
-
-func (p *PodInfo) GetKind() string {
-	return p.lazyPod().GetKind()
-}
-
-func (p *PodInfo) GetName() string {
-	return p.lazyPod().GetName()
-}
-
-func (p *PodInfo) GetNamespace() string {
-	return p.lazyPod().GetNamespace()
-}
-
-func (p *PodInfo) GetResourceVersion() string {
-	return p.lazyPod().GetNamespace()
-}
-
-func (p *PodInfo) GetUid() string {
-	return p.lazyPod().GetUid()
-}
-
-func (p *PodInfo) Pod() proto.Pod {
-	return p.lazyPod()
-}
-
-func (p *PodInfo) Spec() *protoapi.PodSpec {
-	return p.lazyPod().Spec()
-}
-
-func (p *PodInfo) Status() *protoapi.PodStatus {
-	return p.lazyPod().Status()
-}
-
-// lazyPod lazy initializes pod from imports.Pod.
-func (p *PodInfo) lazyPod() proto.Pod {
-	if pod := p.pod; pod != nil {
-		return pod
-	}
-
-	var msg protoapi.Pod
-	if err := imports.Pod(msg.UnmarshalVT); err != nil {
-		panic(err.Error())
-	}
-	p.pod = &internalproto.Pod{Msg: &msg}
-	return p.pod
 }

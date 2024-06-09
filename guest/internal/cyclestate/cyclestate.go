@@ -7,10 +7,3 @@
 //
 // See https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/#extension-points
 package cyclestate
-
-import (
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
-)
-
-var Values api.CycleState = prefilter.CycleState

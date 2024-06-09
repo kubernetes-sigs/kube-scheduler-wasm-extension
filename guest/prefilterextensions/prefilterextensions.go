@@ -21,11 +21,7 @@ package prefilterextensions
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 )
 
 // prefilterextensions is the current plugin assigned with SetPlugin.
@@ -38,40 +34,4 @@ func SetPlugin(preFilterExtensions api.PreFilterExtensions) {
 	}
 	prefilterextensions = preFilterExtensions
 	plugin.MustSet(prefilterextensions)
-}
-
-// prevent unused lint errors (lint is run with normal go).
-var (
-	_ func() uint32 = _addpod
-	_ func() uint32 = _removepod
-)
-
-// _addPod is only exported to the host.
-//
-//export addpod
-func _addpod() uint32 { //nolint
-	if prefilterextensions == nil { // Then, the user didn't define one.
-		// Unlike most plugins we always export reserve so that we can reset
-		// the cycle state: return success to avoid no-op overhead.
-		return 0
-	}
-
-	status := prefilterextensions.AddPod(cyclestate.Values, prefilter.Pod, &filter.PodInfo{}, &filter.NodeInfo{})
-
-	return imports.StatusToCode(status)
-}
-
-// _removePod is only exported to the host.
-//
-//export removepod
-func _removepod() uint32 { //nolint
-	if prefilterextensions == nil { // Then, the user didn't define one.
-		// Unlike most plugins we always export unreserve so that we can reset
-		// the cycle state: return success to avoid no-op overhead.
-		return 0
-	}
-
-	status := prefilterextensions.RemovePod(cyclestate.Values, prefilter.Pod, &filter.PodInfo{}, &filter.NodeInfo{})
-
-	return imports.StatusToCode(status)
 }
