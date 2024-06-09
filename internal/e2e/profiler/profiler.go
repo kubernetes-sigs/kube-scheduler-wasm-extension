@@ -59,7 +59,6 @@ func main() {
 	cpu := p.CPUProfiler()
 	mem := p.MemoryProfiler()
 
-	// Use `WithFunctionListenerFactory` instead of ``FunctionListenerFactoryKey`.
 	ctx := experimental.WithFunctionListenerFactory(
 		context.Background(),
 		experimental.MultiFunctionListenerFactory(
