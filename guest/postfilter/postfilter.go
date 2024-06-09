@@ -21,7 +21,6 @@ import (
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
@@ -77,7 +76,7 @@ func _postfilter() uint64 { //nolint
 
 	// The parameters passed are lazy with regard to host functions. This means
 	// a no-op plugin should not have any unmarshal penalty.
-	nominatedNodeName, nominatingMode, status := postfilter.PostFilter(cyclestate.Values, prefilter.Pod, &nodeToStatus{})
+	nominatedNodeName, nominatingMode, status := postfilter.PostFilter(prefilter.CycleState, prefilter.Pod, &nodeToStatus{})
 	ptr, size := mem.StringToPtr(nominatedNodeName)
 	setNominatedNodeNameResult(ptr, size)
 	runtime.KeepAlive(nominatedNodeName) // until ptr is no longer needed.

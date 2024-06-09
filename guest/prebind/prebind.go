@@ -16,7 +16,6 @@ package prebind
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
@@ -69,7 +68,7 @@ func _prebind() uint32 { //nolint
 	nodeName := imports.NodeName()
 	// The parameters passed are lazy with regard to host functions. This means
 	// a no-op plugin should not have any unmarshal penalty.
-	s := prebind.PreBind(cyclestate.Values, prefilter.Pod, nodeName)
+	s := prebind.PreBind(prefilter.CycleState, prefilter.Pod, nodeName)
 
 	return imports.StatusToCode(s)
 }
