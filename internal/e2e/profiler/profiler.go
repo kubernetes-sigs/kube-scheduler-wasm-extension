@@ -58,8 +58,9 @@ func main() {
 	p := wzprof.ProfilingFor(guestBin)
 	cpu := p.CPUProfiler()
 	mem := p.MemoryProfiler()
-	ctx := context.WithValue(context.Background(),
-		experimental.FunctionListenerFactoryKey{},
+
+	ctx := experimental.WithFunctionListenerFactory(
+		context.Background(),
 		experimental.MultiFunctionListenerFactory(
 			wzprof.Sample(sampleRate, cpu),
 			wzprof.Sample(sampleRate, mem),
