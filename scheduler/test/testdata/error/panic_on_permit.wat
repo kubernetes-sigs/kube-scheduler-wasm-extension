@@ -14,7 +14,7 @@
   (data (i32.const 8) "panic!") ;; iovs[0]
 
   ;; On permit, write "panic!" to stdout and crash.
-  (func (export "permit") (result i32)
+  (func (export "permit") (result i64)
     ;; Write the panic to stdout via its iovec [offset, len].
     (call $wasi.fd_write
       (i32.const 1) ;; stdout
@@ -25,6 +25,5 @@
     drop ;; ignore the errno returned
 
     ;; Issue the unreachable instruction instead of returning a code
-    (unreachable)
-  )
+    (unreachable))
 )

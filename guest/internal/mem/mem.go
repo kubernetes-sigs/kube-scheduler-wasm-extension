@@ -53,15 +53,6 @@ func BytesToPtr(b []byte) (uint32, uint32) {
 	return uint32(uintptr(ptr)), uint32(len(b))
 }
 
-// Int64ToPtr returns a pointer for the given int64 number in a way compatible
-// with WebAssembly numeric types.
-// The returned pointer aliases the number hence it must be kept alive until ptr
-// is no longer needed.
-func Int64ToPtr(n int64) uint32 {
-	ptr := unsafe.Pointer(&n)
-	return uint32(uintptr(ptr))
-}
-
 // Update is for decoding values from memory. The updater doesn't keep a
 // reference to the underlying bytes, so we don't need to copy them.
 func Update(

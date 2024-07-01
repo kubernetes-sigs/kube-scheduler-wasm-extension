@@ -251,10 +251,10 @@ func (g *guest) permit(ctx context.Context) (*framework.Status, time.Duration) {
 		return framework.AsStatus(decorateError(g.out, guestExportPermit, err)), 0
 	}
 
-	timeout := paramsFromContext(ctx).resultTimeout
-	statusCode := int32(callStack[0])
+	statusCode := int32(callStack[0] >> 32)
+	timeoutMilliSeconds := int32(callStack[0])
 	statusReason := paramsFromContext(ctx).resultStatusReason
-	return framework.NewStatus(framework.Code(statusCode), statusReason), timeout
+	return framework.NewStatus(framework.Code(statusCode), statusReason), time.Duration(timeoutMilliSeconds) * time.Millisecond
 }
 
 // preBind calls guestExportPreBind.
@@ -355,8 +355,8 @@ func detectInterfaces(exportedFns map[string]wazeroapi.FunctionDefinition) (inte
 			}
 			e |= iReservePlugin
 		case guestExportPermit:
-			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i32}) {
-				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i32)", name)
+			if len(f.ParamTypes()) != 0 || !bytes.Equal(f.ResultTypes(), []wazeroapi.ValueType{i64}) {
+				return 0, fmt.Errorf("wasm: guest exports the wrong signature for func[%s]. should be () -> (i64)", name)
 			}
 			e |= iPermitPlugin
 		case guestExportPreBind:

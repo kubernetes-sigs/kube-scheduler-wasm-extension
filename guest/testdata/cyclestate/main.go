@@ -20,7 +20,6 @@ package main
 
 import (
 	"os"
-	"time"
 	"unsafe"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
@@ -190,7 +189,7 @@ func (statePlugin) Unreserve(state api.CycleState, pod proto.Pod, nodeName strin
 	mustFilterState(state)
 }
 
-func (statePlugin) Permit(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status, timeout time.Duration) {
+func (statePlugin) Permit(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status, timeout uint32) {
 	mustFilterState(state)
 	return
 }

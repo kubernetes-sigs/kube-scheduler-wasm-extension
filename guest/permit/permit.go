@@ -18,12 +18,9 @@
 package permit
 
 import (
-	"runtime"
-
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 )
 
@@ -42,7 +39,7 @@ var permit api.PermitPlugin
 //
 //	type permitPlugin struct{}
 //
-//	func (permitPlugin) Permit(state api.CycleState, p proto.Pod, nodeName string) (status *api.Status, timeout time.Duration)
+//	func (permitPlugin) Permit(state api.CycleState, p proto.Pod, nodeName string) (status *api.Status, timeout uint32)
 //		// Write state you need on Permit
 //	}
 func SetPlugin(permitPlugin api.PermitPlugin) {
@@ -54,12 +51,12 @@ func SetPlugin(permitPlugin api.PermitPlugin) {
 }
 
 // prevent unused lint errors (lint is run with normal go).
-var _ func() uint32 = _permit
+var _ func() uint64 = _permit
 
 // _permit is only exported to the host.
 //
 //export permit
-func _permit() uint32 {
+func _permit() uint64 {
 	if permit == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export permit so that we can reset
 		// the cycle state: return success to avoid no-op overhead.
@@ -70,9 +67,7 @@ func _permit() uint32 {
 	nodeName := imports.NodeName()
 	status, timeout := permit.Permit(cyclestate.Values, pod, nodeName)
 
-	ptr := mem.Int64ToPtr(int64(timeout))
-	setTimeoutResult(ptr)
-	runtime.KeepAlive(timeout) // untir ptr is no longer needed.
-
-	return imports.StatusToCode(status)
+	// Pack the score and status code into a single WebAssembly 1.0 compatible
+	// result
+	return (uint64(imports.StatusToCode(status)) << uint64(32)) | uint64(timeout)
 }

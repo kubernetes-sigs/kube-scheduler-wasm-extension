@@ -17,8 +17,6 @@
 package api
 
 import (
-	"time"
-
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 )
 
@@ -130,7 +128,8 @@ type ReservePlugin interface {
 type PermitPlugin interface {
 	Plugin
 
-	Permit(state CycleState, p proto.Pod, nodeName string) (*Status, time.Duration)
+	// Note: This is uint32, not time.Duration. See /RATIONALE.md for why.
+	Permit(state CycleState, p proto.Pod, nodeName string) (status *Status, timeoutMilliSeconds uint32)
 }
 
 // PreBindPlugin is a WebAssembly implementation of framework.PreBindPlugin.

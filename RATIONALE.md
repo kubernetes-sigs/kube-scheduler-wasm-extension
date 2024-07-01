@@ -223,6 +223,17 @@ result, not a parameter. The only impact would be to new plugins or those
 ported to WebAssembly. We do not expect limiting the scores to two billion
 above the valid range to be a practical concern for these authors.
 
+### Why does the Permit function return a uint32 representing milliseconds for the timeout, not `time.Duration`?
+
+`framework.PermitPlugin` returns `time.Duration` to represent the timeout.
+`time.Duration` is int64 underneath and 1 time.Duration represents 1 nanosecond.
+
+Given the scheduling throughput in the upstream kube-scheduler is around 300 pods/s, 
+that is, 3+ milliseconds per pod,
+we consider a millisecond-level timeout with uint32 to be sufficiently fine-grained.
+
+Also, tha maximum timeout is around 24 days, which also should be large enough.
+
 ## Why do we return a non-status, second numeric result as an i32?
 
 Most compilers that target WebAssembly Core Specification 1.0, the only REC

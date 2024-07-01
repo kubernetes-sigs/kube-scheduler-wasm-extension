@@ -35,7 +35,7 @@ func main() {
 
 type permitPlugin struct{}
 
-func (permitPlugin) Permit(state api.CycleState, pod proto.Pod, nodeName string) (*api.Status, time.Duration) {
+func (permitPlugin) Permit(state api.CycleState, pod proto.Pod, nodeName string) (*api.Status, uint32) {
 	status, timeout := api.StatusCodeSuccess, time.Duration(0)
 	if nodeName == "bad" {
 		status = api.StatusCodeError
@@ -43,5 +43,5 @@ func (permitPlugin) Permit(state api.CycleState, pod proto.Pod, nodeName string)
 		status = api.StatusCodeWait
 		timeout = 10 * time.Second
 	}
-	return &api.Status{Code: status, Reason: "name is " + nodeName}, timeout
+	return &api.Status{Code: status, Reason: "name is " + nodeName}, uint32(timeout.Milliseconds())
 }

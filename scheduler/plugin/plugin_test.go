@@ -61,7 +61,12 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 	_, status := pl.PreFilter(ctx, nil, pod)
 	if !status.IsSuccess() {
-		t.Fatalf("prefilter failed: %v", status)
+		t.Fatalf("prefilter failed: %v", status.Reasons())
+	}
+
+	status = pl.Filter(ctx, nil, pod, nil)
+	if !status.IsSuccess() {
+		t.Fatalf("filter failed: %v", status.Reasons())
 	}
 
 	if pl.GetScheduledPodUID() != pod.UID {
@@ -71,7 +76,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	// pod is going to the binding cycle.
 	status, _ = pl.Permit(ctx, nil, pod, "node")
 	if !status.IsSuccess() {
-		t.Fatalf("filter failed: %v", status)
+		t.Fatalf("permit failed: %v", status.Reasons())
 	}
 
 	if len(pl.GetBindingCycles()) != 1 {
@@ -82,16 +87,21 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 	_, status = pl.PreFilter(ctx, nil, nextPod)
 	if !status.IsSuccess() {
-		t.Fatalf("PreFilter failed: %v", status)
+		t.Fatalf("PreFilter failed: %v", status.Reasons())
 	}
 
 	if want, have := nextPod.UID, pl.GetScheduledPodUID(); want != have {
 		t.Fatalf("unexpected pod UID: want %v, have %v", want, have)
 	}
 
+	status = pl.Filter(ctx, nil, pod, nil)
+	if !status.IsSuccess() {
+		t.Fatalf("filter failed: %v", status.Reasons())
+	}
+
 	status, _ = pl.Permit(ctx, nil, nextPod, "node")
 	if !status.IsSuccess() {
-		t.Fatalf("filter failed: %v", status)
+		t.Fatalf("filter failed: %v", status.Reasons())
 	}
 
 	if len(pl.GetBindingCycles()) != 2 {
@@ -121,13 +131,13 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	// nextPod is going to PreBind process.
 	status = pl.PreBind(ctx, nil, nextPod, "node")
 	if !status.IsSuccess() {
-		t.Fatalf("prebind failed: %v", status)
+		t.Fatalf("prebind failed: %v", status.Reasons())
 	}
 
 	// nextPod is going to Bind process.
 	status = pl.Bind(ctx, nil, nextPod, "node")
 	if !status.IsSuccess() {
-		t.Fatalf("bind failed: %v", status)
+		t.Fatalf("bind failed: %v", status.Reasons())
 	}
 
 	// nextPod is rejected in the binding cycle.
@@ -1109,7 +1119,7 @@ func TestPermit(t *testing.T) {
 			expectedStatusMessage: "name is bad",
 		},
 		{
-			name:                  "Error",
+			name:                  "Wait",
 			pod:                   test.PodSmall,
 			nodeName:              "wait",
 			expectedStatusCode:    framework.Wait,
@@ -1137,7 +1147,7 @@ func TestPermit(t *testing.T) {
 			guestURL:              test.URLErrorPanicOnPermit,
 			pod:                   test.PodSmall,
 			expectedStatusCode:    framework.Error,
-			expectedStatusMessage: "wasm: permit error: panic!\nwasm error: unreachable\nwasm stack trace:\n\tpanic_on_permit.$1() i32",
+			expectedStatusMessage: "wasm: permit error: panic!\nwasm error: unreachable\nwasm stack trace:\n\tpanic_on_permit.$1() i64",
 		},
 	}
 
