@@ -47,8 +47,12 @@ jobs:
 
       - name: "Set up wat2wasm"
         run: |  # Needed for testdata. wabt includes wat2wasm.
-          wabt_version=1.0.33
-          wabt_url=https://github.com/WebAssembly/wabt/releases/download/${wabt_version}/wabt-${wabt_version}-ubuntu.tar.gz
+          wabt_version=1.0.35
+          wabt_url=https://github.com/WebAssembly/wabt/releases/download/${wabt_version}/wabt-${wabt_version}-ubuntu-20.04.tar.gz
           curl -sSL ${wabt_url} | tar --strip-components 2 -C /usr/local/bin -xzf - wabt-${wabt_version}/bin/wat2wasm
 
-      - run: make testdata
+      - name: "generate testdata"
+        run: make testdata
+
+      - name: Check diff
+        run: git diff --exit-code -- .

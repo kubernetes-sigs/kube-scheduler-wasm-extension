@@ -9,7 +9,7 @@
 
   (func (export "postbind")
     (if (i32.eq (global.get $flag) (i32.const 1))
-      (unreachable)
+      (then unreachable)
     )
   )
 
