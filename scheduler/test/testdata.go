@@ -36,6 +36,8 @@ var URLErrorPanicOnScore = localURL(pathWatError("panic_on_score"))
 
 var URLErrorPanicOnReserve = localURL(pathWatError("panic_on_reserve"))
 
+var URLErrorPanicOnPermit = localURL(pathWatError("panic_on_permit"))
+
 var URLErrorPanicOnPreBind = localURL(pathWatError("panic_on_prebind"))
 
 var URLErrorPanicOnBind = localURL(pathWatError("panic_on_bind"))
@@ -73,6 +75,10 @@ var URLTestScoreFromGlobal = localURL(pathWatTest("score_from_global"))
 var URLTestReserve = localURL(pathTinyGoTest("reserve"))
 
 var URLTestReserveFromGlobal = localURL(pathWatTest("reserve_from_global"))
+
+var URLTestPermit = localURL(pathTinyGoTest("permit"))
+
+var URLTestPermitFromGlobal = localURL(pathWatTest("permit_from_global"))
 
 var URLTestPreBindFromGlobal = localURL(pathWatTest("prebind_from_global"))
 
