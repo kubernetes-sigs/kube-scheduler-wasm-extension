@@ -36,15 +36,13 @@ guest/.tinygo-target.json: scheduler/go.mod
 
 .PHONY: build-wat
 build-wat: $(wildcard scheduler/test/testdata/*/*.wat)
-	@for f in $^; do \
+	@set -e; for f in $^; do \
         wasm=$$(echo $$f | sed -e 's/\.wat/\.wasm/'); \
 		wat2wasm -o $$wasm --debug-names $$f; \
 	done
 
 .PHONY: testdata
-testdata:
-	@$(MAKE) build-tinygo
-	@$(MAKE) build-wat
+testdata: build-tinygo build-wat
 
 .PHONY: profile
 profile: examples/advanced/main-debug.wasm
