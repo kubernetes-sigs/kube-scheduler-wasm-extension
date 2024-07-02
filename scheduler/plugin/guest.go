@@ -252,7 +252,7 @@ func (g *guest) permit(ctx context.Context) (*framework.Status, time.Duration) {
 	}
 
 	statusCode := int32(callStack[0] >> 32)
-	timeoutMilliSeconds := int32(callStack[0])
+	timeoutMilliSeconds := uint32(callStack[0])
 	statusReason := paramsFromContext(ctx).resultStatusReason
 	return framework.NewStatus(framework.Code(statusCode), statusReason), time.Duration(timeoutMilliSeconds) * time.Millisecond
 }
