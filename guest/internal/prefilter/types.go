@@ -2,14 +2,10 @@ package prefilter
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
-
-// Pod is exposed for the cyclestate package.
-var Pod proto.Pod = pod{}
 
 // CycleState is exposed for the cyclestate package.
 var CycleState api.CycleState = cycleState{}
@@ -59,10 +55,6 @@ func (pod) GetApiVersion() string {
 
 func (pod) Spec() *protoapi.PodSpec {
 	return lazyPod().Spec
-}
-
-func (pod) Status() *protoapi.PodStatus {
-	return lazyPod().Status
 }
 
 var currentPod *protoapi.Pod

@@ -191,21 +191,41 @@ func (pl *wasmPlugin) EventsToRegister() (clusterEvents []framework.ClusterEvent
 var _ framework.PreFilterExtensions = (*wasmPlugin)(nil)
 
 // AddPod implements the same method as documented on framework.PreFilterExtensions.
-func (pl *wasmPlugin) AddPod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToAdd *framework.PodInfo, nodeInfo *framework.NodeInfo) *framework.Status {
+func (pl *wasmPlugin) AddPod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToAdd *framework.PodInfo, nodeInfo *framework.NodeInfo) (status *framework.Status) {
 	// We implement PreFilterExtensions with FilterPlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPreFilterExtensions == 0 {
 		return nil // unimplemented
 	}
-	panic("TODO: scheduling: AddPod")
+
+	// Add the stack to the go context so that the corresponding host function
+	// can look them up.
+	params := &stack{pod: podToSchedule, targetPod: podInfoToAdd.Pod, node: nodeInfo.Node()}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
+		status = g.addPod(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	return status
 }
 
 // RemovePod implements the same method as documented on framework.PreFilterExtensions.
-func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToRemove *framework.PodInfo, nodeInfo *framework.NodeInfo) *framework.Status {
+func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToRemove *framework.PodInfo, nodeInfo *framework.NodeInfo) (status *framework.Status) {
 	// We implement PreFilterExtensions with FilterPlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPreFilterExtensions == 0 {
 		return nil // unimplemented
 	}
-	panic("TODO: scheduling: RemovePod")
+
+	// Add the stack to the go context so that the corresponding host function
+	// can look them up.
+	params := &stack{pod: podToSchedule, targetPod: podInfoToRemove.Pod, node: nodeInfo.Node()}
+	ctx = context.WithValue(ctx, stackKey{}, params)
+	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
+		status = g.removePod(ctx)
+	}); err != nil {
+		status = framework.AsStatus(err)
+	}
+	return status
 }
 
 var _ framework.PreFilterPlugin = (*wasmPlugin)(nil)

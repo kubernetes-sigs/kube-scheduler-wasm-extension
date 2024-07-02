@@ -21,10 +21,10 @@ package prescore
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/prefilter"
 	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
@@ -79,9 +79,9 @@ func _prescore() uint32 {
 	}
 
 	// Pod is lazy and the same value for all plugins in a scheduling cycle.
-	pod := cyclestate.Pod
+	pod := prefilter.Pod
 
-	s := prescore.PreScore(cyclestate.Values, pod, &nodeList{})
+	s := prescore.PreScore(prefilter.CycleState, pod, &nodeList{})
 
 	return imports.StatusToCode(s)
 }

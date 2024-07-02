@@ -15,7 +15,7 @@
 */
 
 // Package enqueue is defined internally so that it can export Pod as
-// cyclestate.Pod, without circular dependencies or exporting it publicly.
+// prefilter.Pod, without circular dependencies or exporting it publicly.
 package enqueue
 
 import (
