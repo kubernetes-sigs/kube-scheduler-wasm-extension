@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/bind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/permit"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postbind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
@@ -67,6 +68,7 @@ func main() {
 	score.SetPlugin(plugin)
 	scoreextensions.SetPlugin(plugin)
 	reserve.SetPlugin(plugin)
+	permit.SetPlugin(plugin)
 	prebind.SetPlugin(plugin)
 	bind.SetPlugin(plugin)
 	postbind.SetPlugin(plugin)
@@ -185,6 +187,11 @@ func (statePlugin) Reserve(state api.CycleState, pod proto.Pod, nodeName string)
 
 func (statePlugin) Unreserve(state api.CycleState, pod proto.Pod, nodeName string) {
 	mustFilterState(state)
+}
+
+func (statePlugin) Permit(state api.CycleState, pod proto.Pod, nodeName string) (status *api.Status, timeout uint32) {
+	mustFilterState(state)
+	return
 }
 
 func (statePlugin) PreBind(state api.CycleState, pod proto.Pod, _ string) (status *api.Status) {

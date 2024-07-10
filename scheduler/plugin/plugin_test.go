@@ -30,6 +30,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -60,7 +61,12 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 	_, status := pl.PreFilter(ctx, nil, pod)
 	if !status.IsSuccess() {
-		t.Fatalf("prefilter failed: %v", status)
+		t.Fatalf("prefilter failed: %v", status.Reasons())
+	}
+
+	status = pl.Filter(ctx, nil, pod, nil)
+	if !status.IsSuccess() {
+		t.Fatalf("filter failed: %v", status.Reasons())
 	}
 
 	if pl.GetScheduledPodUID() != pod.UID {
@@ -70,7 +76,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	// pod is going to the binding cycle.
 	status, _ = pl.Permit(ctx, nil, pod, "node")
 	if !status.IsSuccess() {
-		t.Fatalf("filter failed: %v", status)
+		t.Fatalf("permit failed: %v", status.Reasons())
 	}
 
 	if len(pl.GetBindingCycles()) != 1 {
@@ -81,16 +87,21 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 
 	_, status = pl.PreFilter(ctx, nil, nextPod)
 	if !status.IsSuccess() {
-		t.Fatalf("PreFilter failed: %v", status)
+		t.Fatalf("PreFilter failed: %v", status.Reasons())
 	}
 
 	if want, have := nextPod.UID, pl.GetScheduledPodUID(); want != have {
 		t.Fatalf("unexpected pod UID: want %v, have %v", want, have)
 	}
 
+	status = pl.Filter(ctx, nil, pod, nil)
+	if !status.IsSuccess() {
+		t.Fatalf("filter failed: %v", status.Reasons())
+	}
+
 	status, _ = pl.Permit(ctx, nil, nextPod, "node")
 	if !status.IsSuccess() {
-		t.Fatalf("filter failed: %v", status)
+		t.Fatalf("filter failed: %v", status.Reasons())
 	}
 
 	if len(pl.GetBindingCycles()) != 2 {
@@ -120,13 +131,13 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 	// nextPod is going to PreBind process.
 	status = pl.PreBind(ctx, nil, nextPod, "node")
 	if !status.IsSuccess() {
-		t.Fatalf("prebind failed: %v", status)
+		t.Fatalf("prebind failed: %v", status.Reasons())
 	}
 
 	// nextPod is going to Bind process.
 	status = pl.Bind(ctx, nil, nextPod, "node")
 	if !status.IsSuccess() {
-		t.Fatalf("bind failed: %v", status)
+		t.Fatalf("bind failed: %v", status.Reasons())
 	}
 
 	// nextPod is rejected in the binding cycle.
@@ -187,7 +198,6 @@ func TestNew_maskInterfaces(t *testing.T) {
 		expectedFilter  bool
 		expectedScore   bool
 		expectedReserve bool
-		expectedPermit  bool
 		expectedBind    bool
 		expectedError   string
 	}{
@@ -247,9 +257,6 @@ func TestNew_maskInterfaces(t *testing.T) {
 			}
 			if _, ok := p.(wasm.ReservePlugin); tc.expectedReserve != ok {
 				t.Fatalf("unexpected ReservePlugin %v", p)
-			}
-			if _, ok := p.(wasm.PermitPlugin); tc.expectedPermit != ok {
-				t.Fatalf("unexpected PermitPlugin %v", p)
 			}
 			if _, ok := p.(wasm.BindPlugin); tc.expectedBind != ok {
 				t.Fatalf("unexpected BindPlugin %v", p)
@@ -1081,6 +1088,97 @@ func TestReserve(t *testing.T) {
 			// if want, have := tc.expectedUnreserveError, extractMessage(klogErr); cmp.Diff(x, y, opts) != have {
 			if diff := cmp.Diff(tc.expectedUnreserveError, extractMessage(klogErr)); diff != "" {
 				t.Fatalf("unexpected unreserve error: %s", diff)
+			}
+		})
+	}
+}
+
+func TestPermit(t *testing.T) {
+	tests := []struct {
+		name                  string
+		guestURL              string
+		args                  []string
+		globals               map[string]int32
+		pod                   *v1.Pod
+		nodeName              string
+		expectedStatusCode    framework.Code
+		expectedStatusMessage string
+		expectedTimeout       time.Duration
+	}{
+		{
+			name:               "Success",
+			pod:                test.PodSmall,
+			nodeName:           "good",
+			expectedStatusCode: framework.Success,
+		},
+		{
+			name:                  "Error",
+			pod:                   test.PodSmall,
+			nodeName:              "bad",
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "name is bad",
+		},
+		{
+			name:                  "Wait",
+			pod:                   test.PodSmall,
+			nodeName:              "wait",
+			expectedStatusCode:    framework.Wait,
+			expectedStatusMessage: "name is wait",
+			expectedTimeout:       10 * time.Second,
+		},
+		{
+			name:               "min statusCode",
+			guestURL:           test.URLTestPermitFromGlobal,
+			pod:                test.PodSmall,
+			nodeName:           test.NodeSmall.Name,
+			globals:            map[string]int32{"status_code": math.MinInt32},
+			expectedStatusCode: math.MinInt32,
+		},
+		{
+			name:               "max statusCode",
+			guestURL:           test.URLTestPermitFromGlobal,
+			pod:                test.PodSmall,
+			nodeName:           test.NodeSmall.Name,
+			globals:            map[string]int32{"status_code": math.MaxInt32},
+			expectedStatusCode: math.MaxInt32,
+		},
+		{
+			name:                  "panic",
+			guestURL:              test.URLErrorPanicOnPermit,
+			pod:                   test.PodSmall,
+			expectedStatusCode:    framework.Error,
+			expectedStatusMessage: "wasm: permit error: panic!\nwasm error: unreachable\nwasm stack trace:\n\tpanic_on_permit.$1() i64",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			if guestURL == "" {
+				guestURL = test.URLTestPermit
+			}
+
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			if len(tc.globals) > 0 {
+				pl := wasm.NewTestWasmPlugin(p)
+				pl.SetGlobals(tc.globals)
+			}
+
+			cycleState := framework.NewCycleState()
+			status, timeout := p.(framework.PermitPlugin).Permit(ctx, cycleState, tc.pod, tc.nodeName)
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedStatusMessage, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+			if want, have := tc.expectedTimeout, timeout; want != have {
+				t.Fatalf("unexpected timeout: want %v, have %v", want, have)
 			}
 		})
 	}
