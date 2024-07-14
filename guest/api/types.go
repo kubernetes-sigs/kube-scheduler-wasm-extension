@@ -59,6 +59,14 @@ type PreFilterPlugin interface {
 	PreFilter(state CycleState, pod proto.Pod) (nodeNames []string, status *Status)
 }
 
+// PreFilterExtensions is a WebAssembly implementation of framework.PrefFilterExtensions.
+type PreFilterExtensions interface {
+	Plugin
+
+	AddPod(state CycleState, podToSchedule proto.Pod, podInfoToAdd PodInfo, nodeInfo NodeInfo) *Status
+	RemovePod(state CycleState, podToSchedule proto.Pod, podInfoToRemove PodInfo, nodeInfo NodeInfo) *Status
+}
+
 // FilterPlugin is a WebAssembly implementation of framework.FilterPlugin.
 //
 // Note: The pod and nodeInfo parameters are lazy to avoid unmarshal overhead
@@ -158,6 +166,13 @@ type NodeInfo interface {
 	proto.Metadata
 
 	Node() proto.Node
+}
+
+type PodInfo interface {
+	// Metadata is a convenience that triggers Get.
+	proto.Metadata
+
+	Pod() proto.Pod
 }
 
 // NodeToStatus contains which Node got which status during the scheduling cycle.

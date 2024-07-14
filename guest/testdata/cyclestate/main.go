@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prebind"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilterextensions"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/reserve"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
@@ -62,6 +63,7 @@ func main() {
 	plugin := statePlugin{}
 	enqueue.SetPlugin(plugin)
 	prefilter.SetPlugin(plugin)
+	prefilterextensions.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
 	postfilter.SetPlugin(plugin)
 	prescore.SetPlugin(plugin)
@@ -227,6 +229,14 @@ func (statePlugin) PostBind(state api.CycleState, pod proto.Pod, _ string) {
 	} else if _, ok = val.(preBindStateVal)["bind"]; !ok {
 		panic("bind value lost propagating from bind")
 	}
+}
+
+func (statePlugin) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd api.PodInfo, nodeInfo api.NodeInfo) (status *api.Status) {
+	return
+}
+
+func (statePlugin) RemovePod(state api.CycleState, pod proto.Pod, podInfoToAdd api.PodInfo, nodeInfo api.NodeInfo) (status *api.Status) {
+	return
 }
 
 // mustNotScoreState ensures that score state, written after filter, cannot

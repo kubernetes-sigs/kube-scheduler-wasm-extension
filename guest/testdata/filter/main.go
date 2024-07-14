@@ -24,12 +24,14 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/filter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/postfilter"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilter"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prefilterextensions"
 )
 
 type extensionPoints interface {
 	api.PreFilterPlugin
 	api.FilterPlugin
 	api.PostFilterPlugin
+	api.PreFilterExtensions
 }
 
 func main() {
@@ -44,11 +46,14 @@ func main() {
 			plugin = preFilterPlugin{}
 		case "postFilter":
 			plugin = postFilterPlugin{}
+		case "preFilterExtensions":
+			plugin = preFilterExtensions{}
 		}
 	}
 	prefilter.SetPlugin(plugin)
 	filter.SetPlugin(plugin)
 	postfilter.SetPlugin(plugin)
+	prefilterextensions.SetPlugin(plugin)
 }
 
 // noopPlugin doesn't do anything, except evaluate each parameter.
@@ -71,6 +76,20 @@ func (noopPlugin) PostFilter(state api.CycleState, pod proto.Pod, nodeMap api.No
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
 	_ = nodeMap.Map()
+	return
+}
+
+func (noopPlugin) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd api.PodInfo, nodeInfo api.NodeInfo) (status *api.Status) {
+	_, _ = state.Read("ok")
+	_ = pod.Spec()
+	_ = nodeInfo.Node().Spec() // trigger lazy loading
+	return
+}
+
+func (noopPlugin) RemovePod(state api.CycleState, pod proto.Pod, podInfoToRemove api.PodInfo, nodeInfo api.NodeInfo) (status *api.Status) {
+	_, _ = state.Read("ok")
+	_ = pod.Spec()
+	_ = nodeInfo.Node().Spec() // trigger lazy loading
 	return
 }
 
@@ -132,4 +151,26 @@ func (postFilterPlugin) PostFilter(_ api.CycleState, pod proto.Pod, nodeMap api.
 		Code:   api.StatusCodeUnschedulableAndUnresolvable,
 		Reason: podSpecNodeName + " is unschedulable",
 	}
+}
+
+type preFilterExtensions struct{ noopPlugin }
+
+func (preFilterExtensions) AddPod(state api.CycleState, pod proto.Pod, podInfoToAdd api.PodInfo, nodeInfo api.NodeInfo) *api.Status {
+	nodeName := nodeInfo.Node().GetName()
+	state.Write(nodeName+pod.Spec().GetNodeName(), "ok")
+	status := 0
+	if nodeName == "bad" {
+		status = 1
+	}
+	return &api.Status{Code: api.StatusCode(status), Reason: "Node name is " + nodeName + " " + "and PodInfo name is " + podInfoToAdd.Pod().GetName()}
+}
+
+func (preFilterExtensions) RemovePod(state api.CycleState, pod proto.Pod, podInfoToRemove api.PodInfo, nodeInfo api.NodeInfo) *api.Status {
+	nodeName := nodeInfo.Node().GetName()
+	state.Write(nodeName+pod.Spec().GetNodeName(), "ok")
+	status := 0
+	if nodeName == "bad" {
+		status = 1
+	}
+	return &api.Status{Code: api.StatusCode(status), Reason: "Node name is " + nodeName + " " + "and PodInfo name is " + podInfoToRemove.Pod().GetName()}
 }

@@ -91,3 +91,41 @@ func (o *Node) Spec() *protoapi.NodeSpec {
 func (o *Node) Status() *protoapi.NodeStatus {
 	return o.Msg.Status
 }
+
+var _ proto.Pod = (*Pod)(nil)
+
+type Pod struct {
+	Msg *protoapi.Pod
+}
+
+func (o *Pod) GetName() string {
+	return GetName(o.Msg)
+}
+
+func (o *Pod) GetNamespace() string {
+	return GetNamespace(o.Msg)
+}
+
+func (o *Pod) GetUid() string {
+	return GetUid(o.Msg)
+}
+
+func (o *Pod) GetResourceVersion() string {
+	return GetResourceVersion(o.Msg)
+}
+
+func (o *Pod) GetKind() string {
+	return "Pod"
+}
+
+func (o *Pod) GetApiVersion() string {
+	return "v1"
+}
+
+func (o *Pod) Spec() *protoapi.PodSpec {
+	return o.Msg.Spec
+}
+
+func (o *Pod) Status() *protoapi.PodStatus {
+	return o.Msg.Status
+}

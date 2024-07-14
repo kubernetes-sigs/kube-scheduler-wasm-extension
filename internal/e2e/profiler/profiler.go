@@ -52,6 +52,10 @@ func main() {
 	pod := test.PodReal
 	ni := framework.NewNodeInfo()
 	ni.SetNode(node)
+	pi, err := framework.NewPodInfo(pod)
+	if err != nil {
+		log.Panicln("error creating pod info:", err)
+	}
 
 	// Configure the profiler, which integrates via context configuration.
 	sampleRate := 1.0
@@ -84,7 +88,7 @@ func main() {
 
 	// Profile around the functions used in the example
 	cpu.StartProfile()
-	e2e.RunAll(ctx, testing{}, plugin, pod, ni)
+	e2e.RunAll(ctx, testing{}, plugin, pod, ni, pi)
 	cpuProfile := cpu.StopProfile(sampleRate)
 	memProfile := mem.NewProfile(sampleRate)
 

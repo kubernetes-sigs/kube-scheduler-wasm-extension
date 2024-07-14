@@ -46,6 +46,8 @@ var URLErrorPanicOnPostBind = localURL(pathWatError("panic_on_postbind"))
 
 var URLErrorPanicOnScoreExtensions = localURL(pathWatError("panic_on_scoreextensions"))
 
+var URLErrorPanicOnPreFilterExtensions = localURL(pathWatError("panic_on_prefilterextensions"))
+
 var URLErrorScoreExtensionsWithoutScore = localURL(pathWatError("scoreextensions_without_score"))
 
 var URLErrorPanicOnStart = localURL(pathWatError("panic_on_start"))
@@ -91,6 +93,8 @@ var URLTestBind = localURL(pathTinyGoTest("bind"))
 var URLTestScoreExtensionsFromGlobal = localURL(pathWatTest("scoreextensions_from_global"))
 
 var URLTestHandle = localURL(pathTinyGoTest("handle"))
+
+var URLTestPreFilterExtensionsFromGlobal = localURL(pathWatTest("prefilterextensions_from_global"))
 
 //go:embed testdata/yaml/node.yaml
 var yamlNodeReal string
