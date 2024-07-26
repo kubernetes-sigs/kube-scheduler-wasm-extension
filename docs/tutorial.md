@@ -31,17 +31,17 @@ apiVersion: kubescheduler.config.k8s.io/v1
 kind: KubeSchedulerConfiguration
 profiles:
   - plugins:
-      multipoint:
+      multiPoint:
         enabled:
            - name: wasmplugin1
            - name: wasmplugin2
-     pluginConfig:
+      pluginConfig:
        - name: wasmplugin1
           args:
-            guestPath: "/path/to/wasm-plugin1"
+            guestURL: "file://path/to/wasm-plugin1"
        - name: wasmplugin2
           args:
-            guestPath: "/path/to/wasm-plugin2"
+            guestURL: "https://url/to/wasm-plugin2"
 ```
 
 - A wasm plugin **must** be enabled via `multiPoint` even if your wasm plugin only uses some of extension points.
