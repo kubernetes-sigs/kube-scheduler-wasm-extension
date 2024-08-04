@@ -8,4 +8,4 @@ profiles:
     pluginConfig:
       - name: wasm
         args:
-          guestPath: "../../../examples/nodenumber/main.wasm"
+          guestURL: "file://../../../examples/nodenumber/main.wasm"
