@@ -54,6 +54,7 @@ const (
 	k8sSchedulerResultNormalizedScoreList = "result.normalized_score_list"
 	k8sSchedulerHandleEventRecorderEventf = "handle.eventrecorder.eventf"
 	k8sSchedulerHandleRejectWaitingPod    = "handle.reject_waiting_pod"
+	k8sSchedulerHandleGetWaitingPod       = "handle.get_waiting_pod"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime, handle framework.Handle) (wazeroapi.Module, error) {
@@ -131,6 +132,9 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleRejectWaitingPodFn), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleRejectWaitingPod).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleGetWaitingPodFn), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleGetWaitingPod).
 		Instantiate(ctx)
 }
 
@@ -603,4 +607,29 @@ func (h host) k8sHandleRejectWaitingPodFn(ctx context.Context, mod wazeroapi.Mod
 		wasmBool = uint64(1)
 	}
 	writeUint64(mod.Memory(), wasmBool, oBuf, oBufLimit)
+}
+
+func (h host) k8sHandleGetWaitingPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	iBuf := uint32(stack[0])
+	iBufLen := uint32(stack[1])
+	oBuf := uint32(stack[2])
+	oBufLimit := uint32(stack[3])
+
+	b, ok := mod.Memory().Read(iBuf, iBufLen)
+	if !ok {
+		panic("out of memory reading getWaitingPod")
+	}
+	uid := types.UID(b)
+	waitingPod := h.handle.GetWaitingPod(uid)
+	println("waitingPod: ", waitingPod)
+	if waitingPod == nil {
+		print("waitingPod is nil")
+		stack[0] = 0 // Return 0 to indicate no pod found or an error
+		return
+	}
+
+	print("waitingPod!!!!!!: ", waitingPod)
+	print("waitingPod.GetPod() : ", waitingPod.GetPod())
+
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), waitingPod.GetPod(), oBuf, oBufLimit))
 }

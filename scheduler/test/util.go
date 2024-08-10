@@ -33,6 +33,7 @@ type FakeHandle struct {
 	Recorder              events.EventRecorder
 	RejectWaitingPodValue types.UID
 	SharedLister          framework.SharedLister
+	GetWaitingPodValue    types.UID
 }
 
 func (h *FakeHandle) EventRecorder() events.EventRecorder {
