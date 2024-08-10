@@ -21,6 +21,7 @@ package handle
 import (
 	"runtime"
 
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 )
 
@@ -33,4 +34,17 @@ func RejectWaitingPod(uid string) bool {
 	})
 	runtime.KeepAlive(uid)
 	return wasmBool == 1
+}
+
+func GetWaitingPod(uid string) api.WaitingPod {
+	ptr, size := mem.StringToPtr(uid)
+
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	mem.SendAndGetString(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
+		getWaitingPod(input_ptr, input_size, ptr, limit)
+	})
+	runtime.KeepAlive(uid)
+
+	waitingPod := make([]api.WaitingPod, size)
+	return waitingPod[0]
 }

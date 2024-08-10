@@ -103,3 +103,9 @@ func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, in
 	fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
 	return binary.LittleEndian.Uint64(readBuf)
 }
+
+func SendAndGetString(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) string {
+	fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
+	size := binary.LittleEndian.Uint32(readBuf)
+	return string(readBuf[size : size+binary.LittleEndian.Uint32(readBuf[size:])])
+}
