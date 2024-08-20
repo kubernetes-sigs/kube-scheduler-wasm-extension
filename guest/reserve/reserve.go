@@ -69,7 +69,7 @@ func _reserve() uint32 { //nolint
 		return 0
 	}
 
-	nodeName := imports.NodeName()
+	nodeName := imports.CurrentNodeName()
 	status := reserve.Reserve(cyclestate.Values, cyclestate.Pod, nodeName)
 
 	return imports.StatusToCode(status)
@@ -85,6 +85,6 @@ func _unreserve() { //nolint
 		return
 	}
 
-	nodeName := imports.NodeName()
+	nodeName := imports.CurrentNodeName()
 	reserve.Unreserve(cyclestate.Values, cyclestate.Pod, nodeName)
 }

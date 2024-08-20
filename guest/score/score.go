@@ -71,7 +71,7 @@ func _score() uint64 {
 	// This is less awkward than a lazy string. It is possible in a future
 	// refactor we can get this from a `nodeInfo.Node().Metadata.Name` cached
 	// in an upstream plugin stage.
-	nodeName := imports.NodeName()
+	nodeName := imports.CurrentNodeName()
 	score, status := score.Score(cyclestate.Values, pod, nodeName)
 
 	// Pack the score and status code into a single WebAssembly 1.0 compatible

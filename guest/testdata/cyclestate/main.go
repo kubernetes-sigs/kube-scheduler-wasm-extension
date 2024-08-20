@@ -141,7 +141,7 @@ func (statePlugin) PostFilter(state api.CycleState, pod proto.Pod, _ api.NodeToS
 	return
 }
 
-func (statePlugin) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+func (statePlugin) PreScore(state api.CycleState, pod proto.Pod, _ api.NodeInfoList) *api.Status {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from pre-filter")
 	}

@@ -57,7 +57,7 @@ func prepareRuntime(ctx context.Context, guestBin []byte, logSeverity int32, gue
 		}
 	}
 	if imports&importK8sApi != 0 {
-		if _, err = instantiateHostApi(ctx, runtime); err != nil {
+		if _, err = instantiateHostApi(ctx, runtime, handle); err != nil {
 			err = fmt.Errorf("wasm: error instantiating api host functions: %w", err)
 			return
 		}

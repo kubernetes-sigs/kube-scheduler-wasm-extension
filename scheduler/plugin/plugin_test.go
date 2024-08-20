@@ -65,7 +65,9 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 		t.Fatalf("prefilter failed: %v", status.Reasons())
 	}
 
-	status = pl.Filter(ctx, nil, pod, nil)
+	ni := framework.NewNodeInfo()
+	ni.SetNode(test.NodeSmall)
+	status = pl.Filter(ctx, nil, pod, ni)
 	if !status.IsSuccess() {
 		t.Fatalf("filter failed: %v", status.Reasons())
 	}
@@ -95,7 +97,7 @@ func Test_guestPool_bindingCycles(t *testing.T) {
 		t.Fatalf("unexpected pod UID: want %v, have %v", want, have)
 	}
 
-	status = pl.Filter(ctx, nil, pod, nil)
+	status = pl.Filter(ctx, nil, pod, ni)
 	if !status.IsSuccess() {
 		t.Fatalf("filter failed: %v", status.Reasons())
 	}
@@ -562,7 +564,15 @@ wasm stack trace:
 				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
+			ni := framework.NewNodeInfo()
+			ni.SetNode(tc.node)
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, &test.FakeHandle{
+				SharedLister: &test.FakeSharedLister{
+					NodeInfoLister: &test.FakeNodeInfoLister{
+						Nodes: []*framework.NodeInfo{ni},
+					},
+				},
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -573,14 +583,14 @@ wasm stack trace:
 				pl.SetGlobals(tc.globals)
 			}
 
-			ni := framework.NewNodeInfo()
+			ni = framework.NewNodeInfo()
 			ni.SetNode(tc.node)
 			s := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
 			if want, have := tc.expectedStatusCode, s.Code(); want != have {
-				t.Fatalf("unexpected status code: want %d, have %d", want, have)
+				t.Fatalf("unexpected status code: want %d, have %d (message: %v)", want, have, s.Message())
 			}
 			if want, have := tc.expectedStatusMessage, s.Message(); want != have {
-				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+				t.Fatalf("unexpected status message: want %v, have %v (message: %v)", want, have, s.Message())
 			}
 		})
 	}
@@ -1478,7 +1488,7 @@ func TestAddPod(t *testing.T) {
 			podInfo:               framework.PodInfo{Pod: st.MakePod().Name("bad-pod").Obj()},
 			node:                  st.MakeNode().Name("bad").Obj(),
 			expectedStatusCode:    framework.Error,
-			expectedStatusMessage: "Node name is bad and PodInfo name is good-pod",
+			expectedStatusMessage: "Node name is bad and PodInfo name is bad-pod",
 		},
 		{
 			name:               "min statusCode",
@@ -1519,7 +1529,15 @@ wasm stack trace:
 				guestURL = test.URLTestFilter
 			}
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
+			ni := framework.NewNodeInfo()
+			ni.SetNode(tc.node)
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, &test.FakeHandle{
+				SharedLister: &test.FakeSharedLister{
+					NodeInfoLister: &test.FakeNodeInfoLister{
+						Nodes: []*framework.NodeInfo{ni},
+					},
+				},
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1530,8 +1548,6 @@ wasm stack trace:
 				pl.SetGlobals(tc.globals)
 			}
 
-			ni := framework.NewNodeInfo()
-			ni.SetNode(tc.node)
 			status := p.(framework.PreFilterExtensions).AddPod(ctx, nil, tc.pod, &tc.podInfo, ni)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %d, have %d", want, have)
@@ -1570,7 +1586,7 @@ func TestRemovePod(t *testing.T) {
 			podInfo:               framework.PodInfo{Pod: st.MakePod().Name("bad-pod").Obj()},
 			node:                  st.MakeNode().Name("bad").Obj(),
 			expectedStatusCode:    framework.Error,
-			expectedStatusMessage: "Node name is bad and PodInfo name is good-pod",
+			expectedStatusMessage: "Node name is bad and PodInfo name is bad-pod",
 		},
 		{
 			name:               "min statusCode",
@@ -1610,8 +1626,16 @@ wasm stack trace:
 			if guestURL == "" {
 				guestURL = test.URLTestFilter
 			}
+			ni := framework.NewNodeInfo()
+			ni.SetNode(tc.node)
 
-			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, nil)
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, &test.FakeHandle{
+				SharedLister: &test.FakeSharedLister{
+					NodeInfoLister: &test.FakeNodeInfoLister{
+						Nodes: []*framework.NodeInfo{ni},
+					},
+				},
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1622,8 +1646,6 @@ wasm stack trace:
 				pl.SetGlobals(tc.globals)
 			}
 
-			ni := framework.NewNodeInfo()
-			ni.SetNode(tc.node)
 			status := p.(framework.PreFilterExtensions).RemovePod(ctx, nil, tc.pod, &tc.podInfo, ni)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %d, have %d", want, have)
@@ -1722,7 +1744,9 @@ func TestRejectWaitingPod(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer p.(io.Closer).Close()
-			status := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, nil)
+			ni := framework.NewNodeInfo()
+			ni.SetNode(test.NodeSmall)
+			status := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
 			if want, have := tc.expectedUID, handle.RejectWaitingPodValue; want != have {
 				t.Fatalf("unexpected uid: %v != %v", want, have)
 			}

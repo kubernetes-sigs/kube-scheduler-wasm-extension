@@ -49,6 +49,8 @@ func _prefilter() uint32 { //nolint
 	// This function begins a new scheduling cycle: zero out any cycle state.
 	currentPod = nil
 	currentCycleState = map[string]any{}
+	currentNodeInfoList = nil
+	isFullNodeInfoList = false
 
 	if prefilter == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export prefilter so that we can reset
@@ -58,7 +60,7 @@ func _prefilter() uint32 { //nolint
 
 	// The parameters passed are lazy with regard to host functions. This means
 	// a no-op plugin should not have any unmarshal penalty.
-	nodeNames, status := prefilter.PreFilter(CycleState, Pod)
+	nodeNames, status := prefilter.PreFilter(CycleState, CurrentPod)
 
 	// If plugin returned nodeNames, concatenate them into a C-string and call
 	// the host with the count and memory region.

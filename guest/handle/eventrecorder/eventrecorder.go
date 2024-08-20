@@ -46,8 +46,6 @@ func EventfFn(msg internal.EventMessage) {
 }
 
 // Eventf is a convenience that calls the same method documented on api.Eventf.
-//
-// Note: See Info for unit test and benchmarking impact.
 func Eventf(regarding proto.KObject, related proto.KObject, eventtype, reason, action, note string) {
 	eventRecorderInstance.Eventf(regarding, related, eventtype, reason, action, note)
 }

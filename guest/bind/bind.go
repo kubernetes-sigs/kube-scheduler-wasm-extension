@@ -60,7 +60,7 @@ func _bind() uint32 { //nolint
 		return 0
 	}
 
-	nodeName := imports.NodeName()
+	nodeName := imports.CurrentNodeName()
 	// The parameters passed are lazy with regard to host functions. This means
 	// a no-op plugin should not have any unmarshal penalty.
 	s := bind.Bind(cyclestate.Values, cyclestate.Pod, nodeName)

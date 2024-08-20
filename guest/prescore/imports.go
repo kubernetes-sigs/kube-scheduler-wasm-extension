@@ -20,5 +20,5 @@ package prescore
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
-//go:wasmimport k8s.io/api nodeList
-func k8sApiNodeList(ptr uint32, limit mem.BufLimit) (len uint32)
+//go:wasmimport k8s.io/scheduler filteredNodeList
+func k8sSchedulerFilteredNodeList(ptr uint32, limit mem.BufLimit) (len uint32)

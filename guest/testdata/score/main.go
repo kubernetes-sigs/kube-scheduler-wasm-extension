@@ -54,10 +54,10 @@ func main() {
 // noopPlugin doesn't do anything, except evaluate each parameter.
 type noopPlugin struct{}
 
-func (noopPlugin) PreScore(state api.CycleState, pod proto.Pod, nodeList proto.NodeList) *api.Status {
+func (noopPlugin) PreScore(state api.CycleState, pod proto.Pod, nodeList api.NodeInfoList) *api.Status {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
-	_ = nodeList.Items()
+	_ = nodeList.List()
 	return nil
 }
 
@@ -78,8 +78,8 @@ func (noopPlugin) NormalizeScore(state api.CycleState, pod proto.Pod, scores api
 // preScorePlugin returns the count of the node list as the status
 type preScorePlugin struct{ noopPlugin }
 
-func (preScorePlugin) PreScore(_ api.CycleState, _ proto.Pod, nodeList proto.NodeList) *api.Status {
-	return &api.Status{Code: api.StatusCode(len(nodeList.Items()))}
+func (preScorePlugin) PreScore(_ api.CycleState, _ proto.Pod, nodeList api.NodeInfoList) *api.Status {
+	return &api.Status{Code: api.StatusCode(len(nodeList.List()))}
 }
 
 // scorePlugin returns 100 if a node name equals its pod spec.

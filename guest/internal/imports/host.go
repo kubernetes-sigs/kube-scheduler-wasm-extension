@@ -47,24 +47,54 @@ func setStatusReason(reason string) {
 	runtime.KeepAlive(reason) // until ptr is no longer needed.
 }
 
-func NodeName() string {
+func CurrentNodeName() string {
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
 	return mem.GetString(func(ptr uint32, limit mem.BufLimit) (len uint32) {
-		return k8sApiNodeName(ptr, limit)
+		return k8sSchedulerCurrentNodeName(ptr, limit)
 	})
 }
 
-func Node(updater func([]byte) error) error {
+func NodeImageStates(nodeName string) map[string]*api.ImageStateSummary {
+	nodenamePtr, nodenameSize := mem.StringToPtr(nodeName)
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	jsonStr := mem.GetString(func(ptr uint32, limit mem.BufLimit) (len uint32) {
+		return k8sSchedulerNodeImageStates(nodenamePtr, nodenameSize, ptr, limit)
+	})
+	byte := []byte(jsonStr)
+	var nodeImageStates map[string]*api.ImageStateSummary
+	err := json.Unmarshal(byte, &nodeImageStates)
+	if err != nil {
+		panic(err)
+	}
+	return nodeImageStates
+}
+
+func Node(nodeName string, updater func([]byte) error) error {
+	nodenamePtr, nodenameSize := mem.StringToPtr(nodeName)
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
 	return mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
-		return k8sApiNode(ptr, limit)
+		return k8sApiNode(nodenamePtr, nodenameSize, ptr, limit)
 	}, updater)
 }
 
-func Pod(updater func([]byte) error) error {
+func Nodes(updater func([]byte) error) error {
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
 	return mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
-		return k8sApiPod(ptr, limit)
+		return k8sApiNodeList(ptr, limit)
+	}, updater)
+}
+
+func CurrentPod(updater func([]byte) error) error {
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	return mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
+		return k8sSchedulerCurrentPod(ptr, limit)
+	}, updater)
+}
+
+func TargetPod(updater func([]byte) error) error {
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	return mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
+		return k8sSchedulerTargetPod(ptr, limit)
 	}, updater)
 }
 
