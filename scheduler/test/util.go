@@ -87,7 +87,7 @@ func (h *FakeHandle) GetWaitingPod(uid types.UID) framework.WaitingPod {
 		pendingPlugins: make(map[string]*time.Timer),
 		s:              make(chan *framework.Status, 1),
 	}
-	h.GetWaitingPodValue = waitingPod
+	h.GetWaitingPodValue = waitingPod.pod.UID
 	return waitingPod
 }
 
