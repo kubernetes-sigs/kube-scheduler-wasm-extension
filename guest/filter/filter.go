@@ -20,12 +20,10 @@ package filter
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/sharedlister"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
-	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 // filter is the current plugin assigned with SetPlugin.
@@ -67,105 +65,12 @@ func _filter() uint32 { //nolint
 		return 0
 	}
 
-	s := filter.Filter(cyclestate.Values, cyclestate.Pod, &NodeInfo{})
+	nodename := imports.CurrentNodeName()
+	if nodename == "" {
+		return imports.StatusToCode(&api.Status{Code: api.StatusCodeError, Reason: "could not get current node name"})
+	}
+
+	s := filter.Filter(cyclestate.Values, cyclestate.Pod, sharedlister.NodeInfos().Get(nodename))
 
 	return imports.StatusToCode(s)
-}
-
-var _ api.NodeInfo = (*NodeInfo)(nil)
-
-// nodeInfo is lazy so that a plugin which doesn't read fields avoids a
-// relatively expensive unmarshal penalty.
-//
-// Note: Unlike proto.Pod, this is not special cased for the scheduling cycle.
-type NodeInfo struct {
-	node proto.Node
-}
-
-func (n *NodeInfo) GetUid() string {
-	return n.lazyNode().GetUid()
-}
-
-func (n *NodeInfo) GetName() string {
-	return n.lazyNode().GetName()
-}
-
-func (n *NodeInfo) GetNamespace() string {
-	return n.lazyNode().GetNamespace()
-}
-
-func (n *NodeInfo) GetResourceVersion() string {
-	return n.lazyNode().GetResourceVersion()
-}
-
-func (n *NodeInfo) Node() proto.Node {
-	return n.lazyNode()
-}
-
-// lazyNode lazy initializes node from imports.Node.
-func (n *NodeInfo) lazyNode() proto.Node {
-	if node := n.node; node != nil {
-		return node
-	}
-
-	var msg protoapi.Node
-	if err := imports.Node(msg.UnmarshalVT); err != nil {
-		panic(err.Error())
-	}
-	n.node = &internalproto.Node{Msg: &msg}
-	return n.node
-}
-
-type PodInfo struct {
-	pod proto.Pod
-}
-
-func (p *PodInfo) GetApiVersion() string {
-	return p.lazyPod().GetApiVersion()
-}
-
-func (p *PodInfo) GetKind() string {
-	return p.lazyPod().GetKind()
-}
-
-func (p *PodInfo) GetName() string {
-	return p.lazyPod().GetName()
-}
-
-func (p *PodInfo) GetNamespace() string {
-	return p.lazyPod().GetNamespace()
-}
-
-func (p *PodInfo) GetResourceVersion() string {
-	return p.lazyPod().GetNamespace()
-}
-
-func (p *PodInfo) GetUid() string {
-	return p.lazyPod().GetUid()
-}
-
-func (p *PodInfo) Pod() proto.Pod {
-	return p.lazyPod()
-}
-
-func (p *PodInfo) Spec() *protoapi.PodSpec {
-	return p.lazyPod().Spec()
-}
-
-func (p *PodInfo) Status() *protoapi.PodStatus {
-	return p.lazyPod().Status()
-}
-
-// lazyPod lazy initializes pod from imports.Pod.
-func (p *PodInfo) lazyPod() proto.Pod {
-	if pod := p.pod; pod != nil {
-		return pod
-	}
-
-	var msg protoapi.Pod
-	if err := imports.Pod(msg.UnmarshalVT); err != nil {
-		panic(err.Error())
-	}
-	p.pod = &internalproto.Pod{Msg: &msg}
-	return p.pod
 }

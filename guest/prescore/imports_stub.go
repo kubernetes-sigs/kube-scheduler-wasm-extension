@@ -20,5 +20,5 @@ package prescore
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
-// k8sApiNodeList is stubbed for compilation outside TinyGo.
-func k8sApiNodeList(uint32, mem.BufLimit) (len uint32) { return }
+// k8sSchedulerFilteredNodeList is stubbed for compilation outside TinyGo.
+func k8sSchedulerFilteredNodeList(ptr uint32, limit mem.BufLimit) (len uint32) { return }

@@ -56,6 +56,8 @@ var URLExampleNodeNumber = localURL(pathTinyGoExample("nodenumber"))
 
 var URLExampleAdvanced = localURL(pathTinyGoExample("advanced"))
 
+var URLExampleImageLocality = localURL(pathTinyGoExample("imagelocality"))
+
 var URLTestAllNoopWat = localURL(pathWatTest("all_noop"))
 
 var URLTestCycleState = localURL(pathTinyGoTest("cyclestate"))

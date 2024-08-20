@@ -91,7 +91,7 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 }
 
 // PreScore implements api.PreScorePlugin
-func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ api.NodeInfoList) *api.Status {
 	recorder := eventrecorder.Get()
 
 	klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))

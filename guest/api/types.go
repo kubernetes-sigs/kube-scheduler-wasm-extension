@@ -105,7 +105,7 @@ type EnqueueExtensions interface {
 type PreScorePlugin interface {
 	Plugin
 
-	PreScore(state CycleState, pod proto.Pod, nodeList proto.NodeList) *Status
+	PreScore(state CycleState, pod proto.Pod, nodeList NodeInfoList) *Status
 }
 
 // ScorePlugin is a WebAssembly implementation of framework.ScorePlugin.
@@ -161,11 +161,28 @@ type PostBindPlugin interface {
 	PostBind(state CycleState, pod proto.Pod, nodeName string)
 }
 
+type NodeInfoList interface {
+	// List lists all NodeInfo in this list.
+	List() []NodeInfo
+	// Get returns the NodeInfo with the given name.
+	// It returns nil if this list doesn't have the NodeInfo with the given name.
+	Get(name string) NodeInfo
+}
+
 type NodeInfo interface {
 	// Metadata is a convenience that triggers Get.
 	proto.Metadata
 
 	Node() proto.Node
+	ImageStates() map[string]*ImageStateSummary
+
+	// ... we'll support more fields of NodeInfo of the scheduling framework.
+}
+
+type PodInfoList interface {
+	// Get returns the PodInfo with the given name.
+	// It returns nil if this list doesn't have the PodInfo with the given name.
+	Get(name string) PodInfo
 }
 
 type PodInfo interface {
