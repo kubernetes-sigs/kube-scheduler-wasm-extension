@@ -220,6 +220,11 @@ func (g *guest) normalizeScore(ctx context.Context) (framework.NodeScoreList, *f
 	statusCode := int32(callStack[0])
 	statusReason := paramsFromContext(ctx).resultStatusReason
 	normalizedScoreList := paramsFromContext(ctx).resultNormalizedScoreList
+	if len(normalizedScoreList) == 0 {
+		// Probably the guest didn't implement NormalizeScore().
+		normalizedScoreList = paramsFromContext(ctx).nodeScoreList
+	}
+
 	return normalizedScoreList, framework.NewStatus(framework.Code(statusCode), statusReason)
 }
 
