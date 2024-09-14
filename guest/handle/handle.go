@@ -14,8 +14,8 @@
    limitations under the License.
 */
 
-// Package prescore exports an api.PreScorePlugin to the host. Only import this
-// package when setting Plugin, as doing otherwise will cause overhead.
+// Package handle exports an api.RejectWaitingPod and GetWaitingPod to the host.
+// Only import this package when setting Plugin, as doing otherwise will cause overhead.
 package handle
 
 import (
