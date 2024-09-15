@@ -192,6 +192,7 @@ func paramsFromContext(ctx context.Context) *stack {
 	return ctx.Value(stackKey{}).(*stack)
 }
 
+// k8sApiNodeFn is a function used by the host to send the node that the guest wants.
 func (h host) k8sApiNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	nodename := uint32(stack[0])
 	nodenameLen := uint32(stack[1])
@@ -249,6 +250,8 @@ func k8sSchedulerApiFilteredNodeListFn(ctx context.Context, mod wazeroapi.Module
 	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), string(b), buf, bufLimit))
 }
 
+// k8sSchedulerCurrentNodeNameFn returns the node name that is being evaluated.
+// (e.g., the target node in the filter phase.)
 func k8sSchedulerCurrentNodeNameFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
