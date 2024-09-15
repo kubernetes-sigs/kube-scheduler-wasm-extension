@@ -25,6 +25,11 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 )
 
+const (
+	// MaxNodeScore is the maximum score a Score plugin is expected to return.
+	MaxNodeScore int64 = 100
+)
+
 // score is the current plugin assigned with SetPlugin.
 var score api.ScorePlugin
 

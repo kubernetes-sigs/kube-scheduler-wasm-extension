@@ -7,6 +7,7 @@ import (
 	guestapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/sharedlister/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
 // The two thresholds are used as bounds for the image score range. They correspond to a reasonable size range for
@@ -41,11 +42,6 @@ func (pl *imageLocality) Score(state guestapi.CycleState, pod proto.Pod, nodeNam
 	return int32(score), nil
 }
 
-const (
-	// maxNodeScore is the maximum score a Score plugin is expected to return.
-	maxNodeScore int64 = 100
-)
-
 // calculatePriority returns the priority of a node. Given the sumScores of requested images on the node, the node's
 // priority is obtained by scaling the maximum priority value with a ratio proportional to the sumScores.
 func calculatePriority(sumScores int64, numContainers int) int64 {
@@ -56,7 +52,7 @@ func calculatePriority(sumScores int64, numContainers int) int64 {
 		sumScores = maxThreshold
 	}
 
-	return maxNodeScore * (sumScores - minThreshold) / (maxThreshold - minThreshold)
+	return score.MaxNodeScore * (sumScores - minThreshold) / (maxThreshold - minThreshold)
 }
 
 // sumImageScores returns the sum of image scores of all the containers that are already on the node.
