@@ -95,6 +95,6 @@ func (pluginForGet) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInf
 	// This is being skipped, note the reason.
 	return &api.Status{
 		Code:   api.StatusCodeSkip,
-		Reason: "UID is " + pod.GetUid() + " and waitingPod is " + waitingPod.Name,
+		Reason: "UID is " + pod.GetUid() + " and waitingPod is " + waitingPod.GetPod().GetName(),
 	}
 }
