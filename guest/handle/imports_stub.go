@@ -24,4 +24,4 @@ import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 func rejectWaitingPod(uint32, uint32, uint32, mem.BufLimit) {}
 
 // getWaitingPod is stubbed for compilation outside TinyGo.
-func getWaitingPod(uint32, uint32, uint32, mem.BufLimit) { return }
+func getWaitingPod(uint32, uint32, uint32, mem.BufLimit) {}
