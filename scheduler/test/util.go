@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,7 +32,7 @@ func (f *FakeRecorder) Eventf(regarding runtime.Object, related runtime.Object, 
 type FakeHandle struct {
 	Recorder              events.EventRecorder
 	RejectWaitingPodValue types.UID
-	GetWaitingPodValue    types.UID
+	GetWaitingPodValue    framework.WaitingPod
 }
 
 func (h *FakeHandle) EventRecorder() events.EventRecorder {
@@ -75,9 +76,14 @@ func (h *FakeHandle) NominatedPodsForNode(nodeName string) (f []*framework.PodIn
 	return
 }
 
-func (h *FakeHandle) GetWaitingPod(uid types.UID) (w framework.WaitingPod) {
-	h.GetWaitingPodValue = uid
-	return
+func (h *FakeHandle) GetWaitingPod(uid types.UID) framework.WaitingPod {
+	pod := &waitingPod{
+		pod:            nil,
+		pendingPlugins: make(map[string]*time.Timer),
+		s:              make(chan *framework.Status, 1),
+	}
+	println("pod !!!!: ", pod)
+	return pod
 }
 
 func (h *FakeHandle) RejectWaitingPod(uid types.UID) (b bool) {

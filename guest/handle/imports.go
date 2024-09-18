@@ -20,8 +20,11 @@ package handle
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
-//go:wasmimport k8s.io/scheduler handle.reject_waiting_pod
-func rejectWaitingPod(input_ptr, input_size, ptr uint32, limit mem.BufLimit)
+//go:wasmimport k8s.io/scheduler handle.get_waiting_pod
+func allowWaitingPod(input_ptr, input_size, ptr uint32, limit mem.BufLimit)
 
 //go:wasmimport k8s.io/scheduler handle.get_waiting_pod
 func getWaitingPod(input_ptr, input_size, ptr uint32, limit mem.BufLimit)
+
+//go:wasmimport k8s.io/scheduler handle.reject_waiting_pod
+func rejectWaitingPod(input_ptr, input_size, ptr uint32, limit mem.BufLimit)

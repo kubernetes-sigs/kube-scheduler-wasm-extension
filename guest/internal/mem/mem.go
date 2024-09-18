@@ -104,8 +104,21 @@ func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, in
 	return binary.LittleEndian.Uint64(readBuf)
 }
 
-func SendAndGetString(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) string {
+// ReadBytes reads a given number of bytes from memory, starting at the provided pointer.
+func ReadBytes(ptr uint32, limit BufLimit) []byte {
+	if limit == 0 {
+		return nil
+	}
+	// Allocate a slice of the desired size.
+	buf := make([]byte, limit)
+	// Copy data from the memory buffer to the new slice.
+	copy(buf, unsafe.Slice((*byte)(unsafe.Pointer(uintptr(ptr))), limit))
+	return buf
+}
+
+// SendAndGetPodBytes is similar to SendAndGetUint64, but it retrieves a byte slice.
+func SendAndGetPodBytes(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) []byte {
 	fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
-	size := binary.LittleEndian.Uint32(readBuf)
-	return string(readBuf[size : size+binary.LittleEndian.Uint32(readBuf[size:])])
+	// Return the bytes from the buffer.
+	return ReadBytes(uint32(readBufPtr), readBufLimit)
 }
