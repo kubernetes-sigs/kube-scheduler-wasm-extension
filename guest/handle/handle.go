@@ -19,11 +19,38 @@
 package handle
 
 import (
+	"encoding/json"
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
+	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
+
+type wasmWaitingPod struct {
+	uid string
+	ptr uint32
+	pod *protoapi.Pod
+}
+
+func (w *wasmWaitingPod) GetPod() proto.Pod {
+	var msg protoapi.Pod
+	return &internalproto.Pod{Msg: &msg}
+}
+
+func (w *wasmWaitingPod) GetPendingPlugins() []string {
+	return []string{}
+}
+
+func (w *wasmWaitingPod) Allow(pluginName string) {
+	allowWaitingPod(w.ptr, w.ptr, w.ptr, w.ptr)
+}
+
+func (w *wasmWaitingPod) Reject(pluginName, msg string) {
+	rejectWaitingPod(w.ptr, w.ptr, w.ptr, w.ptr)
+}
 
 func RejectWaitingPod(uid string) bool {
 	ptr, size := mem.StringToPtr(uid)
@@ -40,11 +67,24 @@ func GetWaitingPod(uid string) api.WaitingPod {
 	ptr, size := mem.StringToPtr(uid)
 
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
-	mem.SendAndGetString(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
+	podBytes := mem.SendAndGetPodBytes(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
 		getWaitingPod(input_ptr, input_size, ptr, limit)
 	})
 	runtime.KeepAlive(uid)
 
-	waitingPod := make([]api.WaitingPod, size)
-	return waitingPod[0]
+	// Deserialize the pod bytes into a proto.Pod
+	var pod protoapi.Pod
+	err := json.Unmarshal(podBytes, &pod)
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a new instance of wasmWaitingPod with the deserialized pod data
+	waitingPod := &wasmWaitingPod{
+		uid: uid,
+		ptr: ptr, // The pointer that corresponds to this pod's location in memory
+		pod: &pod,
+	}
+
+	return waitingPod
 }

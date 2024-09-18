@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"errors"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -72,16 +73,14 @@ func (h *FakeHandle) Parallelizer() (p parallelize.Parallelizer) {
 	panic("unimplemented")
 }
 
-func (h *FakeHandle) GetWaitingPod(uid types.UID) (w framework.WaitingPod) {
-	panic("unimplemented")
-}
-
-func (h *FakeHandle) IterateOverWaitingPods(callback func(framework.WaitingPod)) {
-	panic("unimplemented")
-}
-
-func (h *FakeHandle) NominatedPodsForNode(nodeName string) (f []*framework.PodInfo) {
-	panic("unimplemented")
+func (h *FakeHandle) GetWaitingPod(uid types.UID) framework.WaitingPod {
+	pod := &waitingPod{
+		pod:            nil,
+		pendingPlugins: make(map[string]*time.Timer),
+		s:              make(chan *framework.Status, 1),
+	}
+	println("pod !!!!: ", pod)
+	return pod
 }
 
 func (h *FakeHandle) RejectWaitingPod(uid types.UID) (b bool) {

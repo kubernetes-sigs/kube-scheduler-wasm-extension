@@ -92,9 +92,15 @@ func (pluginForGet) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInf
 	// Call GetWaitingPod first
 	waitingPod := handle.GetWaitingPod(pod.GetUid())
 
-	// This is being skipped, note the reason.
+	if waitingPod == nil {
+		// This is being skipped, note the reason.
+		return &api.Status{
+			Code:   api.StatusCodeError,
+			Reason: "UID is " + pod.GetUid(),
+		}
+	}
+
 	return &api.Status{
-		Code:   api.StatusCodeSkip,
-		Reason: "UID is " + pod.GetUid() + " and waitingPod is " + waitingPod.GetPod().GetName(),
+		Code: api.StatusCodeSuccess,
 	}
 }

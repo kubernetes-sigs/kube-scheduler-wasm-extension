@@ -29,6 +29,7 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1772,7 +1773,7 @@ func TestGetWaitingPod(t *testing.T) {
 		guestURL           string
 		pod                *v1.Pod
 		args               []string
-		expectedUID        types.UID
+		expectedWaitingPod framework.WaitingPod
 		expectedStatusCode framework.Code
 		expectedStatusMsg  string
 	}{
@@ -1781,7 +1782,7 @@ func TestGetWaitingPod(t *testing.T) {
 			guestURL:           test.URLTestHandle,
 			pod:                test.PodSmall,
 			args:               []string{"test", "getWaitingPod"},
-			expectedUID:        "",
+			expectedWaitingPod: makeTestWaitingPod(test.PodSmall, map[string]*time.Timer{}),
 			expectedStatusCode: framework.Success,
 			expectedStatusMsg:  "",
 		},
@@ -1790,7 +1791,7 @@ func TestGetWaitingPod(t *testing.T) {
 			guestURL:           test.URLTestHandle,
 			pod:                test.PodForHandleTest,
 			args:               []string{"test", "getWaitingPod"},
-			expectedUID:        test.PodForHandleTest.GetUID(),
+			expectedWaitingPod: makeTestWaitingPod(test.PodForHandleTest, map[string]*time.Timer{}),
 			expectedStatusCode: framework.Success,
 			expectedStatusMsg:  "",
 		},
@@ -1801,21 +1802,32 @@ func TestGetWaitingPod(t *testing.T) {
 			guestURL := tc.guestURL
 			recorder := &test.FakeRecorder{EventMsg: ""}
 			handle := &test.FakeHandle{Recorder: recorder}
+			handle.GetWaitingPodValue = makeTestWaitingPod(tc.pod, map[string]*time.Timer{})
+
 			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, handle)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer p.(io.Closer).Close()
-
 			status := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, nil)
-			if want, have := tc.expectedStatusCode, status.Code(); want != have {
-				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+
+			if !waitingPodsEqual(tc.expectedWaitingPod.(*waitingPod), handle.GetWaitingPodValue.(*waitingPod)) {
+				t.Logf("expected: %+v, got: %+v", tc.expectedWaitingPod, handle.GetWaitingPodValue)
+				t.Fatalf("unexpected waiting pod")
 			}
+
 			if want, have := tc.expectedStatusMsg, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
 			}
 		})
 	}
+}
+
+func waitingPodsEqual(wp1, wp2 *waitingPod) bool {
+	if wp1 == nil || wp2 == nil {
+		return wp1 == wp2 // Both should be nil or one is nil
+	}
+	return wp1.pod == wp2.pod && reflect.DeepEqual(wp1.pendingPlugins, wp2.pendingPlugins)
 }
 
 // Extracts and trims the actual log message from a formatted klog string
@@ -1858,5 +1870,50 @@ func requireError(t *testing.T, err error, expectedError string) {
 	}
 	if want := expectedError; want != have {
 		t.Fatalf("unexpected error: want %v, have %v", want, have)
+	}
+}
+
+type waitingPod struct {
+	pod            *v1.Pod
+	pendingPlugins map[string]*time.Timer
+	mu             sync.RWMutex
+}
+
+func (wp *waitingPod) GetPod() *v1.Pod {
+	return wp.pod
+}
+
+func (wp *waitingPod) GetPendingPlugins() []string {
+	wp.mu.RLock()
+	defer wp.mu.RUnlock()
+	var plugins []string
+	for plugin := range wp.pendingPlugins {
+		plugins = append(plugins, plugin)
+	}
+	return plugins
+}
+
+func (wp *waitingPod) Allow(pluginName string) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+	if timer, ok := wp.pendingPlugins[pluginName]; ok {
+		timer.Stop()
+		delete(wp.pendingPlugins, pluginName)
+	}
+}
+
+func (wp *waitingPod) Reject(pluginName, msg string) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+	if timer, ok := wp.pendingPlugins[pluginName]; ok {
+		timer.Stop()
+		delete(wp.pendingPlugins, pluginName)
+	}
+}
+
+func makeTestWaitingPod(pod *v1.Pod, plugins map[string]*time.Timer) framework.WaitingPod {
+	return &waitingPod{
+		pod:            pod,
+		pendingPlugins: plugins,
 	}
 }

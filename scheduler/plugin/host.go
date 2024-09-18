@@ -621,15 +621,10 @@ func (h host) k8sHandleGetWaitingPodFn(ctx context.Context, mod wazeroapi.Module
 	}
 	uid := types.UID(b)
 	waitingPod := h.handle.GetWaitingPod(uid)
-	println("waitingPod: ", waitingPod)
+	println("pod in host.go: ", waitingPod)
 	if waitingPod == nil {
-		print("waitingPod is nil")
-		stack[0] = 0 // Return 0 to indicate no pod found or an error
-		return
+		panic("waitingPod not found")
 	}
-
-	print("waitingPod!!!!!!: ", waitingPod)
-	print("waitingPod.GetPod() : ", waitingPod.GetPod())
 
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), waitingPod.GetPod(), oBuf, oBufLimit))
 }
