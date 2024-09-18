@@ -31,6 +31,7 @@ func (f *FakeRecorder) Eventf(regarding runtime.Object, related runtime.Object, 
 type FakeHandle struct {
 	Recorder              events.EventRecorder
 	RejectWaitingPodValue types.UID
+	GetWaitingPodValue    types.UID
 }
 
 func (h *FakeHandle) EventRecorder() events.EventRecorder {
@@ -67,14 +68,15 @@ func (h *FakeHandle) Parallelizer() (p parallelize.Parallelizer) {
 	return
 }
 
-func (h *FakeHandle) GetWaitingPod(uid types.UID) (w framework.WaitingPod) {
-	return
-}
-
 func (h *FakeHandle) IterateOverWaitingPods(callback func(framework.WaitingPod)) {
 }
 
 func (h *FakeHandle) NominatedPodsForNode(nodeName string) (f []*framework.PodInfo) {
+	return
+}
+
+func (h *FakeHandle) GetWaitingPod(uid types.UID) (w framework.WaitingPod) {
+	h.GetWaitingPodValue = uid
 	return
 }
 

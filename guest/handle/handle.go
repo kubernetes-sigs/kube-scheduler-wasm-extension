@@ -14,13 +14,14 @@
    limitations under the License.
 */
 
-// Package prescore exports an api.PreScorePlugin to the host. Only import this
-// package when setting Plugin, as doing otherwise will cause overhead.
+// Package handle exports an api.RejectWaitingPod and GetWaitingPod to the host.
+// Only import this package when setting Plugin, as doing otherwise will cause overhead.
 package handle
 
 import (
 	"runtime"
 
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 )
 
@@ -33,4 +34,19 @@ func RejectWaitingPod(uid string) bool {
 	})
 	runtime.KeepAlive(uid)
 	return wasmBool == 1
+}
+
+func GetWaitingPod(uid string) api.WaitingPod {
+	ptr, size := mem.StringToPtr(uid)
+
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	_bytes := mem.GetBytes(func(input_ptr uint32, limit mem.BufLimit) (len uint32) {
+		getWaitingPod(ptr, size, input_ptr, limit)
+	})
+	// Ensure uid string is not collected by the GC until after the function call
+	runtime.KeepAlive(uid)
+
+	// WIP: Convert _bytes to api.WaitingPod?
+	waitingPod := make([]api.WaitingPod, size)
+	return waitingPod[0]
 }
