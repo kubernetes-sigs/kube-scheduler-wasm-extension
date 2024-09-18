@@ -104,8 +104,20 @@ func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, in
 	return binary.LittleEndian.Uint64(readBuf)
 }
 
-func SendAndGetString(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) string {
-	fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
-	size := binary.LittleEndian.Uint32(readBuf)
-	return string(readBuf[size : size+binary.LittleEndian.Uint32(readBuf[size:])])
+func GetBytes(fn func(ptr uint32, limit BufLimit) (len uint32)) []byte {
+	size := fn(uint32(readBufPtr), readBufLimit)
+	if size == 0 {
+		return nil
+	}
+
+	// If the function result fit in our read buffer, return it.
+	if size <= readBufLimit {
+		return readBuf[:size]
+	}
+
+	// Resize buffer and get the result again if it's larger than our initial buffer
+	buf := make([]byte, size)
+	ptr := unsafe.Pointer(&buf[0])
+	_ = fn(uint32(uintptr(ptr)), size)
+	return buf
 }

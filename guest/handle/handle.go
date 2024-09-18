@@ -40,11 +40,13 @@ func GetWaitingPod(uid string) api.WaitingPod {
 	ptr, size := mem.StringToPtr(uid)
 
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
-	mem.SendAndGetString(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
-		getWaitingPod(input_ptr, input_size, ptr, limit)
+	_bytes := mem.GetBytes(func(input_ptr uint32, limit mem.BufLimit) (len uint32) {
+		getWaitingPod(ptr, size, input_ptr, limit)
 	})
+	// Ensure uid string is not collected by the GC until after the function call
 	runtime.KeepAlive(uid)
 
+	// WIP: Convert _bytes to api.WaitingPod?
 	waitingPod := make([]api.WaitingPod, size)
 	return waitingPod[0]
 }
