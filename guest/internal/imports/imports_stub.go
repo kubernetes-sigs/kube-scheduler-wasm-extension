@@ -21,13 +21,10 @@ package imports
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
 // k8sApiNode is stubbed for compilation outside TinyGo.
-func k8sApiNode(uint32, mem.BufLimit) (len uint32) { return }
+func k8sApiNode(uint32, uint32, uint32, mem.BufLimit) (len uint32) { return }
 
-// k8sApiNodeName is stubbed for compilation outside TinyGo.
-func k8sApiNodeName(uint32, mem.BufLimit) (len uint32) { return }
-
-// k8sApiPod is stubbed for compilation outside TinyGo.
-func k8sApiPod(uint32, mem.BufLimit) (len uint32) { return }
+// k8sApiNodeList is stubbed for compilation outside TinyGo.
+func k8sApiNodeList(uint32, mem.BufLimit) (len uint32) { return }
 
 // k8sSchedulerNodeToStatusMap is stubbed for compilation outside TinyGo.
 func k8sSchedulerNodeToStatusMap(uint32, mem.BufLimit) (len uint32) { return }
@@ -37,3 +34,15 @@ func k8sSchedulerResultStatusReason(uint32, uint32) {}
 
 // k8sSchedulerNodeScoreList is stubbed for compilation outside TinyGo.
 func k8sSchedulerNodeScoreList(uint32, mem.BufLimit) (len uint32) { return }
+
+// k8sSchedulerCurrentNodeName is stubbed for compilation outside TinyGo.
+func k8sSchedulerCurrentNodeName(uint32, mem.BufLimit) (len uint32) { return }
+
+// k8sSchedulerCurrentPod is stubbed for compilation outside TinyGo.
+func k8sSchedulerCurrentPod(uint32, mem.BufLimit) (len uint32) { return }
+
+// k8sSchedulerTargetPod is stubbed for compilation outside TinyGo.
+func k8sSchedulerTargetPod(uint32, mem.BufLimit) (len uint32) { return }
+
+// k8sSchedulerNodeImageStates is stubbed for compilation outside TinyGo.
+func k8sSchedulerNodeImageStates(uint32, uint32, uint32, mem.BufLimit) (len uint32) { return }

@@ -64,7 +64,7 @@ func _permit() uint64 {
 	}
 
 	pod := cyclestate.Pod
-	nodeName := imports.NodeName()
+	nodeName := imports.CurrentNodeName()
 	status, timeout := permit.Permit(cyclestate.Values, pod, nodeName)
 
 	// Pack the score and status code into a single WebAssembly 1.0 compatible

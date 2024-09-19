@@ -34,17 +34,19 @@ const (
 	k8sApi                                = "k8s.io/api"
 	k8sApiNode                            = "node"
 	k8sApiNodeList                        = "nodeList"
-	k8sApiNodeName                        = "nodeName"
-	k8sApiPod                             = "pod"
-	k8sApiPodInfo                         = "podInfo"
 	k8sApiNodeToStatusMap                 = "nodeToStatusMap"
 	k8sKlog                               = "k8s.io/klog"
 	k8sKlogLog                            = "log"
 	k8sKlogLogs                           = "logs"
 	k8sKlogSeverity                       = "severity"
 	k8sScheduler                          = "k8s.io/scheduler"
+	k8sSchedulerCurrentNodeName           = "currentNodeName"
+	k8sSchedulerTargetPod                 = "targetPod"
+	k8sSchedulerFilteredNodeList          = "filteredNodeList"
+	k8sSchedulerCurrentPod                = "currentPod"
 	k8sSchedulerGetConfig                 = "get_config"
 	k8sSchedulerNodeScoreList             = "nodeScoreList"
+	k8sSchedulerNodeImageStates           = "nodeImageStates"
 	k8sSchedulerResultClusterEvents       = "result.cluster_events"
 	k8sSchedulerResultNodeNames           = "result.node_names"
 	k8sSchedulerResultNominatedNodeName   = "result.nominated_node_name"
@@ -54,23 +56,15 @@ const (
 	k8sSchedulerHandleRejectWaitingPod    = "handle.reject_waiting_pod"
 )
 
-func instantiateHostApi(ctx context.Context, runtime wazero.Runtime) (wazeroapi.Module, error) {
+func instantiateHostApi(ctx context.Context, runtime wazero.Runtime, handle framework.Handle) (wazeroapi.Module, error) {
+	host := &host{handle: handle}
 	return runtime.NewHostModuleBuilder(k8sApi).
 		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
-		WithParameterNames("buf", "buf_limit").Export(k8sApiNode).
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sApiNodeFn), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("nodename", "nodename_len", "buf", "buf_limit").Export(k8sApiNode).
 		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sApiNodeListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeList).
-		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiNodeNameFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
-		WithParameterNames("buf", "buf_limit").Export(k8sApiNodeName).
-		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
-		WithParameterNames("buf", "buf_limit").Export(k8sApiPod).
-		NewFunctionBuilder().
-		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sApiTargetPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
-		WithParameterNames("buf", "buf_limit").Export(k8sApiPodInfo).
 		Instantiate(ctx)
 }
 
@@ -95,6 +89,21 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sSchedulerGetConfigFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
 		WithParameterNames("buf", "buf_limit").Export(k8sSchedulerGetConfig).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerApiFilteredNodeListFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sSchedulerFilteredNodeList).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerTargetPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sSchedulerTargetPod).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerCurrentNodeNameFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sSchedulerCurrentNodeName).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sSchedulerNodeImageStatesFn), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("nodename", "nodename_len", "buf", "buf_limit").Export(k8sSchedulerNodeImageStates).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerCurrentPodFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{i32}).
+		WithParameterNames("buf", "buf_limit").Export(k8sSchedulerCurrentPod).
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(k8sSchedulerResultClusterEventsFn), []wazeroapi.ValueType{i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerResultClusterEvents).
@@ -140,17 +149,14 @@ type stackKey struct{}
 //   - Declaring one type is less complicated than one+context key per
 //     function. Functions should ignore fields they don't use.
 type stack struct {
-	// node is used by guest.filterFn
-	node *v1.Node
+	// filteredNodes are used by guest.prescoreFn
+	filteredNodes []*v1.Node
 
-	// nodes are used by guest.prescoreFn
-	nodes []*v1.Node
+	// currentNodeName is a Node's name that is being evaluated.
+	currentNodeName string
 
-	// nodeName is used by guest.scoreFn
-	nodeName string
-
-	// pod is used by guest.filterFn and guest.scoreFn
-	pod *v1.Pod
+	// currentPod is used by guest.filterFn and guest.scoreFn
+	currentPod *v1.Pod
 
 	// nodeToStatusMap is used by guest.postfilterFn
 	nodeToStatusMap map[string]*framework.Status
@@ -186,47 +192,85 @@ func paramsFromContext(ctx context.Context) *stack {
 	return ctx.Value(stackKey{}).(*stack)
 }
 
-func k8sApiNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
-	buf := uint32(stack[0])
-	bufLimit := bufLimit(stack[1])
+// k8sApiNodeFn is a function used by the host to send the node that the guest wants.
+func (h host) k8sApiNodeFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	nodename := uint32(stack[0])
+	nodenameLen := uint32(stack[1])
+	buf := uint32(stack[2])
+	bufLimit := bufLimit(stack[3])
 
-	node := paramsFromContext(ctx).node
+	var nodeName string
+	if b, ok := mod.Memory().Read(nodename, nodenameLen); !ok {
+		panic("out of memory reading nodeName")
+	} else {
+		nodeName = string(b)
+	}
+
+	var node *v1.Node
+	nodeinfo, err := h.handle.SnapshotSharedLister().NodeInfos().Get(nodeName)
+	if err == nil {
+		node = nodeinfo.Node()
+	}
 
 	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), node, buf, bufLimit))
 }
 
-func k8sApiNodeListFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+func (h host) k8sApiNodeListFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	nodes := paramsFromContext(ctx).nodes
-	// Use v1.NodeList to encode the nodes, as it is easier for both sides.
-	nl := make([]v1.Node, len(nodes))
-	for i := range nodes {
-		nl[i] = *nodes[i]
+	nodeinfos, err := h.handle.SnapshotSharedLister().NodeInfos().List()
+	if err != nil {
+		panic(err)
 	}
-	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), &v1.NodeList{Items: nl}, buf, bufLimit))
+
+	nodes := make([]v1.Node, 0, len(nodeinfos))
+	for _, ni := range nodeinfos {
+		nodes = append(nodes, *ni.Node())
+	}
+
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), &v1.NodeList{Items: nodes}, buf, bufLimit))
 }
 
-func k8sApiNodeNameFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+func k8sSchedulerApiFilteredNodeListFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	nodeName := paramsFromContext(ctx).nodeName
+	nodes := paramsFromContext(ctx).filteredNodes
+	// Use v1.NodeList to encode the nodes, as it is easier for both sides.
+	nl := make([]string, len(nodes))
+	for i := range nodes {
+		nl[i] = nodes[i].GetName()
+	}
+
+	b, err := json.Marshal(nl)
+	if err != nil {
+		panic(err)
+	}
+	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), string(b), buf, bufLimit))
+}
+
+// k8sSchedulerCurrentNodeNameFn returns the node name that is being evaluated.
+// (e.g., the target node in the filter phase.)
+func k8sSchedulerCurrentNodeNameFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	buf := uint32(stack[0])
+	bufLimit := bufLimit(stack[1])
+
+	nodeName := paramsFromContext(ctx).currentNodeName
 
 	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), nodeName, buf, bufLimit))
 }
 
-func k8sApiPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+func k8sSchedulerCurrentPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
-	pod := paramsFromContext(ctx).pod
-	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), pod, buf, bufLimit))
+	podInfo := paramsFromContext(ctx).currentPod
+	stack[0] = uint64(marshalIfUnderLimit(mod.Memory(), podInfo, buf, bufLimit))
 }
 
-// k8sApiTargetPodFn is a function used by the host to send the podInfo.
-func k8sApiTargetPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+// k8sSchedulerTargetPodFn is a function used by the host to send the podInfo.
+func k8sSchedulerTargetPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 	buf := uint32(stack[0])
 	bufLimit := bufLimit(stack[1])
 
@@ -261,6 +305,32 @@ func (h host) k8sSchedulerGetConfigFn(_ context.Context, mod wazeroapi.Module, s
 	config := h.guestConfig
 
 	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), config, buf, bufLimit))
+}
+
+func (h host) k8sSchedulerNodeImageStatesFn(_ context.Context, mod wazeroapi.Module, stack []uint64) {
+	nodename := uint32(stack[0])
+	nodenameLen := uint32(stack[1])
+	buf := uint32(stack[2])
+	bufLimit := bufLimit(stack[3])
+
+	var nodeName string
+	if b, ok := mod.Memory().Read(nodename, nodenameLen); !ok {
+		panic("out of memory reading nodeName")
+	} else {
+		nodeName = string(b)
+	}
+
+	var imageStates map[string]*framework.ImageStateSummary
+	ni, err := h.handle.SnapshotSharedLister().NodeInfos().Get(nodeName)
+	if err == nil {
+		imageStates = ni.ImageStates
+	}
+
+	b, err := json.Marshal(imageStates)
+	if err != nil {
+		panic(err)
+	}
+	stack[0] = uint64(writeStringIfUnderLimit(mod.Memory(), string(b), buf, bufLimit))
 }
 
 const (

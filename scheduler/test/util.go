@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
@@ -31,6 +32,7 @@ func (f *FakeRecorder) Eventf(regarding runtime.Object, related runtime.Object, 
 type FakeHandle struct {
 	Recorder              events.EventRecorder
 	RejectWaitingPodValue types.UID
+	SharedLister          framework.SharedLister
 }
 
 func (h *FakeHandle) EventRecorder() events.EventRecorder {
@@ -38,44 +40,47 @@ func (h *FakeHandle) EventRecorder() events.EventRecorder {
 }
 
 func (h *FakeHandle) AddNominatedPod(pod *framework.PodInfo, node *framework.NominatingInfo) {
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) ClientSet() clientset.Interface {
-	return nil
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) DeleteNominatedPodIfExists(pod *v1.Pod) {
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) Extenders() []framework.Extender {
-	return nil
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) KubeConfig() *restclient.Config {
-	return nil
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) SharedInformerFactory() informers.SharedInformerFactory {
-	return nil
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) RunFilterPluginsWithNominatedPods(ctx context.Context, state *framework.CycleState, pod *v1.Pod, info *framework.NodeInfo) (s *framework.Status) {
-	return
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) Parallelizer() (p parallelize.Parallelizer) {
-	return
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) GetWaitingPod(uid types.UID) (w framework.WaitingPod) {
-	return
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) IterateOverWaitingPods(callback func(framework.WaitingPod)) {
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) NominatedPodsForNode(nodeName string) (f []*framework.PodInfo) {
-	return
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) RejectWaitingPod(uid types.UID) (b bool) {
@@ -84,28 +89,67 @@ func (h *FakeHandle) RejectWaitingPod(uid types.UID) (b bool) {
 }
 
 func (h *FakeHandle) RunPreScorePlugins(context.Context, *framework.CycleState, *v1.Pod, []*v1.Node) (s *framework.Status) {
-	return
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) RunScorePlugins(context.Context, *framework.CycleState, *v1.Pod, []*v1.Node) (n []framework.NodePluginScores, s *framework.Status) {
-	return
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) RunFilterPlugins(context.Context, *framework.CycleState, *v1.Pod, *framework.NodeInfo) (s *framework.Status) {
-	return
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) RunPreFilterExtensionAddPod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToAdd *framework.PodInfo, nodeInfo *framework.NodeInfo) (s *framework.Status) {
-	return
+	panic("unimplemented")
 }
 
 func (h *FakeHandle) RunPreFilterExtensionRemovePod(ctx context.Context, state *framework.CycleState, podToSchedule *v1.Pod, podInfoToRemove *framework.PodInfo, nodeInfo *framework.NodeInfo) (s *framework.Status) {
-	return
+	panic("unimplemented")
 }
 
-func (h *FakeHandle) SnapshotSharedLister() (s framework.SharedLister) {
-	return
+func (h *FakeHandle) SnapshotSharedLister() framework.SharedLister {
+	return h.SharedLister
 }
 
 func (h *FakeHandle) UpdateNominatedPod(oldPod *v1.Pod, newPodInfo *framework.PodInfo) {
+	panic("unimplemented")
+}
+
+type FakeSharedLister struct {
+	NodeInfoLister framework.NodeInfoLister
+}
+
+func (c *FakeSharedLister) NodeInfos() framework.NodeInfoLister {
+	return c.NodeInfoLister
+}
+
+func (c *FakeSharedLister) StorageInfos() framework.StorageInfoLister {
+	panic("unimplemented")
+}
+
+type FakeNodeInfoLister struct {
+	Nodes []*framework.NodeInfo
+}
+
+func (c *FakeNodeInfoLister) List() ([]*framework.NodeInfo, error) {
+	return c.Nodes, nil
+}
+
+func (c *FakeNodeInfoLister) HavePodsWithAffinityList() ([]*framework.NodeInfo, error) {
+	panic("unimplemented")
+}
+
+func (c *FakeNodeInfoLister) HavePodsWithRequiredAntiAffinityList() ([]*framework.NodeInfo, error) {
+	panic("unimplemented")
+}
+
+func (c *FakeNodeInfoLister) Get(name string) (*framework.NodeInfo, error) {
+	for _, n := range c.Nodes {
+		if n.Node().Name == name {
+			return n, nil
+		}
+	}
+
+	return nil, errors.New("not found")
 }

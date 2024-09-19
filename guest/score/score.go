@@ -25,6 +25,11 @@ import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
 )
 
+const (
+	// MaxNodeScore is the maximum score a Score plugin is expected to return.
+	MaxNodeScore int64 = 100
+)
+
 // score is the current plugin assigned with SetPlugin.
 var score api.ScorePlugin
 
@@ -71,7 +76,7 @@ func _score() uint64 {
 	// This is less awkward than a lazy string. It is possible in a future
 	// refactor we can get this from a `nodeInfo.Node().Metadata.Name` cached
 	// in an upstream plugin stage.
-	nodeName := imports.NodeName()
+	nodeName := imports.CurrentNodeName()
 	score, status := score.Score(cyclestate.Values, pod, nodeName)
 
 	// Pack the score and status code into a single WebAssembly 1.0 compatible

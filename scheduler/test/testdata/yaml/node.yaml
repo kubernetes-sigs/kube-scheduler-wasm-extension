@@ -146,40 +146,7 @@ status:
     - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
     sizeBytes: 114493979
   - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
-    sizeBytes: 114493979
-  - names:
-    - k8s.gcr.io/kube-proxy-amd64:v1.24.11-gke.1000
+    - test-image:v1
     sizeBytes: 114493979
   nodeInfo:
     architecture: amd64

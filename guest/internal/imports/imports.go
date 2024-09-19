@@ -21,13 +21,10 @@ package imports
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
 //go:wasmimport k8s.io/api node
-func k8sApiNode(ptr uint32, limit mem.BufLimit) (len uint32)
+func k8sApiNode(uint32, uint32, uint32, mem.BufLimit) (len uint32)
 
-//go:wasmimport k8s.io/api nodeName
-func k8sApiNodeName(ptr uint32, limit mem.BufLimit) (len uint32)
-
-//go:wasmimport k8s.io/api pod
-func k8sApiPod(ptr uint32, limit mem.BufLimit) (len uint32)
+//go:wasmimport k8s.io/api nodeList
+func k8sApiNodeList(ptr uint32, limit mem.BufLimit) (len uint32)
 
 //go:wasmimport k8s.io/scheduler nodeToStatusMap
 func k8sSchedulerNodeToStatusMap(ptr uint32, limit mem.BufLimit) (len uint32)
@@ -37,3 +34,15 @@ func k8sSchedulerResultStatusReason(ptr, size uint32)
 
 //go:wasmimport k8s.io/scheduler nodeScoreList
 func k8sSchedulerNodeScoreList(ptr uint32, limit mem.BufLimit) (len uint32)
+
+//go:wasmimport k8s.io/scheduler currentNodeName
+func k8sSchedulerCurrentNodeName(uint32, mem.BufLimit) (len uint32)
+
+//go:wasmimport k8s.io/scheduler currentPod
+func k8sSchedulerCurrentPod(ptr uint32, limit mem.BufLimit) (len uint32)
+
+//go:wasmimport k8s.io/scheduler targetPod
+func k8sSchedulerTargetPod(ptr uint32, limit mem.BufLimit) (len uint32)
+
+//go:wasmimport k8s.io/scheduler nodeImageStates
+func k8sSchedulerNodeImageStates(uint32, uint32, uint32, mem.BufLimit) (len uint32)

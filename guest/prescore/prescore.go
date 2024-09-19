@@ -19,14 +19,14 @@
 package prescore
 
 import (
+	"encoding/json"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/sharedlister"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
-	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
-	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 // prescore is the current plugin assigned with SetPlugin.
@@ -81,46 +81,55 @@ func _prescore() uint32 {
 	// Pod is lazy and the same value for all plugins in a scheduling cycle.
 	pod := cyclestate.Pod
 
-	s := prescore.PreScore(cyclestate.Values, pod, &nodeList{})
+	s := prescore.PreScore(cyclestate.Values, pod, &filteredNodeInfoList{})
 
 	return imports.StatusToCode(s)
 }
 
-// nodeList is lazy so that a plugin which doesn't read fields avoids a
+// filteredNodeInfoList is lazy so that a plugin which doesn't read fields avoids a
 // relatively expensive unmarshal penalty.
 //
 // Note: Unlike proto.Pod, this is not special cased for the scheduling cycle.
-type nodeList struct {
-	items []proto.Node
+type filteredNodeInfoList struct {
+	// It only contains the Nodes that passed the filtering phase.
+	items []api.NodeInfo
 }
 
-func (n *nodeList) Items() []proto.Node {
+func (n *filteredNodeInfoList) List() []api.NodeInfo {
 	return n.lazyItems()
 }
 
+func (n *filteredNodeInfoList) Get(name string) api.NodeInfo {
+	for _, ni := range n.lazyItems() {
+		if ni.GetName() == name {
+			return ni
+		}
+	}
+
+	return nil
+}
+
 // lazyItems lazy initializes the nodes from lodeList.
-func (n *nodeList) lazyItems() []proto.Node {
+// It fetches the names of the nodes that passed the filtering phase from the host,
+// and initializes the list.
+func (n *filteredNodeInfoList) lazyItems() []api.NodeInfo {
 	if items := n.items; items != nil {
 		return items
 	}
 
-	var msg protoapi.NodeList
-	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
-	if err := mem.Update(func(ptr uint32, limit mem.BufLimit) (len uint32) {
-		return k8sApiNodeList(ptr, limit)
-	}, msg.UnmarshalVT); err != nil {
-		panic(err.Error())
+	jsonStr := mem.GetString(func(ptr uint32, limit mem.BufLimit) (len uint32) {
+		return k8sSchedulerFilteredNodeList(ptr, limit)
+	})
+
+	var nodeNames []string
+	err := json.Unmarshal([]byte(jsonStr), &nodeNames)
+	if err != nil {
+		panic(err)
 	}
 
-	size := len(msg.Items)
-	if size == 0 {
-		return nil
+	for _, nodeName := range nodeNames {
+		n.items = append(n.items, sharedlister.NodeInfos().Get(nodeName))
 	}
 
-	items := make([]proto.Node, size)
-	for i := range msg.Items {
-		items[i] = &internalproto.Node{Msg: msg.Items[i]}
-	}
-	n.items = items
-	return items
+	return n.items
 }

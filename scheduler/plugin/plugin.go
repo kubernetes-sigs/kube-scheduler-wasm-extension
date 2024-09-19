@@ -199,7 +199,7 @@ func (pl *wasmPlugin) AddPod(ctx context.Context, state *framework.CycleState, p
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: podToSchedule, targetPod: podInfoToAdd.Pod, node: nodeInfo.Node()}
+	params := &stack{currentPod: podToSchedule, targetPod: podInfoToAdd.Pod, currentNodeName: nodeInfo.Node().Name}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
 		status = g.addPod(ctx)
@@ -218,7 +218,7 @@ func (pl *wasmPlugin) RemovePod(ctx context.Context, state *framework.CycleState
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: podToSchedule, targetPod: podInfoToRemove.Pod, node: nodeInfo.Node()}
+	params := &stack{currentPod: podToSchedule, targetPod: podInfoToRemove.Pod, currentNodeName: nodeInfo.Node().Name}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, podToSchedule.UID, func(g *guest) {
 		status = g.removePod(ctx)
@@ -250,7 +250,7 @@ func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, po
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: pod}
+	params := &stack{currentPod: pod}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		var nodeNames []string
@@ -270,7 +270,7 @@ var _ framework.FilterPlugin = (*wasmPlugin)(nil)
 func (pl *wasmPlugin) Filter(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, nodeInfo *framework.NodeInfo) (status *framework.Status) {
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: pod, node: nodeInfo.Node()}
+	params := &stack{currentPod: pod, currentNodeName: nodeInfo.Node().Name}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		status = g.filter(ctx)
@@ -291,7 +291,7 @@ func (pl *wasmPlugin) PostFilter(ctx context.Context, state *framework.CycleStat
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: pod, nodeToStatusMap: filteredNodeStatusMap}
+	params := &stack{currentPod: pod, nodeToStatusMap: filteredNodeStatusMap}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		result, status = g.postFilter(ctx)
@@ -312,7 +312,7 @@ func (pl *wasmPlugin) PreScore(ctx context.Context, state *framework.CycleState,
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: pod, nodes: nodes}
+	params := &stack{currentPod: pod, filteredNodes: nodes}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		status = g.preScore(ctx)
@@ -330,7 +330,7 @@ func (pl *wasmPlugin) NormalizeScore(ctx context.Context, state *framework.Cycle
 	if pl.guestInterfaces&iScoreExtensions == 0 {
 		return nil // unimplemented
 	}
-	params := &stack{pod: pod, nodeScoreList: scores}
+	params := &stack{currentPod: pod, nodeScoreList: scores}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	var updatedScores framework.NodeScoreList
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
@@ -354,7 +354,7 @@ var _ framework.ScorePlugin = (*wasmPlugin)(nil)
 func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (score int64, status *framework.Status) {
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: pod, nodeName: nodeName}
+	params := &stack{currentPod: pod, currentNodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		score, status = g.score(ctx)
@@ -377,7 +377,7 @@ var _ framework.ReservePlugin = (*wasmPlugin)(nil)
 
 // Reserve implements the same method as documented on framework.ReservePlugin.
 func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
-	params := &stack{pod: pod, nodeName: nodeName}
+	params := &stack{currentPod: pod, currentNodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		status = g.reserve(ctx)
@@ -391,7 +391,7 @@ func (pl *wasmPlugin) Reserve(ctx context.Context, state *framework.CycleState, 
 func (pl *wasmPlugin) Unreserve(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) {
 	defer pl.pool.freeFromBinding(pod.UID) // the cycle is over, put it back into the pool.
 
-	params := &stack{pod: pod, nodeName: nodeName}
+	params := &stack{currentPod: pod, currentNodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	logger := klog.FromContext(ctx)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
@@ -412,7 +412,7 @@ func (pl *wasmPlugin) PreBind(ctx context.Context, state *framework.CycleState, 
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: pod, nodeName: nodeName}
+	params := &stack{currentPod: pod, currentNodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	g := pl.pool.getForBinding(pod.UID)
 	status = g.preBind(ctx)
@@ -429,7 +429,7 @@ func (pl *wasmPlugin) PostBind(ctx context.Context, state *framework.CycleState,
 	}
 
 	defer pl.pool.freeFromBinding(pod.UID) // the cycle is over, put it back into the pool.
-	params := &stack{pod: pod, nodeName: nodeName}
+	params := &stack{currentPod: pod, currentNodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	g := pl.pool.getForBinding(pod.UID)
 	g.postBind(ctx)
@@ -439,7 +439,7 @@ var _ framework.PermitPlugin = (*wasmPlugin)(nil)
 
 // Permit implements the same method as documented on framework.PermitPlugin.
 func (pl *wasmPlugin) Permit(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status, timeout time.Duration) {
-	params := &stack{pod: pod, nodeName: nodeName}
+	params := &stack{currentPod: pod, currentNodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		status, timeout = g.permit(ctx)
@@ -456,7 +456,7 @@ var _ framework.BindPlugin = (*wasmPlugin)(nil)
 func (pl *wasmPlugin) Bind(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (status *framework.Status) {
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{pod: pod, nodeName: nodeName}
+	params := &stack{currentPod: pod, currentNodeName: nodeName}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	g := pl.pool.getForBinding(pod.UID)
 	status = g.bind(ctx)
