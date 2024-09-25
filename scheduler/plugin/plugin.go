@@ -95,7 +95,6 @@ func newWasmPlugin(ctx context.Context, pluginName string, runtime wazero.Runtim
 		guestModuleConfig: wazero.NewModuleConfig(),
 		instanceCounter:   atomic.Uint64{},
 	}
-
 	if pl.pool, err = newGuestPool(ctx, pl.newGuest); err != nil {
 		return nil, fmt.Errorf("failed to create a guest pool: %w", err)
 	}
