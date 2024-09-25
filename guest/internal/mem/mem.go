@@ -104,21 +104,25 @@ func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, in
 	return binary.LittleEndian.Uint64(readBuf)
 }
 
-// ReadBytes reads a given number of bytes from memory, starting at the provided pointer.
-func ReadBytes(ptr uint32, limit BufLimit) []byte {
-	if limit == 0 {
+// SendAndGetPodBytes retrieves pod bytes from Wasm memory.
+func SendAndGetPodBytes(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) []byte {
+	readBuf := make([]byte, readBufLimit)
+	readBufPtr := uint32(uintptr(unsafe.Pointer(&readBuf[0])))
+
+	fn(input_ptr, input_size, readBufPtr, readBufLimit)
+
+	// We assume that the data in `readBuf` is null-terminated to mark its end
+	var length int
+	for i := 0; i < int(readBufLimit); i++ {
+		if readBuf[i] == 0 {
+			length = i
+			break
+		}
+	}
+
+	if length == 0 {
 		return nil
 	}
-	// Allocate a slice of the desired size.
-	buf := make([]byte, limit)
-	// Copy data from the memory buffer to the new slice.
-	copy(buf, unsafe.Slice((*byte)(unsafe.Pointer(uintptr(ptr))), limit))
-	return buf
-}
 
-// SendAndGetPodBytes is similar to SendAndGetUint64, but it retrieves a byte slice.
-func SendAndGetPodBytes(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) []byte {
-	fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
-	// Return the bytes from the buffer.
-	return ReadBytes(uint32(readBufPtr), readBufLimit)
+	return readBuf[:length]
 }

@@ -71,10 +71,15 @@ func GetWaitingPod(uid string) api.WaitingPod {
 		getWaitingPod(input_ptr, input_size, ptr, limit)
 	})
 	runtime.KeepAlive(uid)
+	println("podBytes in guest/handle/handle.go: ", podBytes)
 
+	if podBytes == nil {
+		return nil
+	}
 	// Deserialize the pod bytes into a proto.Pod
 	var pod protoapi.Pod
 	err := json.Unmarshal(podBytes, &pod)
+	println("err in guest/handle/handle.go: ", err)
 	if err != nil {
 		panic(err)
 	}
