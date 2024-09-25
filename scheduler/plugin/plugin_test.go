@@ -1816,13 +1816,6 @@ func TestGetWaitingPod(t *testing.T) {
 	}
 }
 
-func waitingPodsEqual(wp1, wp2 *waitingPod) bool {
-	if wp1 == nil || wp2 == nil {
-		return wp1 == wp2 // Both should be nil or one is nil
-	}
-	return wp1.pod == wp2.pod && reflect.DeepEqual(wp1.pendingPlugins, wp2.pendingPlugins)
-}
-
 // Extracts and trims the actual log message from a formatted klog string
 // (klog includes timestamp before actual log message)
 func extractMessage(log string) string {
