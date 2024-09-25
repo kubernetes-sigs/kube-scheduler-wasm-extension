@@ -1802,7 +1802,6 @@ func TestGetWaitingPod(t *testing.T) {
 			guestURL := tc.guestURL
 			recorder := &test.FakeRecorder{EventMsg: ""}
 			handle := &test.FakeHandle{Recorder: recorder}
-			handle.GetWaitingPodValue = makeTestWaitingPod(tc.pod, map[string]*time.Timer{})
 
 			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, handle)
 			if err != nil {
@@ -1810,12 +1809,12 @@ func TestGetWaitingPod(t *testing.T) {
 			}
 			defer p.(io.Closer).Close()
 			status := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, nil)
-
-			if !waitingPodsEqual(tc.expectedWaitingPod.(*waitingPod), handle.GetWaitingPodValue.(*waitingPod)) {
-				t.Logf("expected: %+v, got: %+v", tc.expectedWaitingPod, handle.GetWaitingPodValue)
-				t.Fatalf("unexpected waiting pod")
+			if want, have := tc.expectedWaitingPod, handle.GetWaitingPodValue; want != have {
+				t.Fatalf("unexpected pod: %v != %v", want, have)
 			}
-
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
 			if want, have := tc.expectedStatusMsg, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
 			}

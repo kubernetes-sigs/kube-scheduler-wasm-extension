@@ -6,6 +6,7 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
@@ -74,13 +75,20 @@ func (h *FakeHandle) Parallelizer() (p parallelize.Parallelizer) {
 }
 
 func (h *FakeHandle) GetWaitingPod(uid types.UID) framework.WaitingPod {
-	pod := &waitingPod{
-		pod:            nil,
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "good-pod",
+			Namespace: "test",
+			UID:       uid,
+		},
+	}
+	waitingPod := &waitingPod{
+		pod:            pod,
 		pendingPlugins: make(map[string]*time.Timer),
 		s:              make(chan *framework.Status, 1),
 	}
-	println("pod !!!!: ", pod)
-	return pod
+	h.GetWaitingPodValue = waitingPod
+	return waitingPod
 }
 
 func (h *FakeHandle) RejectWaitingPod(uid types.UID) (b bool) {
