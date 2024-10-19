@@ -1836,9 +1836,9 @@ func TestGetWaitingPod(t *testing.T) {
 				}
 			}
 
-			//if want, have := tc.expectedStatusCode, status.Code(); want != have {
-			//	t.Fatalf("unexpected status code: want %v, have %v", want, have)
-			//}
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
 
 			if want, have := tc.expectedStatusMsg, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)

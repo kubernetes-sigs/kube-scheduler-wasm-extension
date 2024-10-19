@@ -19,7 +19,6 @@
 package handle
 
 import (
-	"encoding/json"
 	"runtime"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
@@ -70,20 +69,13 @@ func GetWaitingPod(uid string) api.WaitingPod {
 	podBytes := mem.SendAndGetPodBytes(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
 		getWaitingPod(input_ptr, input_size, ptr, limit)
 	})
-	runtime.KeepAlive(uid)
-	println("podBytes in guest/handle/handle.go: ", podBytes)
+	println("podBytes: ", podBytes)
 
 	if podBytes == nil {
 		return nil
 	}
-	// Deserialize the pod bytes into a proto.Pod
-	var pod protoapi.Pod
-	err := json.Unmarshal(podBytes, &pod)
-	println("err in guest/handle/handle.go: ", err)
-	if err != nil {
-		panic(err)
-	}
 
+	var pod protoapi.Pod
 	// Create a new instance of wasmWaitingPod with the deserialized pod data
 	waitingPod := &wasmWaitingPod{
 		uid: uid,

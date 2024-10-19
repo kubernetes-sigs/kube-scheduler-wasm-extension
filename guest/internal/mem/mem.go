@@ -104,14 +104,12 @@ func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, in
 	return binary.LittleEndian.Uint64(readBuf)
 }
 
-// SendAndGetPodBytes retrieves pod bytes from Wasm memory.
 func SendAndGetPodBytes(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) []byte {
 	readBuf := make([]byte, readBufLimit)
 	readBufPtr := uint32(uintptr(unsafe.Pointer(&readBuf[0])))
 
 	fn(input_ptr, input_size, readBufPtr, readBufLimit)
 
-	// We assume that the data in `readBuf` is null-terminated to mark its end
 	var length int
 	for i := 0; i < int(readBufLimit); i++ {
 		if readBuf[i] == 0 {
