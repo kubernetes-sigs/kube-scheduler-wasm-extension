@@ -92,7 +92,7 @@ func (pluginForGet) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInf
 	// Call GetWaitingPod first
 	waitingPod := handle.GetWaitingPod(pod.GetUid())
 
-	if waitingPod != nil {
+	if waitingPod == nil {
 		return &api.Status{
 			Code:   api.StatusCodeError,
 			Reason: "No waiting pod found for UID: " + pod.GetUid(),
