@@ -1397,8 +1397,8 @@ func TestPostBind(t *testing.T) {
 	
 	wasm error: unreachable
 	wasm stack trace:
-		main.runtime._panic(i32,i32)
-		main.postbind()
+		.runtime._panic(i32,i32)
+		.postbind()
  >`,
 		},
 		{
