@@ -69,7 +69,6 @@ func GetWaitingPod(uid string) api.WaitingPod {
 	podBytes := mem.SendAndGetPodBytes(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
 		getWaitingPod(input_ptr, input_size, ptr, limit)
 	})
-	println("podBytes: ", podBytes)
 
 	if podBytes == nil {
 		return nil
