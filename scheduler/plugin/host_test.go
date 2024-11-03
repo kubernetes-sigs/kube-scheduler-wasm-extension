@@ -19,16 +19,12 @@ package wasm
 import (
 	"bytes"
 	"context"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/tetratelabs/wazero/experimental/wazerotest"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	k8stest "k8s.io/klog/v2/test"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
@@ -97,45 +93,6 @@ func initKlog(t *testing.T, buf *bytes.Buffer) {
 	_ = fs.Set("skip_headers", "true")
 	// Write log output to the buffer
 	klog.SetOutput(buf)
-}
-
-type waitingPod struct {
-	pod            *v1.Pod
-	pendingPlugins map[string]*time.Timer
-	s              chan *framework.Status
-	mu             sync.RWMutex
-}
-
-func (wp *waitingPod) GetPod() *v1.Pod {
-	return wp.pod
-}
-
-func (wp *waitingPod) GetPendingPlugins() []string {
-	wp.mu.RLock()
-	defer wp.mu.RUnlock()
-	var plugins []string
-	for plugin := range wp.pendingPlugins {
-		plugins = append(plugins, plugin)
-	}
-	return plugins
-}
-
-func (wp *waitingPod) Allow(pluginName string) {
-	wp.mu.Lock()
-	defer wp.mu.Unlock()
-	if timer, ok := wp.pendingPlugins[pluginName]; ok {
-		timer.Stop()
-		delete(wp.pendingPlugins, pluginName)
-	}
-}
-
-func (wp *waitingPod) Reject(pluginName, msg string) {
-	wp.mu.Lock()
-	defer wp.mu.Unlock()
-	if timer, ok := wp.pendingPlugins[pluginName]; ok {
-		timer.Stop()
-		delete(wp.pendingPlugins, pluginName)
-	}
 }
 
 func Test_k8sHandleGetWaitingPodFn(t *testing.T) {
