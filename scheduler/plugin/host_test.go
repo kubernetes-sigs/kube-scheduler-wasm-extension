@@ -25,7 +25,6 @@ import (
 
 	"github.com/tetratelabs/wazero/experimental/wazerotest"
 	v1 "k8s.io/api/core/v1"
-	apimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	k8stest "k8s.io/klog/v2/test"
@@ -141,49 +140,28 @@ func (wp *waitingPod) Reject(pluginName, msg string) {
 
 func Test_k8sHandleGetWaitingPodFn(t *testing.T) {
 	recorder := &test.FakeRecorder{EventMsg: ""}
-	uid := types.UID("c6feae3a-7082-42a5-a5ec-6ae2e1603727")
-
-	// Create a fake WaitingPod
-	pod := &v1.Pod{
-		ObjectMeta: apimeta.ObjectMeta{
-			Name:      "good-pod",
-			Namespace: "test",
-			UID:       uid,
-		},
-	}
-	wp := &waitingPod{
-		pod:            pod,
-		pendingPlugins: make(map[string]*time.Timer),
-		s:              make(chan *framework.Status, 1),
-	}
-
-	wp.mu.Lock()
-
-	handle := &test.FakeHandle{
-		Recorder:           recorder,
-		GetWaitingPodValue: wp,
-	}
-
+	handle := &test.FakeHandle{Recorder: recorder}
 	h := host{handle: handle}
 
 	// Create a fake wasm module, which has data the guest should write.
 	mem := wazerotest.NewMemory(wazerotest.PageSize)
 	mod := wazerotest.NewModule(mem)
+	uid := types.UID("c6feae3a-7082-42a5-a5ec-6ae2e1603727")
 	copy(mem.Bytes, uid)
 
 	// Invoke the host function in the same way the guest would have.
 	h.k8sHandleGetWaitingPodFn(context.Background(), mod, []uint64{
 		0,
 		uint64(len(uid)),
-		0,
-		0,
+		0, // Ideally we should define some value, but we don't define it for now.
+		0, // Ideally we should define some value, but we don't define it for now.
 	})
 
-	// Checking the value returned by GetWaitingPod
+	// Checking the value stored on handle
 	have := handle.GetWaitingPodValue
-	want := wp
+	want := uid
 
-	if want != have {
+	if want != have.GetPod().UID {
 		t.Fatalf("unexpected uid: %v != %v", want, have)
 	}
 }
