@@ -4,4 +4,4 @@ profiles:
   - plugins:
       multiPoint:
         enabled:
-          - name: NodeNumber
+          - name: NodeUnschedulable
