@@ -5,11 +5,11 @@ profiles:
       multiPoint:
         enabled:
           - name: wasm
-          - name: NodeNumber
+          - name: NodeUnschedulable
     pluginConfig:
       - name: wasm
         args:
-          guestURL: "file://../../../examples/nodenumber/main.wasm"
+          guestURL: "file://../../../examples/nodeunschedulable/main.wasm"
 extenders:
   - urlPrefix: "http://localhost:8080/"
     prioritizeVerb: "priorities"
