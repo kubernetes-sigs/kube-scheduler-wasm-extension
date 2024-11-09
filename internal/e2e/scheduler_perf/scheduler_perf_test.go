@@ -762,9 +762,11 @@ func runWorkload(ctx context.Context, b *testing.B, tc *testCase, w *workload) [
 	finalFunc, podInformer, client, dynClient := mustSetupScheduler(ctx, b, cfg, registory)
 	b.Cleanup(finalFunc)
 
-	// start extender
-	go extender.Start()
-	defer extender.Shutdown()
+	// Start extender if needed.
+	if cfg != nil && len(cfg.Extenders) > 0 {
+		go extender.Start()
+		defer extender.Shutdown()
+	}
 
 	var mu sync.Mutex
 	var dataItems []DataItem
