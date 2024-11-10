@@ -5,6 +5,9 @@ golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
 examples/advanced/main.wasm: examples/advanced/main.go
 	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi .)
 
+internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm: internal/e2e/scheduler_perf/wasm/nodenumber/main.go
+	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi .)
+
 %/main.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi .)
 
