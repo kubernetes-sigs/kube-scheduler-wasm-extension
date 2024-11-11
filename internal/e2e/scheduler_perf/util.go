@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/informers"
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -41,7 +42,7 @@ import (
 	"k8s.io/component-base/metrics/legacyregistry"
 	"k8s.io/component-base/metrics/testutil"
 	"k8s.io/klog/v2"
-	"k8s.io/kube-scheduler/config/v1beta2"
+	schedulerconfig "k8s.io/kube-scheduler/config/v1"
 	"k8s.io/kubernetes/cmd/kube-apiserver/app/options"
 	"k8s.io/kubernetes/pkg/scheduler"
 	"k8s.io/kubernetes/pkg/scheduler/apis/config"
@@ -64,7 +65,7 @@ const (
 var dataItemsDir = flag.String("data-items-dir", "", "destination directory for storing generated data items for perf dashboard")
 
 func newDefaultComponentConfig() (*config.KubeSchedulerConfiguration, error) {
-	gvk := v1beta2.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration")
+	gvk := schedulerconfig.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration")
 	cfg := config.KubeSchedulerConfiguration{}
 	_, _, err := kubeschedulerscheme.Codecs.UniversalDecoder().Decode(nil, &gvk, &cfg)
 	if err != nil {
@@ -85,7 +86,7 @@ func mustSetupScheduler(ctx context.Context, b *testing.B, config *config.KubeSc
 	// Run API server with minimimal logging by default. Can be raised with -v.
 	framework.MinVerbosity = 0
 
-	_, kubeConfig, tearDownFn := framework.StartTestServer(b, framework.TestServerSetup{
+	clientSet, kubeConfig, tearDownFn := framework.StartTestServer(ctx, b, framework.TestServerSetup{
 		ModifyServerRunOptions: func(opts *options.ServerRunOptions) {
 			// Disable ServiceAccount admission plugin as we don't have serviceaccount controller running.
 			opts.Admission.GenericAdmission.DisablePlugins = []string{"ServiceAccount", "TaintNodesByCondition", "Priority"}
@@ -112,18 +113,18 @@ func mustSetupScheduler(ctx context.Context, b *testing.B, config *config.KubeSc
 
 	// Not all config options will be effective but only those mostly related with scheduler performance will
 	// be applied to start a scheduler, most of them are defined in `scheduler.schedulerOptions`.
-	_, podInformer := startCustomScheduler(ctx, client, cfg, config, outOfTreePluginRegistry)
-	util.StartFakePVController(ctx, client)
+	_, informerFactory := startCustomScheduler(ctx, client, cfg, config, outOfTreePluginRegistry)
+	util.StartFakePVController(ctx, clientSet, informerFactory)
 
 	shutdownFn := func() {
 		cancel()
 		tearDownFn()
 	}
 
-	return shutdownFn, podInformer, client, dynClient
+	return shutdownFn, informerFactory.Core().V1().Pods(), client, dynClient
 }
 
-func startCustomScheduler(ctx context.Context, clientSet clientset.Interface, kubeConfig *restclient.Config, cfg *kubeschedulerconfig.KubeSchedulerConfiguration, outOfTreePluginRegistry frameworkruntime.Registry) (*scheduler.Scheduler, coreinformers.PodInformer) {
+func startCustomScheduler(ctx context.Context, clientSet clientset.Interface, kubeConfig *restclient.Config, cfg *kubeschedulerconfig.KubeSchedulerConfiguration, outOfTreePluginRegistry frameworkruntime.Registry) (*scheduler.Scheduler, informers.SharedInformerFactory) {
 	informerFactory := scheduler.NewInformerFactory(clientSet, 0)
 	evtBroadcaster := events.NewBroadcaster(&events.EventSinkImpl{
 		Interface: clientSet.EventsV1(),
@@ -136,11 +137,11 @@ func startCustomScheduler(ctx context.Context, clientSet clientset.Interface, ku
 	evtBroadcaster.StartRecordingToSink(ctx.Done())
 
 	sched, err := scheduler.New(
+		ctx,
 		clientSet,
 		informerFactory,
 		nil,
 		profile.NewRecorderFactory(evtBroadcaster),
-		ctx.Done(),
 		scheduler.WithKubeConfig(kubeConfig),
 		scheduler.WithProfiles(cfg.Profiles...),
 		scheduler.WithPercentageOfNodesToScore(cfg.PercentageOfNodesToScore),
@@ -158,7 +159,7 @@ func startCustomScheduler(ctx context.Context, clientSet clientset.Interface, ku
 	informerFactory.WaitForCacheSync(ctx.Done())
 	go sched.Run(ctx)
 
-	return sched, informerFactory.Core().V1().Pods()
+	return sched, informerFactory
 }
 
 // Returns the list of scheduled pods in the specified namespaces.
