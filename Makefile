@@ -1,6 +1,6 @@
 gofumpt       := mvdan.cc/gofumpt@v0.5.0
 gosimports    := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
-golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
+golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
 
 examples/advanced/main.wasm: examples/advanced/main.go
 	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi .)
@@ -33,7 +33,7 @@ bench-guest: guest/.tinygo-target.json
 # This makes a wasi target that uses the same wazero version as the scheduler.
 wazero_version := $(shell (cd scheduler; go list -f '{{ .Module.Version }}' github.com/tetratelabs/wazero))
 guest/.tinygo-target.json: scheduler/go.mod
-	@sed 's~"wasmtime.*"~"go run github.com/tetratelabs/wazero/cmd/wazero@$(wazero_version) run {}"~' $(shell tinygo env TINYGOROOT)/targets/wasi.json > $@
+	@jq '."emulator" = "go run github.com/tetratelabs/wazero/cmd/wazero@$(wazero_version) run {}"' $(shell tinygo env TINYGOROOT)/targets/wasi.json > $@
 
 .PHONY: build-wat
 build-wat: $(wildcard scheduler/test/testdata/*/*.wat)

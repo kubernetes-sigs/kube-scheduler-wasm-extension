@@ -27,9 +27,9 @@ jobs:
     strategy:
       matrix:
         go-version:  # Note: Go only supports 2 versions: https://go.dev/doc/devel/release#policy
-          - "1.20"
+          - "1.23"
         tinygo-version:  # Note: TinyGo only supports latest: https://github.com/tinygo-org/tinygo/releases
-          - "0.28.1"  # Latest
+          - "0.34.0"  # Latest
 
     steps:
       - uses: actions/checkout@v3
