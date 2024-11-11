@@ -1,6 +1,6 @@
 module sigs.k8s.io/kube-scheduler-wasm-extension/internal/e2e/guest
 
-go 1.20
+go 1.22.0
 
 require (
 	github.com/wasilibs/nottinygc v0.4.0

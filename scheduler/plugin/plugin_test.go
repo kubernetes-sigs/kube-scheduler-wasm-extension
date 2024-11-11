@@ -235,7 +235,7 @@ func TestNew_maskInterfaces(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := wasm.PluginFactory("wasm")(&runtime.Unknown{
+			p, err := wasm.PluginFactory("wasm")(context.Background(), &runtime.Unknown{
 				ContentType: runtime.ContentTypeJSON,
 				Raw:         []byte(fmt.Sprintf(`{"guestURL": "%s"}`, tc.guestURL)),
 			}, nil)
@@ -338,7 +338,7 @@ func TestEnqueue(t *testing.T) {
 		name     string
 		guestURL string
 		args     []string
-		expected []framework.ClusterEvent
+		expected []framework.ClusterEventWithHint
 	}{
 		{
 			name:     "success: 0",
@@ -347,16 +347,16 @@ func TestEnqueue(t *testing.T) {
 		{
 			name: "success: 1",
 			args: []string{"test", "1"},
-			expected: []framework.ClusterEvent{
-				{Resource: framework.PersistentVolume, ActionType: framework.Delete},
+			expected: []framework.ClusterEventWithHint{
+				{Event: framework.ClusterEvent{Resource: framework.PersistentVolume, ActionType: framework.Delete}},
 			},
 		},
 		{
 			name: "success: 2",
 			args: []string{"test", "2"},
-			expected: []framework.ClusterEvent{
-				{Resource: framework.Node, ActionType: framework.Add},
-				{Resource: framework.PersistentVolume, ActionType: framework.Delete},
+			expected: []framework.ClusterEventWithHint{
+				{Event: framework.ClusterEvent{Resource: framework.Node, ActionType: framework.Add}},
+				{Event: framework.ClusterEvent{Resource: framework.PersistentVolume, ActionType: framework.Delete}},
 			},
 		},
 	}
@@ -414,7 +414,7 @@ func TestPreFilter(t *testing.T) {
 			name:               "success: pod has spec.NodeName",
 			pod:                test.PodSmall,
 			args:               []string{"test", "preFilter"},
-			expectedResult:     &framework.PreFilterResult{NodeNames: sets.NewString("good-node")},
+			expectedResult:     &framework.PreFilterResult{NodeNames: sets.New("good-node")},
 			expectedStatusCode: framework.Success,
 		},
 		{
@@ -787,7 +787,13 @@ wasm stack trace:
 				pl.SetGlobals(tc.globals)
 			}
 
-			status := p.(framework.PreScorePlugin).PreScore(ctx, nil, tc.pod, tc.nodes)
+			nodeInfos := make([]*framework.NodeInfo, len(tc.nodes))
+			for i, n := range tc.nodes {
+				ni := framework.NewNodeInfo()
+				ni.SetNode(n)
+				nodeInfos[i] = ni
+			}
+			status := p.(framework.PreScorePlugin).PreScore(ctx, nil, tc.pod, nodeInfos)
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %d, have %d", want, have)
 			}

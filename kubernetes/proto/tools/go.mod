@@ -1,6 +1,6 @@
 module sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/tools
 
-go 1.20
+go 1.22.0
 
 require (
 	github.com/knqyf263/go-plugin v0.8.0

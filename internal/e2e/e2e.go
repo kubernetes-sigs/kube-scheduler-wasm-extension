@@ -36,7 +36,7 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 	}
 
 	if prescoreP, ok := plugin.(framework.PreScorePlugin); ok {
-		s = prescoreP.PreScore(ctx, nil, pod, []*v1.Node{ni.Node()})
+		s = prescoreP.PreScore(ctx, nil, pod, []*framework.NodeInfo{ni})
 		RequireSuccess(t, s)
 	}
 

@@ -33,12 +33,12 @@ import (
 )
 
 func PluginFactory(pluginName string) frameworkruntime.PluginFactory {
-	return func(configuration runtime.Object, frameworkHandle framework.Handle) (framework.Plugin, error) {
+	return func(ctx context.Context, configuration runtime.Object, frameworkHandle framework.Handle) (framework.Plugin, error) {
 		config := PluginConfig{}
 		if err := frameworkruntime.DecodeInto(configuration, &config); err != nil {
 			return nil, fmt.Errorf("failed to decode into %s PluginConfig: %w", pluginName, err)
 		}
-		return NewFromConfig(context.Background(), pluginName, config, frameworkHandle)
+		return NewFromConfig(ctx, pluginName, config, frameworkHandle)
 	}
 }
 
@@ -139,24 +139,25 @@ var _ framework.EnqueueExtensions = (*wasmPlugin)(nil)
 
 // allClusterEvents is copied from framework.go, to avoid the complexity of
 // conditionally implementing framework.EnqueueExtensions.
-var allClusterEvents = []framework.ClusterEvent{
-	{Resource: framework.Pod, ActionType: framework.All},
-	{Resource: framework.Node, ActionType: framework.All},
-	{Resource: framework.CSINode, ActionType: framework.All},
-	{Resource: framework.PersistentVolume, ActionType: framework.All},
-	{Resource: framework.PersistentVolumeClaim, ActionType: framework.All},
-	{Resource: framework.StorageClass, ActionType: framework.All},
+var allClusterEvents = []framework.ClusterEventWithHint{
+	{Event: framework.ClusterEvent{Resource: framework.Pod, ActionType: framework.All}},
+	{Event: framework.ClusterEvent{Resource: framework.Node, ActionType: framework.All}},
+	{Event: framework.ClusterEvent{Resource: framework.CSINode, ActionType: framework.All}},
+	{Event: framework.ClusterEvent{Resource: framework.PersistentVolume, ActionType: framework.All}},
+	{Event: framework.ClusterEvent{Resource: framework.PersistentVolumeClaim, ActionType: framework.All}},
+	{Event: framework.ClusterEvent{Resource: framework.StorageClass, ActionType: framework.All}},
 }
 
 // EventsToRegister implements the same method as documented on framework.EnqueueExtensions.
-func (pl *wasmPlugin) EventsToRegister() (clusterEvents []framework.ClusterEvent) {
+func (pl *wasmPlugin) EventsToRegister() (clusterEvents []framework.ClusterEventWithHint) {
 	// We always implement EventsToRegister, even when the guest doesn't
 	if pl.guestInterfaces&iEnqueueExtensions == 0 {
 		return allClusterEvents // unimplemented
 	}
 
-	// TODO: Track https://github.com/kubernetes/kubernetes/pull/119155 for QueueingHintFn
-	// This will become []ClusterEventWithHint, but the hint will be difficult
+	// We currently don't support QueueingHintFn, so we don't expect it from
+	// the guest. Instead, we convert the events to events with hints.
+	// We could support it in the future, but the hint will be difficult
 	// to implement. If we do, we may need to make a generic guest export
 	// QueueingHintFn which has another parameter of the an funcID which
 	// substitutes for event.QueueingHintFn and passed later to the generic
@@ -180,7 +181,11 @@ func (pl *wasmPlugin) EventsToRegister() (clusterEvents []framework.ClusterEvent
 		// Only override the default cluster events if at least one was
 		// returned from the guest
 		if ce := g.eventsToRegister(ctx); len(ce) != 0 {
-			clusterEvents = ce
+			clusterEventsWithHints := make([]framework.ClusterEventWithHint, len(ce))
+			for i, e := range ce {
+				clusterEventsWithHints[i] = framework.ClusterEventWithHint{Event: e}
+			}
+			clusterEvents = clusterEventsWithHints
 		}
 	}); err != nil {
 		panic(err)
@@ -256,7 +261,7 @@ func (pl *wasmPlugin) PreFilter(ctx context.Context, _ *framework.CycleState, po
 		var nodeNames []string
 		nodeNames, status = g.preFilter(ctx)
 		if nodeNames != nil {
-			result = &framework.PreFilterResult{NodeNames: sets.NewString(nodeNames...)}
+			result = &framework.PreFilterResult{NodeNames: sets.New(nodeNames...)}
 		}
 	}); err != nil {
 		status = framework.AsStatus(err)
@@ -304,7 +309,7 @@ func (pl *wasmPlugin) PostFilter(ctx context.Context, state *framework.CycleStat
 var _ framework.PreScorePlugin = (*wasmPlugin)(nil)
 
 // PreScore implements the same method as documented on framework.PreScorePlugin.
-func (pl *wasmPlugin) PreScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodes []*v1.Node) (status *framework.Status) {
+func (pl *wasmPlugin) PreScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeInfoList []*framework.NodeInfo) (status *framework.Status) {
 	// We implement PreScorePlugin with ScorePlugin, even when the guest doesn't.
 	if pl.guestInterfaces&iPreScorePlugin == 0 {
 		return nil // unimplemented
@@ -312,7 +317,7 @@ func (pl *wasmPlugin) PreScore(ctx context.Context, state *framework.CycleState,
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{currentPod: pod, filteredNodes: nodes}
+	params := &stack{currentPod: pod, filteredNodes: nodeInfoList}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		status = g.preScore(ctx)

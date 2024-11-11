@@ -1,6 +1,6 @@
 module sigs.k8s.io/kube-scheduler-wasm-extension/guest
 
-go 1.20
+go 1.22.0
 
 replace sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto => ../kubernetes/proto
 

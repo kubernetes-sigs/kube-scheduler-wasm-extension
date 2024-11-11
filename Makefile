@@ -70,7 +70,7 @@ proto-tools:
 	cat tools.go | grep "_" | awk -F'"' '{print $$2}' | xargs -tI % go install %
 
 # Generate protobuf sources from the same kubernetes version as the plugin.
-kubernetes_version := v1.27.3
+kubernetes_version := v1.30.4
 .PHONY: submodule-update
 submodule-update:
 	git submodule update -i

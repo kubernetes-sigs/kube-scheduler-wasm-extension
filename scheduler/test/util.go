@@ -11,6 +11,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/kubernetes/pkg/scheduler/framework/parallelize"
 )
@@ -38,7 +39,7 @@ func (h *FakeHandle) EventRecorder() events.EventRecorder {
 	return h.Recorder
 }
 
-func (h *FakeHandle) AddNominatedPod(pod *framework.PodInfo, node *framework.NominatingInfo) {
+func (h *FakeHandle) AddNominatedPod(logger klog.Logger, pod *framework.PodInfo, node *framework.NominatingInfo) {
 	panic("unimplemented")
 }
 
@@ -87,11 +88,11 @@ func (h *FakeHandle) RejectWaitingPod(uid types.UID) (b bool) {
 	return uid == types.UID("handle-test")
 }
 
-func (h *FakeHandle) RunPreScorePlugins(context.Context, *framework.CycleState, *v1.Pod, []*v1.Node) (s *framework.Status) {
+func (h *FakeHandle) RunPreScorePlugins(context.Context, *framework.CycleState, *v1.Pod, []*framework.NodeInfo) (s *framework.Status) {
 	panic("unimplemented")
 }
 
-func (h *FakeHandle) RunScorePlugins(context.Context, *framework.CycleState, *v1.Pod, []*v1.Node) (n []framework.NodePluginScores, s *framework.Status) {
+func (h *FakeHandle) RunScorePlugins(context.Context, *framework.CycleState, *v1.Pod, []*framework.NodeInfo) (n []framework.NodePluginScores, s *framework.Status) {
 	panic("unimplemented")
 }
 
@@ -111,7 +112,7 @@ func (h *FakeHandle) SnapshotSharedLister() framework.SharedLister {
 	return h.SharedLister
 }
 
-func (h *FakeHandle) UpdateNominatedPod(oldPod *v1.Pod, newPodInfo *framework.PodInfo) {
+func (h *FakeHandle) UpdateNominatedPod(logger klog.Logger, oldPod *v1.Pod, newPodInfo *framework.PodInfo) {
 	panic("unimplemented")
 }
 

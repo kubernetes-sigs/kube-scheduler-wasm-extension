@@ -150,7 +150,7 @@ type stackKey struct{}
 //     function. Functions should ignore fields they don't use.
 type stack struct {
 	// filteredNodes are used by guest.prescoreFn
-	filteredNodes []*v1.Node
+	filteredNodes []*framework.NodeInfo
 
 	// currentNodeName is a Node's name that is being evaluated.
 	currentNodeName string
@@ -240,7 +240,7 @@ func k8sSchedulerApiFilteredNodeListFn(ctx context.Context, mod wazeroapi.Module
 	// Use v1.NodeList to encode the nodes, as it is easier for both sides.
 	nl := make([]string, len(nodes))
 	for i := range nodes {
-		nl[i] = nodes[i].GetName()
+		nl[i] = nodes[i].Node().GetName()
 	}
 
 	b, err := json.Marshal(nl)
