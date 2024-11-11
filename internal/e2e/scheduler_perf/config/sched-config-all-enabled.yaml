@@ -9,7 +9,7 @@ profiles:
     pluginConfig:
       - name: wasm
         args:
-          guestURL: "file://../../../examples/nodenumber/main.wasm"
+          guestURL: "file://./wasm/nodenumber/main.wasm"
 extenders:
   - urlPrefix: "http://localhost:8080/"
     prioritizeVerb: "priorities"

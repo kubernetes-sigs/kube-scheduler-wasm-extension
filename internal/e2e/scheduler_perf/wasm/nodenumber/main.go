@@ -22,12 +22,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	_ "github.com/wasilibs/nottinygc"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog"
 	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/plugin"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/prescore"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/score"
 )
 
 // main is compiled to a WebAssembly function named "_start", called by the
@@ -37,10 +41,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	plugin.Set(p)
+	enqueue.SetPlugin(p)
+	prescore.SetPlugin(p)
+	score.SetPlugin(p)
 }
 
-func New(klog klogapi.Klog, jsonConfig []byte) (api.Plugin, error) {
+func New(klog klogapi.Klog, jsonConfig []byte) (*NodeNumber, error) {
 	var args nodeNumberArgs
 	if jsonConfig != nil {
 		if err := json.Unmarshal(jsonConfig, &args); err != nil {
@@ -90,7 +96,7 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 }
 
 // PreScore implements api.PreScorePlugin
-func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ proto.NodeList) *api.Status {
+func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ api.NodeInfoList) *api.Status {
 	podnum, ok := lastNumber(pod.Spec().GetNodeName())
 	if !ok {
 		return nil // return success even if its suffix is non-number.
