@@ -1,4 +1,4 @@
-FROM golang:1.21 AS build-env
+FROM golang:1.23 AS build-env
 
 ENV GOOS=linux
 ENV GOARCH=amd64
@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 RUN go build -v -o ./bin/kube-scheduler-wasm-extension ./cmd/scheduler
 
-FROM alpine:3.19.1
+FROM alpine:3.20.3
 
 COPY --from=build-env /go/src/kube-scheduler-wasm-extension/bin/kube-scheduler-wasm-extension /kube-scheduler-wasm-extension
 RUN chmod a+x /kube-scheduler-wasm-extension
