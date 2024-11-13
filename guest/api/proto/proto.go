@@ -32,6 +32,8 @@ type Metadata interface {
 	GetName() string
 	GetNamespace() string
 	GetResourceVersion() string
+	GetLabels() map[string]string
+	GetAnnotations() map[string]string
 }
 
 type Node interface {

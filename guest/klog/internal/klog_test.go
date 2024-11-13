@@ -285,3 +285,11 @@ func (podSmall) GetUid() string {
 func (podSmall) GetResourceVersion() string {
 	return "resource-version"
 }
+
+func (podSmall) GetLabels() map[string]string {
+	return map[string]string{}
+}
+
+func (podSmall) GetAnnotations() map[string]string {
+	return map[string]string{}
+}

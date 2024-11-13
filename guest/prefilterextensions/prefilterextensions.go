@@ -116,6 +116,14 @@ func (p *podInfo) GetUid() string {
 	return p.lazyPod().GetUid()
 }
 
+func (p *podInfo) GetLabels() map[string]string {
+	return p.lazyPod().GetLabels()
+}
+
+func (p *podInfo) GetAnnotations() map[string]string {
+	return p.lazyPod().GetAnnotations()
+}
+
 func (p *podInfo) Pod() proto.Pod {
 	return p.lazyPod()
 }

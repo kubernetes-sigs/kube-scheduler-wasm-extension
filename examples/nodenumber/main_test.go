@@ -154,6 +154,14 @@ func (t testPod) GetResourceVersion() string {
 	return "v1"
 }
 
+func (t testPod) GetLabels() map[string]string {
+	return map[string]string{}
+}
+
+func (t testPod) GetAnnotations() map[string]string {
+	return map[string]string{}
+}
+
 func (t testPod) Spec() *protoapi.PodSpec {
 	nodeName := t.nodeName
 	return &protoapi.PodSpec{NodeName: &nodeName}
