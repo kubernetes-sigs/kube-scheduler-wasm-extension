@@ -45,6 +45,7 @@ var _ proto.Metadata = &testMetadata{}
 
 type testMetadata struct {
 	Name, Namespace, UID, ResourceVersion string
+	Labels, Annotations                   map[string]string
 }
 
 func (t *testMetadata) GetName() string {
@@ -61,6 +62,14 @@ func (t *testMetadata) GetUid() string {
 
 func (t *testMetadata) GetResourceVersion() string {
 	return t.ResourceVersion
+}
+
+func (t *testMetadata) GetLabels() map[string]string {
+	return t.Labels
+}
+
+func (t *testMetadata) GetAnnotations() map[string]string {
+	return t.Annotations
 }
 
 type stringerFunc func() string

@@ -61,6 +61,14 @@ func (pod) GetApiVersion() string {
 	return "v1"
 }
 
+func (pod) GetLabels() map[string]string {
+	return internalproto.GetLabels(lazyPod())
+}
+
+func (pod) GetAnnotations() map[string]string {
+	return internalproto.GetAnnotations(lazyPod())
+}
+
 func (pod) Spec() *protoapi.PodSpec {
 	return lazyPod().Spec
 }
@@ -183,6 +191,14 @@ func (n *nodeInfo) GetNamespace() string {
 
 func (n *nodeInfo) GetResourceVersion() string {
 	return n.lazyNode().GetResourceVersion()
+}
+
+func (n *nodeInfo) GetLabels() map[string]string {
+	return n.lazyNode().GetLabels()
+}
+
+func (n *nodeInfo) GetAnnotations() map[string]string {
+	return n.lazyNode().GetAnnotations()
 }
 
 func (n *nodeInfo) Node() proto.Node {

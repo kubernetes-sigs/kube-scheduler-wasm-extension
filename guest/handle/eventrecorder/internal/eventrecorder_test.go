@@ -85,3 +85,11 @@ func (podSmall) GetKind() string {
 func (podSmall) GetResourceVersion() string {
 	return "v1"
 }
+
+func (podSmall) GetLabels() map[string]string {
+	return map[string]string{}
+}
+
+func (podSmall) GetAnnotations() map[string]string {
+	return map[string]string{}
+}
