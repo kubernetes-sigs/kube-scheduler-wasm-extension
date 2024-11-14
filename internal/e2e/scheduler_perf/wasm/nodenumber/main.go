@@ -97,7 +97,7 @@ func (pl *NodeNumber) EventsToRegister() []api.ClusterEvent {
 
 // PreScore implements api.PreScorePlugin
 func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ api.NodeInfoList) *api.Status {
-	podnum, ok := lastNumber(pod.Spec().GetNodeName())
+	podnum, ok := lastNumber(pod.GetName())
 	if !ok {
 		return nil // return success even if its suffix is non-number.
 	}
@@ -113,7 +113,7 @@ func (pl *NodeNumber) Score(state api.CycleState, pod proto.Pod, nodeName string
 		nodenum, ok := lastNumber(nodeName)
 		match = ok && data.(*preScoreState).podSuffixNumber == nodenum
 	} else {
-		// Match is also when there is no pod spec node name.
+		// Match is also when there is no pod name suffix.
 		match = true
 	}
 
