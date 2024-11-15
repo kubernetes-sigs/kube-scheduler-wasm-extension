@@ -96,7 +96,7 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ api.NodeIn
 
 	klog.InfoS("execute PreScore on NodeNumber plugin", "pod", klog.KObj(pod))
 
-	podnum, ok := lastNumber(pod.Spec().GetNodeName())
+	podnum, ok := lastNumber(pod.GetName())
 	if !ok {
 		recorder.Eventf(pod, nil, "PreScore", "not match lastNumber", "Skip", "")
 		return nil // return success even if its suffix is non-number.
@@ -116,7 +116,7 @@ func (pl *NodeNumber) Score(state api.CycleState, pod proto.Pod, nodeName string
 		nodenum, ok := lastNumber(nodeName)
 		match = ok && data.(*preScoreState).podSuffixNumber == nodenum
 	} else {
-		// Match is also when there is no pod spec node name.
+		// Match is also when there is no pod name suffix.
 		match = true
 	}
 

@@ -35,11 +35,11 @@ func Test_NodeNumber(t *testing.T) {
 		{name: "empty,empty", pod: &testPod{}, nodeName: "", expectedMatch: true},
 		{name: "empty,letter", pod: &testPod{}, nodeName: "a", expectedMatch: true},
 		{name: "empty,digit", pod: &testPod{}, nodeName: "1", expectedMatch: true},
-		{name: "letter,letter", pod: &testPod{nodeName: "a"}, nodeName: "a", expectedMatch: true},
-		{name: "letter,digit", pod: &testPod{nodeName: "a"}, nodeName: "1", expectedMatch: true},
-		{name: "digit,letter", pod: &testPod{nodeName: "1"}, nodeName: "a", expectedMatch: false},
-		{name: "digit,digit", pod: &testPod{nodeName: "1"}, nodeName: "1", expectedMatch: true},
-		{name: "digit,different digit", pod: &testPod{nodeName: "1"}, nodeName: "2", expectedMatch: false},
+		{name: "letter,letter", pod: &testPod{name: "a"}, nodeName: "a", expectedMatch: true},
+		{name: "letter,digit", pod: &testPod{name: "a"}, nodeName: "1", expectedMatch: true},
+		{name: "digit,letter", pod: &testPod{name: "1"}, nodeName: "a", expectedMatch: false},
+		{name: "digit,digit", pod: &testPod{name: "1"}, nodeName: "1", expectedMatch: true},
+		{name: "digit,different digit", pod: &testPod{name: "1"}, nodeName: "2", expectedMatch: false},
 	}
 
 	for _, reverse := range []bool{false, true} {
@@ -127,7 +127,7 @@ var _ proto.Pod = &testPod{}
 
 // testPod is test data just to set the nodeName
 type testPod struct {
-	nodeName string
+	name string
 }
 
 func (t testPod) GetUid() string {
@@ -135,7 +135,7 @@ func (t testPod) GetUid() string {
 }
 
 func (t testPod) GetName() string {
-	return ""
+	return t.name
 }
 
 func (t testPod) GetNamespace() string {
@@ -163,8 +163,7 @@ func (t testPod) GetAnnotations() map[string]string {
 }
 
 func (t testPod) Spec() *protoapi.PodSpec {
-	nodeName := t.nodeName
-	return &protoapi.PodSpec{NodeName: &nodeName}
+	return &protoapi.PodSpec{}
 }
 
 func (t testPod) Status() *protoapi.PodStatus {
