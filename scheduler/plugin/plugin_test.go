@@ -29,6 +29,7 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1396,8 +1397,8 @@ func TestPostBind(t *testing.T) {
 	
 	wasm error: unreachable
 	wasm stack trace:
-		main.runtime._panic(i32,i32)
-		main.postbind()
+		.runtime._panic(i32,i32)
+		.postbind()
  >`,
 		},
 		{
@@ -1765,6 +1766,87 @@ func TestRejectWaitingPod(t *testing.T) {
 	}
 }
 
+func TestGetWaitingPod(t *testing.T) {
+	tests := []struct {
+		name               string
+		guestURL           string
+		pod                *v1.Pod
+		args               []string
+		expectedUID        types.UID
+		expectedWaitingPod framework.WaitingPod
+		expectedStatusCode framework.Code
+		expectedStatusMsg  string
+	}{
+		{
+			name:               "Pod is not returned",
+			guestURL:           test.URLTestHandle,
+			pod:                test.PodForHandleTest,
+			args:               []string{"test", "getWaitingPod"},
+			expectedUID:        "non-existent-uid",
+			expectedWaitingPod: nil,
+			expectedStatusCode: framework.Error,
+			expectedStatusMsg:  "No waiting pod found for UID: handle-test",
+		},
+		{
+			name:               "Pod is returned",
+			guestURL:           test.URLTestHandle,
+			pod:                test.PodSmall,
+			args:               []string{"test", "getWaitingPod"},
+			expectedUID:        "handle-test",
+			expectedWaitingPod: makeTestWaitingPod(test.PodForHandlePod, map[string]*time.Timer{}),
+			expectedStatusCode: framework.Success,
+			expectedStatusMsg:  "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			recorder := &test.FakeRecorder{EventMsg: ""}
+			handle := &test.FakeHandle{Recorder: recorder}
+
+			// Create a new Wasm plugin instance.
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, handle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			// Create node info and set up a node.
+			ni := framework.NewNodeInfo()
+			ni.SetNode(test.NodeSmall)
+
+			status := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
+
+			got := handle.GetWaitingPodValue
+			want := tc.expectedWaitingPod
+
+			if want == nil {
+				if got != nil {
+					t.Fatalf("expected no pod, but got: %v", got)
+				}
+			} else {
+				// Compare the pod's UID and pendingPlugins map
+				if !comparePods(got.GetPod(), want.GetPod()) {
+					t.Fatalf("unexpected pod: got %+v, want %+v", got.GetPod(), want.GetPod())
+				}
+
+				if !reflect.DeepEqual(got.GetPendingPlugins(), want.GetPendingPlugins()) {
+					t.Fatalf("unexpected pending plugins: got %+v, want %+v", got.GetPendingPlugins(), want.GetPendingPlugins())
+				}
+			}
+
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+
+			if want, have := tc.expectedStatusMsg, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
 // Extracts and trims the actual log message from a formatted klog string
 // (klog includes timestamp before actual log message)
 func extractMessage(log string) string {
@@ -1806,4 +1888,57 @@ func requireError(t *testing.T, err error, expectedError string) {
 	if want := expectedError; want != have {
 		t.Fatalf("unexpected error: want %v, have %v", want, have)
 	}
+}
+
+type waitingPod struct {
+	pod            *v1.Pod
+	pendingPlugins map[string]*time.Timer
+	mu             sync.RWMutex
+}
+
+func (wp *waitingPod) GetPod() *v1.Pod {
+	return wp.pod
+}
+
+func (wp *waitingPod) GetPendingPlugins() []string {
+	wp.mu.RLock()
+	defer wp.mu.RUnlock()
+	var plugins []string
+	for plugin := range wp.pendingPlugins {
+		plugins = append(plugins, plugin)
+	}
+	return plugins
+}
+
+func (wp *waitingPod) Allow(pluginName string) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+	if timer, ok := wp.pendingPlugins[pluginName]; ok {
+		timer.Stop()
+		delete(wp.pendingPlugins, pluginName)
+	}
+}
+
+func (wp *waitingPod) Reject(pluginName, msg string) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+	if timer, ok := wp.pendingPlugins[pluginName]; ok {
+		timer.Stop()
+		delete(wp.pendingPlugins, pluginName)
+	}
+}
+
+func makeTestWaitingPod(pod *v1.Pod, plugins map[string]*time.Timer) framework.WaitingPod {
+	return &waitingPod{
+		pod:            pod,
+		pendingPlugins: plugins,
+	}
+}
+
+// comparePods compares the UIDs of two v1.Pod objects
+func comparePods(pod1, pod2 *v1.Pod) bool {
+	if pod1 == nil || pod2 == nil {
+		return pod1 == pod2
+	}
+	return pod1.UID == pod2.UID && pod1.Name == pod2.Name && pod1.Namespace == pod2.Namespace
 }

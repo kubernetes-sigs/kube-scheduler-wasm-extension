@@ -14,15 +14,42 @@
    limitations under the License.
 */
 
-// Package prescore exports an api.PreScorePlugin to the host. Only import this
-// package when setting Plugin, as doing otherwise will cause overhead.
+// Package handle exports an api.RejectWaitingPod and GetWaitingPod to the host.
+// Only import this package when setting Plugin, as doing otherwise will cause overhead.
 package handle
 
 import (
 	"runtime"
 
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
+	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
+
+type wasmWaitingPod struct {
+	uid string
+	ptr uint32
+	pod *protoapi.Pod
+}
+
+func (w *wasmWaitingPod) GetPod() proto.Pod {
+	var msg protoapi.Pod
+	return &internalproto.Pod{Msg: &msg}
+}
+
+func (w *wasmWaitingPod) GetPendingPlugins() []string {
+	return []string{}
+}
+
+func (w *wasmWaitingPod) Allow(pluginName string) {
+	allowWaitingPod(w.ptr, w.ptr, w.ptr, w.ptr)
+}
+
+func (w *wasmWaitingPod) Reject(pluginName, msg string) {
+	rejectWaitingPod(w.ptr, w.ptr, w.ptr, w.ptr)
+}
 
 func RejectWaitingPod(uid string) bool {
 	ptr, size := mem.StringToPtr(uid)
@@ -33,4 +60,27 @@ func RejectWaitingPod(uid string) bool {
 	})
 	runtime.KeepAlive(uid)
 	return wasmBool == 1
+}
+
+func GetWaitingPod(uid string) api.WaitingPod {
+	ptr, size := mem.StringToPtr(uid)
+
+	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
+	podBytes := mem.SendAndGetPodBytes(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
+		getWaitingPod(input_ptr, input_size, ptr, limit)
+	})
+
+	if podBytes == nil {
+		return nil
+	}
+
+	var pod protoapi.Pod
+	// Create a new instance of wasmWaitingPod with the deserialized pod data
+	waitingPod := &wasmWaitingPod{
+		uid: uid,
+		ptr: ptr, // The pointer that corresponds to this pod's location in memory
+		pod: &pod,
+	}
+
+	return waitingPod
 }

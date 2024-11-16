@@ -3,8 +3,10 @@ package test
 import (
 	"context"
 	"errors"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
@@ -33,6 +35,7 @@ type FakeHandle struct {
 	Recorder              events.EventRecorder
 	RejectWaitingPodValue types.UID
 	SharedLister          framework.SharedLister
+	GetWaitingPodValue    framework.WaitingPod
 }
 
 func (h *FakeHandle) EventRecorder() events.EventRecorder {
@@ -71,8 +74,27 @@ func (h *FakeHandle) Parallelizer() (p parallelize.Parallelizer) {
 	panic("unimplemented")
 }
 
-func (h *FakeHandle) GetWaitingPod(uid types.UID) (w framework.WaitingPod) {
-	panic("unimplemented")
+func (h *FakeHandle) GetWaitingPod(uid types.UID) framework.WaitingPod {
+	if uid == types.UID("handle-test") {
+		return nil
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: apimeta.ObjectMeta{
+			Name:      "handle-pod",
+			Namespace: "test",
+			UID:       uid,
+		},
+		Spec: v1.PodSpec{NodeName: NodeSmall.Name},
+	}
+
+	waitingPod := &waitingPod{
+		pod:            pod,
+		pendingPlugins: make(map[string]*time.Timer),
+	}
+
+	h.GetWaitingPodValue = waitingPod
+	return waitingPod
 }
 
 func (h *FakeHandle) IterateOverWaitingPods(callback func(framework.WaitingPod)) {

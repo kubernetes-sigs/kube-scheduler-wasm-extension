@@ -54,6 +54,7 @@ const (
 	k8sSchedulerResultNormalizedScoreList = "result.normalized_score_list"
 	k8sSchedulerHandleEventRecorderEventf = "handle.eventrecorder.eventf"
 	k8sSchedulerHandleRejectWaitingPod    = "handle.reject_waiting_pod"
+	k8sSchedulerHandleGetWaitingPod       = "handle.get_waiting_pod"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime, handle framework.Handle) (wazeroapi.Module, error) {
@@ -131,6 +132,9 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleRejectWaitingPodFn), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleRejectWaitingPod).
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleGetWaitingPodFn), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleGetWaitingPod).
 		Instantiate(ctx)
 }
 
@@ -603,4 +607,35 @@ func (h host) k8sHandleRejectWaitingPodFn(ctx context.Context, mod wazeroapi.Mod
 		wasmBool = uint64(1)
 	}
 	writeUint64(mod.Memory(), wasmBool, oBuf, oBufLimit)
+}
+
+func (h host) k8sHandleGetWaitingPodFn(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
+	iBuf := uint32(stack[0])
+	iBufLen := uint32(stack[1])
+	oBuf := uint32(stack[2])
+	oBufLimit := uint32(stack[3])
+
+	// Safely read UID from memory
+	b, ok := mod.Memory().Read(iBuf, iBufLen)
+	if !ok {
+		panic("out of memory reading getWaitingPod")
+	}
+	uid := types.UID(b)
+
+	// Fetch the waiting pod using the handle
+	waitingPod := h.handle.GetWaitingPod(uid)
+	if waitingPod == nil {
+		// Write an error message or handle this scenario in a non-crashing way
+		writeUint64(mod.Memory(), uint64(0), oBuf, oBufLimit)
+		stack[0] = uint64(0) // Indicate failure (return 0 to WebAssembly)
+		return
+	}
+
+	// Marshal the found pod and ensure no out-of-bounds memory writes
+	vLen := marshalIfUnderLimit(mod.Memory(), waitingPod.GetPod(), oBuf, oBufLimit)
+	if vLen == 0 {
+		panic("out of memory writing getWaitingPod result")
+	}
+	// Indicate success (return 1=success to WebAssembly)
+	stack[0] = uint64(1)
 }
