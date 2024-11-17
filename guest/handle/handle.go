@@ -44,7 +44,6 @@ func (w *wasmWaitingPod) GetPendingPlugins() []string {
 }
 
 func (w *wasmWaitingPod) Allow(pluginName string) {
-	allowWaitingPod(w.ptr, w.ptr, w.ptr, w.ptr)
 }
 
 func (w *wasmWaitingPod) Reject(pluginName, msg string) {
