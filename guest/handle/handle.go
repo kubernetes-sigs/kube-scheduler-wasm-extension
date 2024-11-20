@@ -21,10 +21,8 @@ package handle
 import (
 	"runtime"
 
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
-	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
+	guestapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
-	internalproto "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/proto"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
@@ -32,22 +30,6 @@ type wasmWaitingPod struct {
 	uid string
 	ptr uint32
 	pod *protoapi.Pod
-}
-
-func (w *wasmWaitingPod) GetPod() proto.Pod {
-	var msg protoapi.Pod
-	return &internalproto.Pod{Msg: &msg}
-}
-
-func (w *wasmWaitingPod) GetPendingPlugins() []string {
-	return []string{}
-}
-
-func (w *wasmWaitingPod) Allow(pluginName string) {
-}
-
-func (w *wasmWaitingPod) Reject(pluginName, msg string) {
-	rejectWaitingPod(w.ptr, w.ptr, w.ptr, w.ptr)
 }
 
 func RejectWaitingPod(uid string) bool {
@@ -61,7 +43,7 @@ func RejectWaitingPod(uid string) bool {
 	return wasmBool == 1
 }
 
-func GetWaitingPod(uid string) api.WaitingPod {
+func GetWaitingPod(uid string) guestapi.WaitingPod {
 	ptr, size := mem.StringToPtr(uid)
 
 	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value

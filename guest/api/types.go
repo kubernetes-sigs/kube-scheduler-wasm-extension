@@ -207,14 +207,4 @@ type NodeScore interface {
 }
 
 // WaitingPod represents a pod currently waiting in the permit phase.
-type WaitingPod interface {
-	GetPod() proto.Pod
-	// GetPendingPlugins returns a list of pending Permit plugin's name.
-	GetPendingPlugins() []string
-	// Allow declares the waiting pod is allowed to be scheduled by the plugin named as "pluginName".
-	// If this is the last remaining plugin to allow, then a success signal is delivered
-	// to unblock the pod.
-	Allow(pluginName string)
-	// Reject declares the waiting pod unschedulable.
-	Reject(pluginName, msg string)
-}
+type WaitingPod interface{}
