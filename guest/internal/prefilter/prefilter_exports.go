@@ -44,7 +44,7 @@ var _ func() uint32 = _prefilter
 
 // _prefilter is only exported to the host.
 //
-//export prefilter
+//go:wasmexport prefilter
 func _prefilter() uint32 { //nolint
 	// This function begins a new scheduling cycle: zero out any cycle state.
 	currentPod = nil

@@ -32,7 +32,8 @@ type extensionPoints interface {
 	api.PostBindPlugin
 }
 
-func main() {
+func main() {}
+func init() {
 	// Multiple tests are here to reduce re-compilation time and size checked
 	// into git.
 	var plugin extensionPoints = noopPlugin{}

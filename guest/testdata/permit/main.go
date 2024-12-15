@@ -28,7 +28,8 @@ type extensionPoints interface {
 	api.PermitPlugin
 }
 
-func main() {
+func main() {}
+func init() {
 	var plugin extensionPoints = permitPlugin{}
 	permit.SetPlugin(plugin)
 }

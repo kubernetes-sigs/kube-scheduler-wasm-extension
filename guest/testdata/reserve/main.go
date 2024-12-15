@@ -26,7 +26,8 @@ type extensionPoints interface {
 	api.ReservePlugin
 }
 
-func main() {
+func main() {}
+func init() {
 	var plugin extensionPoints = reservePlugin{}
 	reserve.SetPlugin(plugin)
 }

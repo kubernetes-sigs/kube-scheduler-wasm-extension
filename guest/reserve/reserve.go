@@ -61,7 +61,7 @@ var (
 
 // _reserve is only exported to the host.
 //
-//export reserve
+//go:wasmexport reserve
 func _reserve() uint32 { //nolint
 	if reserve == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export reserve so that we can reset
@@ -77,7 +77,7 @@ func _reserve() uint32 { //nolint
 
 // _unreserve is only exported to the host.
 //
-//export unreserve
+//go:wasmexport unreserve
 func _unreserve() { //nolint
 	if reserve == nil { // Then, the user didn't define one.
 		// Unlike most plugins we always export unreserve so that we can reset

@@ -33,13 +33,15 @@ import (
 
 // main is compiled to a WebAssembly function named "_start", called by the
 // wasm scheduler plugin during initialization.
-func main() {
+func init() {
 	p, err := New(klog.Get(), config.Get())
 	if err != nil {
 		panic(err)
 	}
 	plugin.Set(p)
 }
+
+func main() {}
 
 func New(klog klogapi.Klog, jsonConfig []byte) (api.Plugin, error) {
 	var args nodeNumberArgs

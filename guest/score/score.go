@@ -61,7 +61,7 @@ var _ func() uint64 = _score
 
 // score is only exported to the host.
 //
-//export score
+//go:wasmexport score
 func _score() uint64 {
 	if score == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't

@@ -57,7 +57,7 @@ var _ func() uint32 = _filter
 
 // filter is only exported to the host.
 //
-//export filter
+//go:wasmexport filter
 func _filter() uint32 { //nolint
 	if filter == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't

@@ -1,5 +1,3 @@
-//go:build tinygo.wasm
-
 /*
    Copyright 2023 The Kubernetes Authors.
 
@@ -20,11 +18,7 @@
 // 'tinygo build -target=wasi'. See /guest/RATIONALE.md for details.
 package main
 
-// Override the default GC with a more performant one.
-// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
-	_ "github.com/wasilibs/nottinygc"
-
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/advanced/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"
@@ -36,7 +30,7 @@ import (
 
 // main is compiled to an exported Wasm function named "_start", called by the
 // Wasm scheduler plugin during initialization.
-func main() {
+func init() {
 	// The plugin package uses only normal Go code, which allows it to be
 	// unit testable via `tinygo test -target=wasi` as well normal `go test`.
 	//
@@ -53,3 +47,5 @@ func main() {
 	prescore.SetPlugin(plugin)
 	score.SetPlugin(plugin)
 }
+
+func main() {}
