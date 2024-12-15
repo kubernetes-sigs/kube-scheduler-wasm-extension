@@ -65,7 +65,7 @@ var _ func() uint64 = _postfilter
 
 // _postfilter is only exported to the host.
 //
-//export postfilter
+//go:wasmexport postfilter
 func _postfilter() uint64 { //nolint
 
 	if postfilter == nil { // Then, the user didn't define one.

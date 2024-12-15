@@ -59,7 +59,7 @@ var _ func() uint32 = _normalizescore
 
 // normalizescore is only exported to the host.
 //
-//export normalizescore
+//go:wasmexport normalizescore
 func _normalizescore() uint32 {
 	if scoreextensions == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't

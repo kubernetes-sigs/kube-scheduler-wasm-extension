@@ -86,7 +86,7 @@ func (pl *wasmPlugin) newGuest(ctx context.Context) (*guest, error) {
 	// A guest may have an instantiation error, which writes to stdout or stderr.
 	// Capture stdout and stderr during instantiation.
 	var out bytes.Buffer
-	moduleConfig = moduleConfig.WithStdout(&out).WithStderr(&out)
+	moduleConfig = moduleConfig.WithStdout(&out).WithStderr(&out).WithStartFunctions("_initialize")
 
 	// Set any args used for testing
 	moduleConfig = moduleConfig.WithArgs(pl.guestArgs...)

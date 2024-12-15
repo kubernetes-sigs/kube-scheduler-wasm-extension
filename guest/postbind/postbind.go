@@ -57,7 +57,7 @@ var _ func() = _postbind
 
 // _postbind is only exported to the host.
 //
-//export postbind
+//go:wasmexport postbind
 func _postbind() { //nolint
 	if postbind == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't

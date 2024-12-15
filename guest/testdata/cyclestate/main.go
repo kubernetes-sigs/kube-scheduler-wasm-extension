@@ -40,7 +40,8 @@ import (
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
-func main() {
+func main() {}
+func init() {
 	// Multiple tests are here to reduce re-compilation time and size checked
 	// into git.
 	if len(os.Args) == 2 {

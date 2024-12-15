@@ -57,7 +57,7 @@ var _ func() uint32 = _prebind
 
 // _prebind is only exported to the host.
 //
-//export prebind
+//go:wasmexport prebind
 func _prebind() uint32 { //nolint
 	if prebind == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't

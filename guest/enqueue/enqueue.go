@@ -43,7 +43,7 @@ var _ func() = _enqueue
 
 // enqueue is only exported to the host.
 //
-//export enqueue
+//go:wasmexport enqueue
 func _enqueue() {
 	if enqueue == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't

@@ -23,7 +23,8 @@ import (
 
 // main is compiled to an exported Wasm function named "_start", called by the
 // Wasm scheduler plugin during initialization.
-func main() {
+func main() {}
+func init() {
 	// The plugin package uses only normal Go code, which allows it to be
 	// unit testable via `tinygo test -target=wasi` as well normal `go test`.
 	//

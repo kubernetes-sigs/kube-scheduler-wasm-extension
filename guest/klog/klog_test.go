@@ -1,4 +1,4 @@
-//go:build !tinygo.wasm
+//go:build !wasm
 
 /*
    Copyright 2023 The Kubernetes Authors.

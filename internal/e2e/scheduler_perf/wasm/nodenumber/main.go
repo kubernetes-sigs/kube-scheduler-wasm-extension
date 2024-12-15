@@ -22,8 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	_ "github.com/wasilibs/nottinygc"
-
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
@@ -36,7 +34,7 @@ import (
 
 // main is compiled to a WebAssembly function named "_start", called by the
 // wasm scheduler plugin during initialization.
-func main() {
+func init() {
 	p, err := New(klog.Get(), config.Get())
 	if err != nil {
 		panic(err)
@@ -45,6 +43,8 @@ func main() {
 	prescore.SetPlugin(p)
 	score.SetPlugin(p)
 }
+
+func main() {}
 
 func New(klog klogapi.Klog, jsonConfig []byte) (*NodeNumber, error) {
 	var args nodeNumberArgs

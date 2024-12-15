@@ -70,7 +70,7 @@ var _ func() uint32 = _prescore
 
 // prescore is only exported to the host.
 //
-//export prescore
+//go:wasmexport prescore
 func _prescore() uint32 {
 	if prescore == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't

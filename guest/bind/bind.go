@@ -52,7 +52,7 @@ var _ func() uint32 = _bind
 
 // _bind is only exported to the host.
 //
-//export bind
+//go:wasmexport bind
 func _bind() uint32 { //nolint
 	if bind == nil { // Then, the user didn't define one.
 		// This is likely caused by use of plugin.Set(p), where 'p' didn't
