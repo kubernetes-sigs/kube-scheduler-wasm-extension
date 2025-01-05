@@ -207,4 +207,8 @@ type NodeScore interface {
 }
 
 // WaitingPod represents a pod currently waiting in the permit phase.
-type WaitingPod interface{}
+type WaitingPod interface {
+	GetPod() proto.Pod
+	// Reject declares the waiting pod unschedulable.
+	Reject(pluginName, msg string)
+}

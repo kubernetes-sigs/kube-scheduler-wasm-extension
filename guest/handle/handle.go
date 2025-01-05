@@ -21,6 +21,8 @@ package handle
 import (
 	"runtime"
 
+	proto "google.golang.org/protobuf/proto"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	guestapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
@@ -30,6 +32,10 @@ type wasmWaitingPod struct {
 	uid string
 	ptr uint32
 	pod *protoapi.Pod
+}
+
+func (w *wasmWaitingPod) GetPod() *protoapi.Pod {
+	return w.pod
 }
 
 func RejectWaitingPod(uid string) bool {
@@ -46,22 +52,21 @@ func RejectWaitingPod(uid string) bool {
 func GetWaitingPod(uid string) guestapi.WaitingPod {
 	ptr, size := mem.StringToPtr(uid)
 
-	// Wrap to avoid TinyGo 0.28: cannot use an exported function as value
-	podBytes := mem.SendAndGetPodBytes(ptr, size, func(input_ptr, input_size, ptr uint32, limit mem.BufLimit) {
-		getWaitingPod(input_ptr, input_size, ptr, limit)
-	})
+	var pod protoapi.Pod
+	err := mem.Update(
+		func(outPtr uint32, limit mem.BufLimit) (len uint32) {
+			getWaitingPod(ptr, size, outPtr, limit)
+			return limit
+		},
+		func(data []byte) error {
+			return proto.Unmarshal(data, &pod)
+		},
+	)
 
-	if podBytes == nil {
+	if err != nil {
 		return nil
 	}
 
-	var pod protoapi.Pod
-	// Create a new instance of wasmWaitingPod with the deserialized pod data
-	waitingPod := &wasmWaitingPod{
-		uid: uid,
-		ptr: ptr, // The pointer that corresponds to this pod's location in memory
-		pod: &pod,
-	}
-
-	return waitingPod
+	waitingPod := make([]api.WaitingPod, size)
+	return waitingPod[0]
 }
