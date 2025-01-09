@@ -22,21 +22,12 @@ import (
 	"runtime"
 
 	proto "google.golang.org/protobuf/proto"
+
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	guestapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
-
-type wasmWaitingPod struct {
-	uid string
-	ptr uint32
-	pod *protoapi.Pod
-}
-
-func (w *wasmWaitingPod) GetPod() *protoapi.Pod {
-	return w.pod
-}
 
 func RejectWaitingPod(uid string) bool {
 	ptr, size := mem.StringToPtr(uid)
@@ -62,7 +53,6 @@ func GetWaitingPod(uid string) guestapi.WaitingPod {
 			return proto.Unmarshal(data, &pod)
 		},
 	)
-
 	if err != nil {
 		return nil
 	}
