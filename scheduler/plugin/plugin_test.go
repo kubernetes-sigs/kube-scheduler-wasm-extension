@@ -1772,7 +1772,6 @@ func TestGetWaitingPod(t *testing.T) {
 		guestURL           string
 		pod                *v1.Pod
 		args               []string
-		expectedUID        types.UID
 		expectedWaitingPod framework.WaitingPod
 		expectedStatusCode framework.Code
 		expectedStatusMsg  string
@@ -1782,7 +1781,6 @@ func TestGetWaitingPod(t *testing.T) {
 			guestURL:           test.URLTestHandle,
 			pod:                test.PodSmall,
 			args:               []string{"test", "getWaitingPod"},
-			expectedUID:        "non-existent-uid",
 			expectedWaitingPod: nil,
 			expectedStatusCode: framework.Error,
 			expectedStatusMsg:  "No waiting pod found for UID: 384900cd-dc7b-41ec-837e-9c4c1762363e",
@@ -1792,7 +1790,6 @@ func TestGetWaitingPod(t *testing.T) {
 			guestURL:           test.URLTestHandle,
 			pod:                test.PodForHandleTest,
 			args:               []string{"test", "getWaitingPod"},
-			expectedUID:        "handle-test",
 			expectedWaitingPod: makeTestWaitingPod(test.PodForHandleTest, map[string]*time.Timer{}),
 			expectedStatusCode: framework.Success,
 			expectedStatusMsg:  "",
