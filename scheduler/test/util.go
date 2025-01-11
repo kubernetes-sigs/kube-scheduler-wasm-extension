@@ -6,7 +6,6 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
-	apimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
@@ -74,22 +73,14 @@ func (h *FakeHandle) Parallelizer() (p parallelize.Parallelizer) {
 	panic("unimplemented")
 }
 
+// GetWaitingPod returns PodForHandleTest only when the uid is handle-test.
 func (h *FakeHandle) GetWaitingPod(uid types.UID) framework.WaitingPod {
-	if uid == types.UID("handle-test") {
+	if uid != types.UID("handle-test") {
 		return nil
 	}
 
-	pod := &v1.Pod{
-		ObjectMeta: apimeta.ObjectMeta{
-			Name:      "handle-pod",
-			Namespace: "test",
-			UID:       uid,
-		},
-		Spec: v1.PodSpec{NodeName: NodeSmall.Name},
-	}
-
 	waitingPod := &waitingPod{
-		pod:            pod,
+		pod:            PodForHandleTest,
 		pendingPlugins: make(map[string]*time.Timer),
 	}
 
