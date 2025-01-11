@@ -615,19 +615,16 @@ func (h host) k8sHandleGetWaitingPodFn(ctx context.Context, mod wazeroapi.Module
 	oBuf := uint32(stack[2])
 	oBufLimit := uint32(stack[3])
 
-	// Safely read UID from memory
 	b, ok := mod.Memory().Read(iBuf, iBufLen)
 	if !ok {
 		panic("out of memory reading getWaitingPod")
 	}
 	uid := types.UID(b)
 
-	// Fetch the waiting pod using the handle
 	waitingPod := h.handle.GetWaitingPod(uid)
 	if waitingPod == nil {
-		// Write an error message or handle this scenario in a non-crashing way
 		writeUint64(mod.Memory(), uint64(0), oBuf, oBufLimit)
-		stack[0] = uint64(0) // Indicate failure (return 0 to WebAssembly)
+		stack[0] = uint64(0)
 		return
 	}
 
@@ -636,6 +633,6 @@ func (h host) k8sHandleGetWaitingPodFn(ctx context.Context, mod wazeroapi.Module
 	if vLen == 0 {
 		panic("out of memory writing getWaitingPod result")
 	}
-	// Indicate success (return 1=success to WebAssembly)
+
 	stack[0] = uint64(1)
 }

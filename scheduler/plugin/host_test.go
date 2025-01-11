@@ -140,7 +140,7 @@ func Test_k8sHandleGetWaitingPodFn(t *testing.T) {
 	// Create a fake wasm module, which has data the guest should write.
 	mem := wazerotest.NewMemory(wazerotest.PageSize)
 	mod := wazerotest.NewModule(mem)
-	uid := types.UID("c6feae3a-7082-42a5-a5ec-6ae2e1603727")
+	uid := types.UID("handle-test")
 	copy(mem.Bytes, uid)
 
 	// Invoke the host function in the same way the guest would have.
