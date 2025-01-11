@@ -1827,7 +1827,7 @@ func TestGetWaitingPod(t *testing.T) {
 				}
 			} else {
 				// Compare the pod's UID and pendingPlugins map
-				if !comparePods(got.GetPod(), want.GetPod()) {
+				if !reflect.DeepEqual(got.GetPod(), want.GetPod()) {
 					t.Fatalf("unexpected pod: got %+v, want %+v", got.GetPod(), want.GetPod())
 				}
 
@@ -1933,12 +1933,4 @@ func makeTestWaitingPod(pod *v1.Pod, plugins map[string]*time.Timer) framework.W
 		pod:            pod,
 		pendingPlugins: plugins,
 	}
-}
-
-// comparePods compares the UIDs of two v1.Pod objects
-func comparePods(pod1, pod2 *v1.Pod) bool {
-	if pod1 == nil || pod2 == nil {
-		return pod1 == pod2
-	}
-	return pod1.UID == pod2.UID && pod1.Name == pod2.Name && pod1.Namespace == pod2.Namespace
 }
