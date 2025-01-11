@@ -16,7 +16,6 @@ import (
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	apiyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/kubectl/pkg/scheme"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
 )
 
 var URLErrorNotPlugin = localURL(pathWatError("not_plugin"))
@@ -159,7 +158,6 @@ var PodForHandlePod = &v1.Pod{
 type waitingPod struct {
 	pod            *v1.Pod
 	pendingPlugins map[string]*time.Timer
-	s              chan *framework.Status
 	mu             sync.RWMutex
 }
 
@@ -185,13 +183,6 @@ func (wp *waitingPod) Allow(pluginName string) {
 func (wp *waitingPod) Reject(reason string, msg string) {
 	wp.mu.Lock()
 	defer wp.mu.Unlock()
-}
-
-// Create the test WaitingPod
-var WaitingPod = &waitingPod{
-	pod:            nil,
-	pendingPlugins: make(map[string]*time.Timer),
-	s:              make(chan *framework.Status, 1),
 }
 
 func decodeYaml[O apiruntime.Object](yaml string, object O) {
