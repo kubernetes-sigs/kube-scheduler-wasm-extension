@@ -103,24 +103,3 @@ func SendAndGetUint64(input_ptr uint32, input_size uint32, fn func(input_ptr, in
 	fn(input_ptr, input_size, uint32(readBufPtr), readBufLimit)
 	return binary.LittleEndian.Uint64(readBuf)
 }
-
-func SendAndGetPodBytes(input_ptr uint32, input_size uint32, fn func(input_ptr, input_size, ptr uint32, limit BufLimit)) []byte {
-	readBuf := make([]byte, readBufLimit)
-	readBufPtr := uint32(uintptr(unsafe.Pointer(&readBuf[0])))
-
-	fn(input_ptr, input_size, readBufPtr, readBufLimit)
-
-	var length int
-	for i := 0; i < int(readBufLimit); i++ {
-		if readBuf[i] == 0 {
-			length = i
-			break
-		}
-	}
-
-	if length == 0 {
-		return nil
-	}
-
-	return readBuf[:length]
-}
