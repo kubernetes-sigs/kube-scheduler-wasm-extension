@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -71,6 +72,37 @@ func (h *FakeHandle) RunFilterPluginsWithNominatedPods(ctx context.Context, stat
 
 func (h *FakeHandle) Parallelizer() (p parallelize.Parallelizer) {
 	panic("unimplemented")
+}
+
+// waitingPod implements the framework.WaitingPod interface
+type waitingPod struct {
+	pod            *v1.Pod
+	pendingPlugins map[string]*time.Timer
+	mu             sync.RWMutex
+}
+
+func (wp *waitingPod) GetPod() *v1.Pod {
+	return wp.pod
+}
+
+func (wp *waitingPod) GetPendingPlugins() []string {
+	wp.mu.RLock()
+	defer wp.mu.RUnlock()
+	var plugins []string
+	for plugin := range wp.pendingPlugins {
+		plugins = append(plugins, plugin)
+	}
+	return plugins
+}
+
+func (wp *waitingPod) Allow(pluginName string) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+}
+
+func (wp *waitingPod) Reject(reason string, msg string) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
 }
 
 // GetWaitingPod returns PodForHandleTest only when the uid is handle-test.

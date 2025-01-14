@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
-	"time"
 
 	v1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -143,37 +141,6 @@ var PodForHandleTest = &v1.Pod{
 		UID:       "handle-test",
 	},
 	Spec: v1.PodSpec{NodeName: NodeSmall.Name},
-}
-
-// waitingPod implements the framework.WaitingPod interface
-type waitingPod struct {
-	pod            *v1.Pod
-	pendingPlugins map[string]*time.Timer
-	mu             sync.RWMutex
-}
-
-func (wp *waitingPod) GetPod() *v1.Pod {
-	return wp.pod
-}
-
-func (wp *waitingPod) GetPendingPlugins() []string {
-	wp.mu.RLock()
-	defer wp.mu.RUnlock()
-	var plugins []string
-	for plugin := range wp.pendingPlugins {
-		plugins = append(plugins, plugin)
-	}
-	return plugins
-}
-
-func (wp *waitingPod) Allow(pluginName string) {
-	wp.mu.Lock()
-	defer wp.mu.Unlock()
-}
-
-func (wp *waitingPod) Reject(reason string, msg string) {
-	wp.mu.Lock()
-	defer wp.mu.Unlock()
 }
 
 func decodeYaml[O apiruntime.Object](yaml string, object O) {
