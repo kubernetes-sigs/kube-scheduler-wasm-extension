@@ -145,15 +145,6 @@ var PodForHandleTest = &v1.Pod{
 	Spec: v1.PodSpec{NodeName: NodeSmall.Name},
 }
 
-var PodForHandlePod = &v1.Pod{
-	ObjectMeta: apimeta.ObjectMeta{
-		Name:      "handle-pod",
-		Namespace: "test",
-		UID:       "384900cd-dc7b-41ec-837e-9c4c1762363e",
-	},
-	Spec: v1.PodSpec{NodeName: NodeSmall.Name},
-}
-
 // waitingPod implements the framework.WaitingPod interface
 type waitingPod struct {
 	pod            *v1.Pod
