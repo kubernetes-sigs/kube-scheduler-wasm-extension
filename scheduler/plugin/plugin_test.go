@@ -29,7 +29,6 @@ import (
 	"path"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -44,6 +43,7 @@ import (
 
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
+	util "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
 var ctx = context.Background()
@@ -1887,47 +1887,6 @@ func requireError(t *testing.T, err error, expectedError string) {
 	}
 }
 
-type waitingPod struct {
-	pod            *v1.Pod
-	pendingPlugins map[string]*time.Timer
-	mu             sync.RWMutex
-}
-
-func (wp *waitingPod) GetPod() *v1.Pod {
-	return wp.pod
-}
-
-func (wp *waitingPod) GetPendingPlugins() []string {
-	wp.mu.RLock()
-	defer wp.mu.RUnlock()
-	var plugins []string
-	for plugin := range wp.pendingPlugins {
-		plugins = append(plugins, plugin)
-	}
-	return plugins
-}
-
-func (wp *waitingPod) Allow(pluginName string) {
-	wp.mu.Lock()
-	defer wp.mu.Unlock()
-	if timer, ok := wp.pendingPlugins[pluginName]; ok {
-		timer.Stop()
-		delete(wp.pendingPlugins, pluginName)
-	}
-}
-
-func (wp *waitingPod) Reject(pluginName, msg string) {
-	wp.mu.Lock()
-	defer wp.mu.Unlock()
-	if timer, ok := wp.pendingPlugins[pluginName]; ok {
-		timer.Stop()
-		delete(wp.pendingPlugins, pluginName)
-	}
-}
-
 func makeTestWaitingPod(pod *v1.Pod, plugins map[string]*time.Timer) framework.WaitingPod {
-	return &waitingPod{
-		pod:            pod,
-		pendingPlugins: plugins,
-	}
+	return util.NewWaitingPod(pod, plugins)
 }

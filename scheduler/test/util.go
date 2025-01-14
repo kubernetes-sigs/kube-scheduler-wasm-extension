@@ -105,6 +105,10 @@ func (wp *waitingPod) Reject(reason string, msg string) {
 	defer wp.mu.Unlock()
 }
 
+func NewWaitingPod(pod *v1.Pod, plugins map[string]*time.Timer) framework.WaitingPod {
+	return &waitingPod{pod: pod, pendingPlugins: plugins}
+}
+
 // GetWaitingPod returns PodForHandleTest only when the uid is handle-test.
 func (h *FakeHandle) GetWaitingPod(uid types.UID) framework.WaitingPod {
 	if uid != types.UID("handle-test") {
