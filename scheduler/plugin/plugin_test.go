@@ -1790,7 +1790,7 @@ func TestGetWaitingPod(t *testing.T) {
 			guestURL:           test.URLTestHandle,
 			pod:                test.PodForHandleTest,
 			args:               []string{"test", "getWaitingPod"},
-			expectedWaitingPod: makeTestWaitingPod(test.PodForHandleTest, map[string]*time.Timer{}),
+			expectedWaitingPod: util.NewWaitingPod(test.PodForHandleTest, map[string]*time.Timer{}),
 			expectedStatusCode: framework.Success,
 			expectedStatusMsg:  "",
 		},
@@ -1885,8 +1885,4 @@ func requireError(t *testing.T, err error, expectedError string) {
 	if want := expectedError; want != have {
 		t.Fatalf("unexpected error: want %v, have %v", want, have)
 	}
-}
-
-func makeTestWaitingPod(pod *v1.Pod, plugins map[string]*time.Timer) framework.WaitingPod {
-	return util.NewWaitingPod(pod, plugins)
 }
