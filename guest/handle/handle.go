@@ -14,14 +14,19 @@
    limitations under the License.
 */
 
-// Package prescore exports an api.PreScorePlugin to the host. Only import this
-// package when setting Plugin, as doing otherwise will cause overhead.
+// Package handle exports an api.RejectWaitingPod and GetWaitingPod to the host.
+// Only import this package when setting Plugin, as doing otherwise will cause overhead.
 package handle
 
 import (
 	"runtime"
 
+	proto "google.golang.org/protobuf/proto"
+
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	guestapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
+	protoapi "sigs.k8s.io/kube-scheduler-wasm-extension/kubernetes/proto/api"
 )
 
 func RejectWaitingPod(uid string) bool {
@@ -33,4 +38,25 @@ func RejectWaitingPod(uid string) bool {
 	})
 	runtime.KeepAlive(uid)
 	return wasmBool == 1
+}
+
+func GetWaitingPod(uid string) guestapi.WaitingPod {
+	ptr, size := mem.StringToPtr(uid)
+
+	var pod protoapi.Pod
+	err := mem.Update(
+		func(outPtr uint32, limit mem.BufLimit) (len uint32) {
+			getWaitingPod(ptr, size, outPtr, limit)
+			return limit
+		},
+		func(data []byte) error {
+			return proto.Unmarshal(data, &pod)
+		},
+	)
+	if err != nil {
+		return nil
+	}
+
+	waitingPod := make([]api.WaitingPod, size)
+	return waitingPod[0]
 }

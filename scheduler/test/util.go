@@ -3,6 +3,8 @@ package test
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +35,7 @@ type FakeHandle struct {
 	Recorder              events.EventRecorder
 	RejectWaitingPodValue types.UID
 	SharedLister          framework.SharedLister
+	GetWaitingPodValue    framework.WaitingPod
 }
 
 func (h *FakeHandle) EventRecorder() events.EventRecorder {
@@ -71,8 +74,54 @@ func (h *FakeHandle) Parallelizer() (p parallelize.Parallelizer) {
 	panic("unimplemented")
 }
 
-func (h *FakeHandle) GetWaitingPod(uid types.UID) (w framework.WaitingPod) {
-	panic("unimplemented")
+// waitingPod implements the framework.WaitingPod interface
+type waitingPod struct {
+	pod            *v1.Pod
+	pendingPlugins map[string]*time.Timer
+	mu             sync.RWMutex
+}
+
+func (wp *waitingPod) GetPod() *v1.Pod {
+	return wp.pod
+}
+
+func (wp *waitingPod) GetPendingPlugins() []string {
+	wp.mu.RLock()
+	defer wp.mu.RUnlock()
+	var plugins []string
+	for plugin := range wp.pendingPlugins {
+		plugins = append(plugins, plugin)
+	}
+	return plugins
+}
+
+func (wp *waitingPod) Allow(pluginName string) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+}
+
+func (wp *waitingPod) Reject(reason string, msg string) {
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+}
+
+func NewWaitingPod(pod *v1.Pod, plugins map[string]*time.Timer) framework.WaitingPod {
+	return &waitingPod{pod: pod, pendingPlugins: plugins}
+}
+
+// GetWaitingPod returns PodForHandleTest only when the uid is handle-test.
+func (h *FakeHandle) GetWaitingPod(uid types.UID) framework.WaitingPod {
+	if uid != types.UID("handle-test") {
+		return nil
+	}
+
+	waitingPod := &waitingPod{
+		pod:            PodForHandleTest,
+		pendingPlugins: make(map[string]*time.Timer),
+	}
+
+	h.GetWaitingPodValue = waitingPod
+	return waitingPod
 }
 
 func (h *FakeHandle) IterateOverWaitingPods(callback func(framework.WaitingPod)) {

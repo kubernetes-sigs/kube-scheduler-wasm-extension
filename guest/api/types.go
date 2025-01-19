@@ -205,3 +205,10 @@ type NodeScore interface {
 	// which is keyed by the node name and valued by the score.
 	Map() map[string]int
 }
+
+// WaitingPod represents a pod currently waiting in the permit phase.
+type WaitingPod interface {
+	GetPod() proto.Pod
+	// Reject declares the waiting pod unschedulable.
+	Reject(pluginName, msg string)
+}

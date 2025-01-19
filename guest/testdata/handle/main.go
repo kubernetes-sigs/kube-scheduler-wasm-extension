@@ -40,6 +40,8 @@ func main() {
 		switch os.Args[1] {
 		case "rejectWaitingPod":
 			plugin = pluginForReject{}
+		case "getWaitingPod":
+			plugin = pluginForGet{}
 		}
 	}
 	prefilter.SetPlugin(plugin)
@@ -78,6 +80,25 @@ func (pluginForReject) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.Node
 	}
 
 	// Otherwise, this is success.
+	return &api.Status{
+		Code: api.StatusCodeSuccess,
+	}
+}
+
+// pluginForGet checks the function of GetWaitingPod
+type pluginForGet struct{ noopPlugin }
+
+func (pluginForGet) Filter(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) *api.Status {
+	// Call GetWaitingPod first
+	waitingPod := handle.GetWaitingPod(pod.GetUid())
+
+	if waitingPod == nil {
+		return &api.Status{
+			Code:   api.StatusCodeError,
+			Reason: "No waiting pod found for UID: " + pod.GetUid(),
+		}
+	}
+
 	return &api.Status{
 		Code: api.StatusCodeSuccess,
 	}

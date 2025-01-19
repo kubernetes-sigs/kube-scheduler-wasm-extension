@@ -20,5 +20,8 @@ package handle
 
 import "sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/mem"
 
+// getWaitingPod is stubbed for compilation outside TinyGo.
+func getWaitingPod(uint32, uint32, uint32, mem.BufLimit) {}
+
 // rejectWaitingPod is stubbed for compilation outside TinyGo.
 func rejectWaitingPod(uint32, uint32, uint32, mem.BufLimit) {}

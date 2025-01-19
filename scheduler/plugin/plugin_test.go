@@ -43,6 +43,7 @@ import (
 
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
+	util "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 )
 
 var ctx = context.Background()
@@ -1396,8 +1397,8 @@ func TestPostBind(t *testing.T) {
 	
 	wasm error: unreachable
 	wasm stack trace:
-		main.runtime._panic(i32,i32)
-		main.postbind()
+		.runtime._panic(i32,i32)
+		.postbind()
  >`,
 		},
 		{
@@ -1758,6 +1759,84 @@ func TestRejectWaitingPod(t *testing.T) {
 			if want, have := tc.expectedStatusCode, status.Code(); want != have {
 				t.Fatalf("unexpected status code: want %v, have %v", want, have)
 			}
+			if want, have := tc.expectedStatusMsg, status.Message(); want != have {
+				t.Fatalf("unexpected status message: want %v, have %v", want, have)
+			}
+		})
+	}
+}
+
+func TestGetWaitingPod(t *testing.T) {
+	tests := []struct {
+		name               string
+		guestURL           string
+		pod                *v1.Pod
+		args               []string
+		expectedWaitingPod framework.WaitingPod
+		expectedStatusCode framework.Code
+		expectedStatusMsg  string
+	}{
+		{
+			name:               "Pod is not returned",
+			guestURL:           test.URLTestHandle,
+			pod:                test.PodSmall,
+			args:               []string{"test", "getWaitingPod"},
+			expectedWaitingPod: nil,
+			expectedStatusCode: framework.Error,
+			expectedStatusMsg:  "No waiting pod found for UID: 384900cd-dc7b-41ec-837e-9c4c1762363e",
+		},
+		{
+			name:               "Pod is returned",
+			guestURL:           test.URLTestHandle,
+			pod:                test.PodForHandleTest,
+			args:               []string{"test", "getWaitingPod"},
+			expectedWaitingPod: util.NewWaitingPod(test.PodForHandleTest, map[string]*time.Timer{}),
+			expectedStatusCode: framework.Success,
+			expectedStatusMsg:  "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			guestURL := tc.guestURL
+			recorder := &test.FakeRecorder{EventMsg: ""}
+			handle := &test.FakeHandle{Recorder: recorder}
+
+			// Create a new Wasm plugin instance.
+			p, err := wasm.NewFromConfig(ctx, "wasm", wasm.PluginConfig{GuestURL: guestURL, Args: tc.args}, handle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.(io.Closer).Close()
+
+			// Create node info and set up a node.
+			ni := framework.NewNodeInfo()
+			ni.SetNode(test.NodeSmall)
+
+			status := p.(framework.FilterPlugin).Filter(ctx, nil, tc.pod, ni)
+
+			got := handle.GetWaitingPodValue
+			want := tc.expectedWaitingPod
+
+			if want == nil {
+				if got != nil {
+					t.Fatalf("expected no pod, but got: %v", got)
+				}
+			} else {
+				// Compare the pod's UID and pendingPlugins map
+				if !reflect.DeepEqual(got.GetPod(), want.GetPod()) {
+					t.Fatalf("unexpected pod: got %+v, want %+v", got.GetPod(), want.GetPod())
+				}
+
+				if !reflect.DeepEqual(got.GetPendingPlugins(), want.GetPendingPlugins()) {
+					t.Fatalf("unexpected pending plugins: got %+v, want %+v", got.GetPendingPlugins(), want.GetPendingPlugins())
+				}
+			}
+
+			if want, have := tc.expectedStatusCode, status.Code(); want != have {
+				t.Fatalf("unexpected status code: want %v, have %v", want, have)
+			}
+
 			if want, have := tc.expectedStatusMsg, status.Message(); want != have {
 				t.Fatalf("unexpected status message: want %v, have %v", want, have)
 			}

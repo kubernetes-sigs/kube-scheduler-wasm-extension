@@ -132,6 +132,34 @@ func Test_k8sHandleEventRecorderEventFn(t *testing.T) {
 	}
 }
 
+func Test_k8sHandleGetWaitingPodFn(t *testing.T) {
+	recorder := &test.FakeRecorder{EventMsg: ""}
+	handle := &test.FakeHandle{Recorder: recorder}
+	h := host{handle: handle}
+
+	// Create a fake wasm module, which has data the guest should write.
+	mem := wazerotest.NewMemory(wazerotest.PageSize)
+	mod := wazerotest.NewModule(mem)
+	uid := types.UID("handle-test")
+	copy(mem.Bytes, uid)
+
+	// Invoke the host function in the same way the guest would have.
+	h.k8sHandleGetWaitingPodFn(context.Background(), mod, []uint64{
+		0,
+		uint64(len(uid)),
+		0, // Ideally we should define some value, but we don't define it for now.
+		0, // Ideally we should define some value, but we don't define it for now.
+	})
+
+	// Checking the value stored on handle
+	have := handle.GetWaitingPodValue
+	want := uid
+
+	if want != have.GetPod().UID {
+		t.Fatalf("unexpected uid: %v != %v", want, have)
+	}
+}
+
 func Test_k8sHandleRejectWaitingPodFn(t *testing.T) {
 	recorder := &test.FakeRecorder{EventMsg: ""}
 	handle := &test.FakeHandle{Recorder: recorder}
