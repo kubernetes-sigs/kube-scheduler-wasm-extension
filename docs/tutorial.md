@@ -13,7 +13,7 @@ via a similar experience to Go scheduler plugin.
 Some of them look different from [the interfaces in Scheduling Framework](https://github.com/kubernetes/kubernetes/blob/master/pkg/scheduler/framework/interface.go) though, 
 it's the same how they're called by the scheduler.
 
-You can learn how you can implement your wasm plugins by referring to [./examples](./examples/).
+You can learn how you can implement your wasm plugins by referring to [examples](../examples/).
 
 Currently, Go SDK uses TinyGo for its compile, you can refer to [Makefile](../Makefile) to see how we build example implementations.
 Each example takes a different approach to build them, as README in them describes.
