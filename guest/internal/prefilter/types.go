@@ -164,6 +164,7 @@ type nodeInfo struct {
 
 	node        proto.Node
 	imageStates map[string]*api.ImageStateSummary
+	usedPorts   api.HostPortInfo
 }
 
 // newNodeInfo initializes a nodeInfo with the given nodeName.
@@ -230,4 +231,11 @@ func (n *nodeInfo) ImageStates() map[string]*api.ImageStateSummary {
 	n.imageStates = imports.NodeImageStates(n.name)
 
 	return n.imageStates
+}
+
+func (n *nodeInfo) UsedPorts() api.HostPortInfo {
+	if n.usedPorts != nil {
+		return n.usedPorts
+	}
+	return nil
 }
