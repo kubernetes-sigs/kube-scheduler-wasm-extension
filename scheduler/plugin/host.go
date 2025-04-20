@@ -29,32 +29,33 @@ import (
 )
 
 const (
-	i32                                   = wazeroapi.ValueTypeI32
-	i64                                   = wazeroapi.ValueTypeI64
-	k8sApi                                = "k8s.io/api"
-	k8sApiNode                            = "node"
-	k8sApiNodeList                        = "nodeList"
-	k8sApiNodeToStatusMap                 = "nodeToStatusMap"
-	k8sKlog                               = "k8s.io/klog"
-	k8sKlogLog                            = "log"
-	k8sKlogLogs                           = "logs"
-	k8sKlogSeverity                       = "severity"
-	k8sScheduler                          = "k8s.io/scheduler"
-	k8sSchedulerCurrentNodeName           = "currentNodeName"
-	k8sSchedulerTargetPod                 = "targetPod"
-	k8sSchedulerFilteredNodeList          = "filteredNodeList"
-	k8sSchedulerCurrentPod                = "currentPod"
-	k8sSchedulerGetConfig                 = "get_config"
-	k8sSchedulerNodeScoreList             = "nodeScoreList"
-	k8sSchedulerNodeImageStates           = "nodeImageStates"
-	k8sSchedulerResultClusterEvents       = "result.cluster_events"
-	k8sSchedulerResultNodeNames           = "result.node_names"
-	k8sSchedulerResultNominatedNodeName   = "result.nominated_node_name"
-	k8sSchedulerResultStatusReason        = "result.status_reason"
-	k8sSchedulerResultNormalizedScoreList = "result.normalized_score_list"
-	k8sSchedulerHandleEventRecorderEventf = "handle.eventrecorder.eventf"
-	k8sSchedulerHandleRejectWaitingPod    = "handle.reject_waiting_pod"
-	k8sSchedulerHandleGetWaitingPod       = "handle.get_waiting_pod"
+	i32                                                 = wazeroapi.ValueTypeI32
+	i64                                                 = wazeroapi.ValueTypeI64
+	k8sApi                                              = "k8s.io/api"
+	k8sApiNode                                          = "node"
+	k8sApiNodeList                                      = "nodeList"
+	k8sApiNodeToStatusMap                               = "nodeToStatusMap"
+	k8sKlog                                             = "k8s.io/klog"
+	k8sKlogLog                                          = "log"
+	k8sKlogLogs                                         = "logs"
+	k8sKlogSeverity                                     = "severity"
+	k8sScheduler                                        = "k8s.io/scheduler"
+	k8sSchedulerCurrentNodeName                         = "currentNodeName"
+	k8sSchedulerTargetPod                               = "targetPod"
+	k8sSchedulerFilteredNodeList                        = "filteredNodeList"
+	k8sSchedulerCurrentPod                              = "currentPod"
+	k8sSchedulerGetConfig                               = "get_config"
+	k8sSchedulerNodeScoreList                           = "nodeScoreList"
+	k8sSchedulerNodeImageStates                         = "nodeImageStates"
+	k8sSchedulerResultClusterEvents                     = "result.cluster_events"
+	k8sSchedulerResultNodeNames                         = "result.node_names"
+	k8sSchedulerResultNominatedNodeName                 = "result.nominated_node_name"
+	k8sSchedulerResultStatusReason                      = "result.status_reason"
+	k8sSchedulerResultNormalizedScoreList               = "result.normalized_score_list"
+	k8sSchedulerHandleEventRecorderEventf               = "handle.eventrecorder.eventf"
+	k8sSchedulerHandleRejectWaitingPod                  = "handle.reject_waiting_pod"
+	k8sSchedulerHandleGetWaitingPod                     = "handle.get_waiting_pod"
+	k8sSchedulerHandleRunFilterPluginsWithNominatedPods = "handle.run_filter_plugins_with_nominated_pods"
 )
 
 func instantiateHostApi(ctx context.Context, runtime wazero.Runtime, handle framework.Handle) (wazeroapi.Module, error) {
@@ -135,6 +136,10 @@ func instantiateHostScheduler(ctx context.Context, runtime wazero.Runtime, guest
 		NewFunctionBuilder().
 		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sHandleGetWaitingPodFn), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{}).
 		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleGetWaitingPod).
+		// WIP
+		NewFunctionBuilder().
+		WithGoModuleFunction(wazeroapi.GoModuleFunc(host.k8sSchedulerHandleRunFilterPluginsWithNominatedPods), []wazeroapi.ValueType{i32, i32, i32, i32}, []wazeroapi.ValueType{}).
+		WithParameterNames("buf", "buf_len").Export(k8sSchedulerHandleRunFilterPluginsWithNominatedPods).
 		Instantiate(ctx)
 }
 
@@ -635,4 +640,7 @@ func (h host) k8sHandleGetWaitingPodFn(ctx context.Context, mod wazeroapi.Module
 	}
 
 	stack[0] = uint64(1)
+}
+
+func (h host) k8sSchedulerHandleRunFilterPluginsWithNominatedPods(ctx context.Context, mod wazeroapi.Module, stack []uint64) {
 }
