@@ -175,6 +175,7 @@ type NodeInfo interface {
 
 	Node() proto.Node
 	ImageStates() map[string]*ImageStateSummary
+	UsedPorts() HostPortInfo
 
 	// ... we'll support more fields of NodeInfo of the scheduling framework.
 }

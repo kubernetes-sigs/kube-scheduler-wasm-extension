@@ -7,3 +7,12 @@ type ImageStateSummary struct {
 	// Used to track how many nodes have this image
 	NumNodes uint32
 }
+
+// HostPortInfo stores mapping from ip to a set of ProtocolPort
+type HostPortInfo map[string]map[ProtocolPort]struct{}
+
+// ProtocolPort represents a protocol port pair, e.g. tcp:80.
+type ProtocolPort struct {
+	Protocol string
+	Port     int32
+}
