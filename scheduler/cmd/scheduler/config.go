@@ -17,10 +17,10 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/sets"
 	_ "k8s.io/component-base/logs/json/register" // for JSON log format registration
 	_ "k8s.io/component-base/metrics/prometheus/clientgo"
@@ -36,8 +36,10 @@ import (
 // and return the wasm plugins enabled by the user.
 func getWasmPluginsFromConfig() ([]string, error) {
 	// In the scheduler, the path to the scheduler configuration is specified with --config option.
-	configFile := flag.String("config", "", "")
-	flag.Parse()
+	flagSet := pflag.NewFlagSet("", pflag.ExitOnError)
+	flagSet.ParseErrorsWhitelist.UnknownFlags = true
+	configFile := flagSet.String("config", "", "")
+	flagSet.Parse(os.Args[1:])
 
 	if configFile == nil {
 		// Users don't have the own configuration. do nothing.
