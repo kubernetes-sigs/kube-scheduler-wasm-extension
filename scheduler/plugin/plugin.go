@@ -148,10 +148,10 @@ var allClusterEvents = []framework.ClusterEventWithHint{
 }
 
 // EventsToRegister implements the same method as documented on framework.EnqueueExtensions.
-func (pl *wasmPlugin) EventsToRegister() (clusterEvents []framework.ClusterEventWithHint) {
+func (pl *wasmPlugin) EventsToRegister(ctx context.Context) (clusterEvents []framework.ClusterEventWithHint, err error) {
 	// We always implement EventsToRegister, even when the guest doesn't
 	if pl.guestInterfaces&iEnqueueExtensions == 0 {
-		return allClusterEvents // unimplemented
+		return allClusterEvents, nil // unimplemented
 	}
 
 	// We currently don't support QueueingHintFn, so we don't expect it from
@@ -163,10 +163,6 @@ func (pl *wasmPlugin) EventsToRegister() (clusterEvents []framework.ClusterEvent
 	// guest export. There will be other concerns as the parameters to
 	// QueueingHintFn are `interface{}` so probably need to be narrowed to
 	// support at all.
-
-	// Note: EventsToRegister() doesn't pass a context or return an error
-	// See https://github.com/kubernetes/kubernetes/issues/119323/
-	ctx := context.Background()
 
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.

@@ -21,6 +21,7 @@ import (
 
 	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
 	perf "k8s.io/kubernetes/test/integration/scheduler_perf"
+
 	nodenumberplugin "sigs.k8s.io/kube-scheduler-wasm-extension/internal/e2e/scheduler_perf/nodenumber"
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 )
@@ -34,5 +35,6 @@ var (
 )
 
 func BenchmarkPerfScheduling(b *testing.B) {
-	perf.RunBenchmarkPerfScheduling(b, registory)
+	// Use relative path from current directory, following upstream convention
+	perf.RunBenchmarkPerfScheduling(b, "config/performance-config.yaml", "wasm", registory)
 }

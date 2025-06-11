@@ -39,7 +39,9 @@ func getWasmPluginsFromConfig() ([]string, error) {
 	flagSet := pflag.NewFlagSet("", pflag.ExitOnError)
 	flagSet.ParseErrorsWhitelist.UnknownFlags = true
 	configFile := flagSet.String("config", "", "")
-	flagSet.Parse(os.Args[1:])
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		return nil, err
+	}
 
 	if configFile == nil {
 		// Users don't have the own configuration. do nothing.

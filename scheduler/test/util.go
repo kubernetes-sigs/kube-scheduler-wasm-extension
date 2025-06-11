@@ -165,6 +165,14 @@ func (h *FakeHandle) UpdateNominatedPod(logger klog.Logger, oldPod *v1.Pod, newP
 	panic("unimplemented")
 }
 
+func (h *FakeHandle) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
+	// No-op implementation for testing
+}
+
+func (h *FakeHandle) SharedDRAManager() framework.SharedDRAManager {
+	panic("unimplemented")
+}
+
 type FakeSharedLister struct {
 	NodeInfoLister framework.NodeInfoLister
 }
