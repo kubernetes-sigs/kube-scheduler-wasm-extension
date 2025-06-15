@@ -41,14 +41,14 @@ const (
 	gvkWildCard
 )
 
-func (gvk gvk) toGVK() framework.GVK {
-	if int(gvk) < len(gvkToGVK) {
-		return gvkToGVK[gvk]
+func (gvk gvk) toEventResource() framework.EventResource {
+	if int(gvk) < len(gvkToEventResource) {
+		return gvkToEventResource[gvk]
 	}
-	return framework.GVK("GVK(" + strconv.Itoa(int(gvk)) + ")")
+	return framework.EventResource("EventResource(" + strconv.Itoa(int(gvk)) + ")")
 }
 
-var gvkToGVK = [...]framework.GVK{
+var gvkToEventResource = [...]framework.EventResource{
 	"Pod",
 	"Node",
 	"PersistentVolume",
@@ -69,7 +69,7 @@ const sizeEncodedClusterEvent = 4 + 4
 func decodeClusterEvents(b []byte) (clusterEvents []framework.ClusterEvent) {
 	for i := 0; i+sizeEncodedClusterEvent <= len(b); i += sizeEncodedClusterEvent {
 		clusterEvents = append(clusterEvents, framework.ClusterEvent{
-			Resource:   gvk(binary.LittleEndian.Uint32(b[i:])).toGVK(),
+			Resource:   gvk(binary.LittleEndian.Uint32(b[i:])).toEventResource(),
 			ActionType: framework.ActionType(binary.LittleEndian.Uint32(b[i+4:])),
 		})
 	}

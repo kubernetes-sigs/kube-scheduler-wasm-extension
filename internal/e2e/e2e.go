@@ -90,7 +90,7 @@ func MaybeRunPreFilter(ctx context.Context, t Testing, plugin framework.Plugin, 
 	t.Helper()
 
 	// We always implement EnqueueExtensions for simplicity
-	_ = plugin.(framework.EnqueueExtensions).EventsToRegister()
+	_, _ = plugin.(framework.EnqueueExtensions).EventsToRegister(ctx)
 
 	if p, ok := plugin.(framework.PreFilterPlugin); ok {
 		_, s := p.PreFilter(ctx, nil, pod)

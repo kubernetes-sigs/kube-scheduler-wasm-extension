@@ -375,7 +375,7 @@ func TestEnqueue(t *testing.T) {
 			}
 			defer p.(io.Closer).Close()
 
-			clusterEvents := p.(framework.EnqueueExtensions).EventsToRegister()
+			clusterEvents, _ := p.(framework.EnqueueExtensions).EventsToRegister(context.Background())
 			if want, have := tc.expected, clusterEvents; !reflect.DeepEqual(want, have) {
 				t.Fatalf("unexpected node names: want %v, have %v", want, have)
 			}
@@ -392,7 +392,7 @@ func TestEnqueue(t *testing.T) {
 		defer p.(io.Closer).Close()
 
 		if captured := test.CapturePanic(func() {
-			_ = p.(framework.EnqueueExtensions).EventsToRegister()
+			_, _ = p.(framework.EnqueueExtensions).EventsToRegister(context.Background())
 		}); captured == "" {
 			t.Fatal("expected to panic")
 		}
@@ -687,7 +687,12 @@ wasm stack trace:
 				pl.SetGlobals(tc.globals)
 			}
 
-			result, status := p.(framework.PostFilterPlugin).PostFilter(ctx, nil, tc.pod, tc.nodeToStatusMap)
+			nodeToStatus := framework.NewDefaultNodeToStatus()
+			for nodeName, status := range tc.nodeToStatusMap {
+				nodeToStatus.Set(nodeName, status)
+			}
+
+			result, status := p.(framework.PostFilterPlugin).PostFilter(ctx, nil, tc.pod, nodeToStatus)
 			if want, have := tc.expectedResult, result; !reflect.DeepEqual(want, have) {
 				t.Fatalf("unexpected result: want %#v, have %#v", want.NominatingInfo, have.NominatingInfo)
 			}

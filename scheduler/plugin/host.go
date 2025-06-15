@@ -19,6 +19,7 @@ package wasm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/tetratelabs/wazero"
 	wazeroapi "github.com/tetratelabs/wazero/api"
@@ -163,7 +164,7 @@ type stack struct {
 	currentPod *v1.Pod
 
 	// nodeToStatusMap is used by guest.postfilterFn
-	nodeToStatusMap map[string]*framework.Status
+	nodeToStatusMap framework.NodeToStatusMap
 
 	// nodeScoreList is used by guest.normalizedscoreFn
 	nodeScoreList framework.NodeScoreList
@@ -479,14 +480,26 @@ func k8sSchedulerResultStatusReasonFn(ctx context.Context, mod wazeroapi.Module,
 }
 
 // Converts nodeToStatusMap to a map with node names as keys and their scores as integer values.
-func nodeStatusMapToMap(originalMap map[string]*framework.Status) map[string]int {
-	newMap := make(map[string]int)
-	for key, value := range originalMap {
-		if value != nil {
-			newMap[key] = int(value.Code())
-		}
+func nodeStatusMapToMap(nodeToStatusMap framework.NodeToStatusMap) map[string]int {
+	result := make(map[string]int)
+
+	if nodeToStatusMap == nil {
+		return result
 	}
-	return newMap
+
+	// Handle the standard framework.NodeToStatus implementation
+	if nts, ok := nodeToStatusMap.(*framework.NodeToStatus); ok {
+		nts.ForEachExplicitNode(func(nodeName string, status *framework.Status) {
+			if status != nil {
+				result[nodeName] = int(status.Code())
+			}
+		})
+		return result
+	}
+
+	// Non-standard implementations cannot be iterated due to interface limitations.
+	klog.V(5).InfoS("nodeStatusMapToMap: non-standard NodeToStatusMap implementation, returning empty map", "type", fmt.Sprintf("%T", nodeToStatusMap))
+	return result
 }
 
 // k8sSchedulerNodeScoreListFn is a function used by the host to send the nodeScoreList.
