@@ -351,10 +351,10 @@ func (pl *wasmPlugin) NormalizeScore(ctx context.Context, state *framework.Cycle
 var _ framework.ScorePlugin = (*wasmPlugin)(nil)
 
 // Score implements the same method as documented on framework.ScorePlugin.
-func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (score int64, status *framework.Status) {
+func (pl *wasmPlugin) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeInfo *framework.NodeInfo) (score int64, status *framework.Status) {
 	// Add the stack to the go context so that the corresponding host function
 	// can look them up.
-	params := &stack{currentPod: pod, currentNodeName: nodeName}
+	params := &stack{currentPod: pod, currentNodeName: nodeInfo.GetName()}
 	ctx = context.WithValue(ctx, stackKey{}, params)
 	if err := pl.pool.doWithSchedulingGuest(ctx, pod.UID, func(g *guest) {
 		score, status = g.score(ctx)

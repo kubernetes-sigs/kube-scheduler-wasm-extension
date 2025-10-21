@@ -41,6 +41,8 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	wasm "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
 	util "sigs.k8s.io/kube-scheduler-wasm-extension/scheduler/test"
@@ -905,7 +907,11 @@ wasm stack trace:
 				pl.SetGlobals(tc.globals)
 			}
 
-			score, status := p.(framework.ScorePlugin).Score(ctx, nil, tc.pod, tc.nodeName)
+			nodeInfo := framework.NewNodeInfo()
+			nodeInfo.SetNode(&v1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: tc.name},
+			})
+			score, status := p.(framework.ScorePlugin).Score(ctx, nil, tc.pod, nodeInfo)
 			if want, have := tc.expectedScore, score; want != have {
 				t.Fatalf("unexpected score: want %v, have %v", want, have)
 			}
