@@ -22,8 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	_ "github.com/wasilibs/nottinygc"
-
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
