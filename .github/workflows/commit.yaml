@@ -6,7 +6,8 @@ name: "build"
 
 on:
   push:  # We run tests on non-tagged pushes to main
-    tags: ''
+    tags-ignore:
+      - '*'
     branches: main
     paths-ignore:
       - '**/*.md'
