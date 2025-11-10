@@ -6,6 +6,7 @@ name: "testdata"
 
 on:
   push:  # We run tests on non-tagged pushes to main
+    tags: ''
     branches: main
     paths-ignore:
       - '**/*.md'
