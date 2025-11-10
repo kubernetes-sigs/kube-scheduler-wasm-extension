@@ -51,6 +51,9 @@ jobs:
           wabt_url=https://github.com/WebAssembly/wabt/releases/download/${wabt_version}/wabt-${wabt_version}-ubuntu-20.04.tar.gz
           curl -sSL ${wabt_url} | tar --strip-components 2 -C /usr/local/bin -xzf - wabt-${wabt_version}/bin/wat2wasm
 
+      - name: "cleanup testdata"
+        run: make clean-testdata
+
       - name: "generate testdata"
         run: make testdata
 

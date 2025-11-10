@@ -1,6 +1,9 @@
-gofumpt       := mvdan.cc/gofumpt@v0.5.0
-gosimports    := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
-golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
+gofumpt        := mvdan.cc/gofumpt@v0.5.0
+gosimports     := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
+golangci_lint  := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
+tinygo_targets := examples/nodenumber/main.wasm examples/advanced/main.wasm examples/imagelocality/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm \
+					guest/testdata/bind/main.wasm guest/testdata/reserve/main.wasm guest/testdata/handle/main.wasm guest/testdata/permit/main.wasm \
+					internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm
 
 examples/advanced/main.wasm: examples/advanced/main.go
 	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi .)
@@ -12,9 +15,7 @@ internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm: internal/e2e/scheduler_pe
 	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi .)
 
 .PHONY: build-tinygo
-build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm examples/imagelocality/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm \
-			  guest/testdata/bind/main.wasm guest/testdata/reserve/main.wasm guest/testdata/handle/main.wasm guest/testdata/permit/main.wasm \
-			  internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm
+build-tinygo: $(tinygo_targets)
 
 %/main-debug.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi .)
@@ -47,6 +48,11 @@ build-wat: $(wildcard scheduler/test/testdata/*/*.wat)
 
 .PHONY: testdata
 testdata: build-tinygo build-wat
+
+.PHONY: clean-testdata
+clean-testdata:
+	@rm $(wildcard scheduler/test/testdata/*/*.wasm)
+	@rm $(tinygo_targets)
 
 .PHONY: profile
 profile: examples/advanced/main-debug.wasm
