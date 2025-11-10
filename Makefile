@@ -3,10 +3,10 @@ gosimports    := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
 golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
 
 examples/advanced/main.wasm: examples/advanced/main.go
-	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi .)
+	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi -buildmode=wasi-legacy .)
 
 internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm: internal/e2e/scheduler_perf/wasm/nodenumber/main.go
-	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi .)
+	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi -buildmode=wasi-legacy .)
 
 %/main.wasm: %/main.go
 	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi -buildmode=wasi-legacy .)
@@ -17,7 +17,7 @@ build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm examples
 			  internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm
 
 %/main-debug.wasm: %/main.go
-	@(cd $(@D); tinygo build -o main-debug.wasm -scheduler=none -target=wasi .)
+	@(cd $(@D); tinygo build -o main-debug.wasm -scheduler=none -target=wasi -buildmode=wasi-legacy .)
 
 # Testing the guest code means running it with TinyGo, which internally
 # compiles the unit tests to a wasm binary, then runs it with wazero.
