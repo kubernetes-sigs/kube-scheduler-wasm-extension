@@ -20,6 +20,7 @@ package score
 
 import (
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
+	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/handle/sharedlister"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/cyclestate"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/imports"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/internal/plugin"
@@ -77,7 +78,8 @@ func _score() uint64 {
 	// refactor we can get this from a `nodeInfo.Node().Metadata.Name` cached
 	// in an upstream plugin stage.
 	nodeName := imports.CurrentNodeName()
-	score, status := score.Score(cyclestate.Values, pod, nodeName)
+	nodeInfo := sharedlister.NodeInfos().Get(nodeName)
+	score, status := score.Score(cyclestate.Values, pod, nodeInfo)
 
 	// Pack the score and status code into a single WebAssembly 1.0 compatible
 	// result

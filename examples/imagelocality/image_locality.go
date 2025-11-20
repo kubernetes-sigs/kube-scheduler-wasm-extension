@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	guestapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
@@ -24,12 +23,7 @@ type imageLocality struct {
 }
 
 // Score invoked at the score extension point.
-func (pl *imageLocality) Score(state guestapi.CycleState, pod proto.Pod, nodeName string) (int32, *guestapi.Status) {
-	nodeInfo := pl.sharedLister.NodeInfos().Get(nodeName)
-	if nodeInfo == nil {
-		return 0, &guestapi.Status{Code: guestapi.StatusCodeError, Reason: fmt.Sprintf("failed to get node %q", nodeName)}
-	}
-
+func (pl *imageLocality) Score(state guestapi.CycleState, pod proto.Pod, nodeInfo guestapi.NodeInfo) (int32, *guestapi.Status) {
 	nodeInfos := pl.sharedLister.NodeInfos().List()
 	if nodeInfos == nil {
 		return 0, &guestapi.Status{Code: guestapi.StatusCodeError, Reason: "failed to list nodes"}

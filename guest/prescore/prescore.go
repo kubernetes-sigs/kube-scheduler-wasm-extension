@@ -50,7 +50,7 @@ var prescore api.PreScorePlugin
 //		return nil
 //	}
 //
-//	func (scorePlugin) Score(state api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
+//	func (scorePlugin) Score(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (int32, *api.Status) {
 //		var score int32
 //		// Derive score for the node name using state set on PreScore!
 //		return score, nil
