@@ -908,7 +908,7 @@ wasm stack trace:
 
 			nodeInfo := framework.NewNodeInfo()
 			nodeInfo.SetNode(&v1.Node{
-				ObjectMeta: metav1.ObjectMeta{Name: tc.name},
+				ObjectMeta: metav1.ObjectMeta{Name: tc.nodeName},
 			})
 			score, status := p.(framework.ScorePlugin).Score(ctx, nil, tc.pod, nodeInfo)
 			if want, have := tc.expectedScore, score; want != have {
