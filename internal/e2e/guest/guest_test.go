@@ -16,13 +16,9 @@
 
 package guest_test
 
-// Override the default GC with a more performant one.
-// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
 	"fmt"
 	"testing"
-
-	_ "github.com/wasilibs/nottinygc"
 
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	klogapi "sigs.k8s.io/kube-scheduler-wasm-extension/guest/klog/api"

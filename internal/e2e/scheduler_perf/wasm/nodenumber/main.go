@@ -22,8 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	_ "github.com/wasilibs/nottinygc"
-
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/api/proto"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
@@ -106,11 +104,11 @@ func (pl *NodeNumber) PreScore(state api.CycleState, pod proto.Pod, _ api.NodeIn
 }
 
 // Score implements api.ScorePlugin
-func (pl *NodeNumber) Score(state api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
+func (pl *NodeNumber) Score(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (int32, *api.Status) {
 	var match bool
 	if data, ok := state.Read(preScoreStateKey); ok {
 		// Match is when there is a last digit, and it is the pod suffix.
-		nodenum, ok := lastNumber(nodeName)
+		nodenum, ok := lastNumber(nodeInfo.GetName())
 		match = ok && data.(*preScoreState).podSuffixNumber == nodenum
 	} else {
 		// Match is also when there is no pod name suffix.

@@ -154,7 +154,7 @@ func (statePlugin) PreScore(state api.CycleState, pod proto.Pod, _ api.NodeInfoL
 	return nil
 }
 
-func (statePlugin) Score(state api.CycleState, pod proto.Pod, _ string) (score int32, status *api.Status) {
+func (statePlugin) Score(state api.CycleState, pod proto.Pod, _ api.NodeInfo) (score int32, status *api.Status) {
 	if unsafe.Pointer(pod.Spec()) != unsafe.Pointer(podSpec) {
 		panic("didn't cache pod from pre-filter")
 	}

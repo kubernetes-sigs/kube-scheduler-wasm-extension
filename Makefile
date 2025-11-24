@@ -3,13 +3,13 @@ gosimports    := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
 golangci_lint := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
 
 examples/advanced/main.wasm: examples/advanced/main.go
-	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi .)
+	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi -buildmode=wasi-legacy .)
 
 internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm: internal/e2e/scheduler_perf/wasm/nodenumber/main.go
-	@(cd $(@D); tinygo build -o main.wasm -gc=custom -tags=custommalloc -scheduler=none --no-debug -target=wasi .)
+	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi -buildmode=wasi-legacy .)
 
 %/main.wasm: %/main.go
-	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi .)
+	@(cd $(@D); tinygo build -o main.wasm -scheduler=none --no-debug -target=wasi -buildmode=wasi-legacy .)
 
 .PHONY: build-tinygo
 build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm examples/imagelocality/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm \
@@ -17,7 +17,7 @@ build-tinygo: examples/nodenumber/main.wasm examples/advanced/main.wasm examples
 			  internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm
 
 %/main-debug.wasm: %/main.go
-	@(cd $(@D); tinygo build -o main-debug.wasm -gc=custom -tags=custommalloc -scheduler=none -target=wasi .)
+	@(cd $(@D); tinygo build -o main-debug.wasm -scheduler=none -target=wasi -buildmode=wasi-legacy .)
 
 # Testing the guest code means running it with TinyGo, which internally
 # compiles the unit tests to a wasm binary, then runs it with wazero.
@@ -30,7 +30,7 @@ test-guest: guest/.tinygo-target.json
 # compiles the benchmarks to a wasm binary, then runs it with wazero.
 .PHONY: bench-guest
 bench-guest: guest/.tinygo-target.json
-	@(cd internal/e2e/guest; tinygo test -gc=custom -tags=custommalloc -scheduler=none -v -count=6 -target ../../../guest/.tinygo-target.json -run='^$$' -bench '^Benchmark.*$$' .)
+	@(cd internal/e2e/guest; tinygo test -scheduler=none -v -count=6 -target ../../../guest/.tinygo-target.json -run='^$$' -bench '^Benchmark.*$$' .)
 
 # By default, TinyGo's wasi target uses wasmtime. but our plugin uses wazero.
 # This makes a wasi target that uses the same wazero version as the scheduler.
@@ -70,7 +70,7 @@ proto-tools:
 	cat tools.go | grep "_" | awk -F'"' '{print $$2}' | xargs -tI % go install %
 
 # Generate protobuf sources from the same kubernetes version as the plugin.
-kubernetes_version := v1.30.4
+kubernetes_version := v1.33.4
 .PHONY: submodule-update
 submodule-update:
 	git submodule update -i

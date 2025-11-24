@@ -41,7 +41,7 @@ func RunAll(ctx context.Context, t Testing, plugin framework.Plugin, pod *v1.Pod
 	}
 
 	if scoreP, ok := plugin.(framework.ScorePlugin); ok {
-		score, s = scoreP.Score(ctx, nil, pod, ni.Node().Name)
+		score, s = scoreP.Score(ctx, nil, pod, ni)
 		RequireSuccess(t, s)
 	}
 

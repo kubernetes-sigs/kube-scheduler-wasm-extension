@@ -79,7 +79,7 @@ func (pl *NodeNumber) EventsToRegister() []framework.ClusterEvent {
 var ErrNotExpectedPreScoreState = errors.New("unexpected pre score state")
 
 // Score invoked at the score extension point.
-func (pl *NodeNumber) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
+func (pl *NodeNumber) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, ni *framework.NodeInfo) (int64, *framework.Status) {
 	data, err := state.Read(preScoreStateKey)
 	if err != nil {
 		// return success even if there is no value in preScoreStateKey, since the
@@ -92,6 +92,7 @@ func (pl *NodeNumber) Score(ctx context.Context, state *framework.CycleState, po
 		return 0, framework.AsStatus(fmt.Errorf("fetched pre score state is not *preScoreState, but %T, %w", data, ErrNotExpectedPreScoreState))
 	}
 
+	nodeName := ni.GetName()
 	nodeNameLastChar := nodeName[len(nodeName)-1:]
 
 	nodenum, err := strconv.Atoi(nodeNameLastChar)

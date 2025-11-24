@@ -35,6 +35,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -905,7 +906,11 @@ wasm stack trace:
 				pl.SetGlobals(tc.globals)
 			}
 
-			score, status := p.(framework.ScorePlugin).Score(ctx, nil, tc.pod, tc.nodeName)
+			nodeInfo := framework.NewNodeInfo()
+			nodeInfo.SetNode(&v1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: tc.nodeName},
+			})
+			score, status := p.(framework.ScorePlugin).Score(ctx, nil, tc.pod, nodeInfo)
 			if want, have := tc.expectedScore, score; want != have {
 				t.Fatalf("unexpected score: want %v, have %v", want, have)
 			}
@@ -1402,8 +1407,8 @@ func TestPostBind(t *testing.T) {
 	
 	wasm error: unreachable
 	wasm stack trace:
-		.runtime._panic(i32,i32)
-		.postbind()
+		main.runtime._panic(i32,i32)
+		main.postbind()
  >`,
 		},
 		{

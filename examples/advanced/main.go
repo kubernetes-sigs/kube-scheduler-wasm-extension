@@ -20,11 +20,7 @@
 // 'tinygo build -target=wasi'. See /guest/RATIONALE.md for details.
 package main
 
-// Override the default GC with a more performant one.
-// Note: this requires tinygo flags: -gc=custom -tags=custommalloc
 import (
-	_ "github.com/wasilibs/nottinygc"
-
 	"sigs.k8s.io/kube-scheduler-wasm-extension/examples/advanced/plugin"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/config"
 	"sigs.k8s.io/kube-scheduler-wasm-extension/guest/enqueue"

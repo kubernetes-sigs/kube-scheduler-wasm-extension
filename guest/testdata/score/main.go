@@ -61,10 +61,10 @@ func (noopPlugin) PreScore(state api.CycleState, pod proto.Pod, nodeList api.Nod
 	return nil
 }
 
-func (noopPlugin) Score(state api.CycleState, pod proto.Pod, nodeName string) (score int32, status *api.Status) {
+func (noopPlugin) Score(state api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (score int32, status *api.Status) {
 	_, _ = state.Read("ok")
 	_ = pod.Spec()
-	_ = nodeName
+	_ = nodeInfo.GetName()
 	return
 }
 
@@ -85,9 +85,9 @@ func (preScorePlugin) PreScore(_ api.CycleState, _ proto.Pod, nodeList api.NodeI
 // scorePlugin returns 100 if a node name equals its pod spec.
 type scorePlugin struct{ noopPlugin }
 
-func (scorePlugin) Score(_ api.CycleState, pod proto.Pod, nodeName string) (int32, *api.Status) {
+func (scorePlugin) Score(_ api.CycleState, pod proto.Pod, nodeInfo api.NodeInfo) (int32, *api.Status) {
 	podSpecNodeName := pod.Spec().GetNodeName()
-	if nodeName == podSpecNodeName {
+	if nodeInfo.GetName() == podSpecNodeName {
 		return 100, nil
 	}
 	return 0, nil

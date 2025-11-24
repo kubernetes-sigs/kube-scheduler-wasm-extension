@@ -114,7 +114,7 @@ type PreScorePlugin interface {
 type ScorePlugin interface {
 	Plugin
 
-	Score(state CycleState, pod proto.Pod, nodeName string) (int32, *Status)
+	Score(state CycleState, pod proto.Pod, nodeInfo NodeInfo) (int32, *Status)
 }
 
 // ScoreExtensions is a WebAssembly implementation of framework.ScoreExtensions.
