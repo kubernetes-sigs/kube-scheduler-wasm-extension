@@ -7,7 +7,6 @@ require (
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/stealthrocket/wzprof v0.1.5
 	github.com/tetratelabs/wazero v1.7.2
-	github.com/wasilibs/nottinygc v0.7.1
 	go.uber.org/zap v1.27.0
 	k8s.io/api v0.33.4
 	k8s.io/apimachinery v0.33.4
@@ -93,7 +92,6 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
-	github.com/magefile/mage v1.14.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect

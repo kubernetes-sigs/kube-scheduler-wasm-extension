@@ -61,7 +61,7 @@ func Test_NodeNumber(t *testing.T) {
 					t.Fatalf("unexpected status: %v", status)
 				}
 
-				score, status := plugin.Score(state, nil, tc.nodeName)
+				score, status := plugin.Score(state, nil, testNodeInfo{name: tc.nodeName})
 				if status != nil {
 					t.Fatalf("unexpected status: %v", status)
 				}
@@ -171,5 +171,41 @@ func (t testPod) Spec() *protoapi.PodSpec {
 }
 
 func (t testPod) Status() *protoapi.PodStatus {
+	return nil
+}
+
+type testNodeInfo struct {
+	name string
+}
+
+func (t testNodeInfo) GetUid() string {
+	return ""
+}
+
+func (t testNodeInfo) GetName() string {
+	return t.name
+}
+
+func (t testNodeInfo) GetNamespace() string {
+	return ""
+}
+
+func (t testNodeInfo) GetResourceVersion() string {
+	return "v1"
+}
+
+func (t testNodeInfo) GetLabels() map[string]string {
+	return map[string]string{}
+}
+
+func (t testNodeInfo) GetAnnotations() map[string]string {
+	return map[string]string{}
+}
+
+func (t testNodeInfo) Node() proto.Node {
+	return nil
+}
+
+func (t testNodeInfo) ImageStates() map[string]*api.ImageStateSummary {
 	return nil
 }
