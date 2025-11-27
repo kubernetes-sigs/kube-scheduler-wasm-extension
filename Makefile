@@ -1,6 +1,6 @@
 gofumpt        := mvdan.cc/gofumpt@v0.5.0
 gosimports     := github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
-golangci_lint  := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
+golangci_lint  := github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
 tinygo_targets := examples/nodenumber/main.wasm examples/advanced/main.wasm examples/imagelocality/main.wasm guest/testdata/cyclestate/main.wasm guest/testdata/filter/main.wasm guest/testdata/score/main.wasm \
 					guest/testdata/bind/main.wasm guest/testdata/reserve/main.wasm guest/testdata/handle/main.wasm guest/testdata/permit/main.wasm \
 					internal/e2e/scheduler_perf/wasm/nodenumber/main.wasm
